@@ -714,6 +714,15 @@
     <string name="sources_order_header">Sources, tried in this order</string>
     <string name="sources_quality_capped">This connection is set below High quality, so streams are transcoded to fit that limit. Downloads are unaffected.</string>
     <string name="jiosaavn_mismatch_warning">May match the wrong version of a song. Enable at your own risk.</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">Your Tidal account streams FLAC up to 24-bit/192\u0020kHz wherever it holds the recording. Sign-in happens on tidal.com; the app stores only the session token.</string>
+    <string name="tidal_not_signed_in">Not signed in</string>
+    <string name="tidal_sign_in">Sign in with Tidal</string>
+    <string name="tidal_full_access">Full access</string>
+    <string name="tidal_session_limited">1-hour session</string>
+    <string name="tidal_sign_out">Sign out</string>
+    <string name="tidal_sign_out_confirm_title">Sign out of Tidal?</string>
+    <string name="tidal_sign_out_confirm_message">Tidal streams stop until you sign in again. Your library and queues are unaffected.</string>
     <string name="enable_jiosaavn">Enable JioSaavn?</string>
     <string name="enable_anyway">Enable anyway</string>
     <string name="sources_subtitle">Where audio comes from and the order used</string>

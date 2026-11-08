@@ -78,6 +78,7 @@ import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceHealth
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.ui.components.AddonEditorAlert
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
@@ -125,6 +126,10 @@ fun SourcesScreen(
     onEditSmb: () -> Unit,
     /** Opens the full-window warning before JioSaavn is opted into. */
     onConfirmJioSaavn: () -> Unit,
+    /** Opens the Tidal account sign-in screen, raised for the same reason as [onEditSource]. */
+    onSignInTidal: () -> Unit,
+    /** Opens the sign-out confirmation, raised for the same reason. */
+    onSignOutTidal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -150,10 +155,11 @@ fun SourcesScreen(
     // was any good, and the only place a manifest that fails validation gets to
     // say why. Except an addon waiting on a lossless output: it is not to be
     // contacted at all until one is connected, and connecting one re-runs this.
-    val probeKey = configs.filter { it.kind.needsServer }
+    val probeKey = configs.filter { it.kind.needsServer || it.kind == SourceKind.TIDAL }
         .joinToString { "${it.id}@${it.baseUrl}@${it.checkValidLossless}" } + "@${losslessOutput.capable}"
     LaunchedEffect(probeKey) {
-        configs.filter { it.kind.needsServer && it.isComplete && !it.awaitsLosslessOutput }.forEach { config ->
+        configs.filter { (it.kind.needsServer || it.kind == SourceKind.TIDAL) && it.isComplete && !it.awaitsLosslessOutput }
+            .forEach { config ->
             val source = SourceRegistry.instance(config.id) ?: return@forEach
             health[config.id] = withContext(Dispatchers.IO) {
                 runCatching { source.health() }
@@ -300,6 +306,29 @@ fun SourcesScreen(
             RowDivider()
             AddSourceRow(
                 onClick = { onEditSource(SourceConfig(kind = SourceKind.ADDON)) },
+            )
+        }
+
+        // The Tidal account, which the row above streams through. Raised to
+        // the activity like every other full-screen interaction: the sign-in
+        // WebView cannot live inside this haze-sampling subtree.
+        val tidalSession by TidalAccountStore.session.collectAsStateWithLifecycle()
+        val tidalSignedIn = tidalSession != null
+        SettingsGroup(
+            header = stringResource(R.string.tidal_account),
+            footer = stringResource(R.string.tidal_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.Waves,
+                title = stringResource(R.string.tidal_account),
+                subtitle = tidalSession?.username
+                    ?: stringResource(R.string.tidal_not_signed_in),
+                value = when (tidalSession?.flow) {
+                    TidalAccountStore.FLOW_PKCE -> stringResource(R.string.tidal_full_access)
+                    null -> null
+                    else -> stringResource(R.string.tidal_session_limited)
+                },
+                onClick = if (tidalSignedIn) onSignOutTidal else onSignInTidal,
             )
         }
 
@@ -817,6 +846,7 @@ private fun SourceRow(
                 SourceKind.ADDON -> SfIcons.Extension
                 SourceKind.CUSTOM_MODULE -> SfIcons.Extension
                 SourceKind.MODULE -> SfIcons.Extension
+                SourceKind.TIDAL -> SfIcons.Waves
                 SourceKind.JIOSAAVN -> SfIcons.GraphicEq // or some other icon
                 SourceKind.YOUTUBE -> SfIcons.PlayCircle
             },
@@ -844,7 +874,7 @@ private fun SourceRow(
             // the label's length, so it adds the same height to every addon;
             // the full label is in the list it opens.
             val quality = config.activeQuality
-            if (config.kind == SourceKind.ADDON && config.isComplete && quality != null) {
+            if ((config.kind == SourceKind.ADDON || config.kind == SourceKind.TIDAL) && config.isComplete && quality != null) {
                 Row(
                     modifier = Modifier
                         .clickable(

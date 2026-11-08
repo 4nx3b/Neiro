@@ -126,6 +126,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
+import com.music.bitchord.auth.TidalLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
@@ -271,6 +272,7 @@ import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.ui.components.ChoiceAlert
 import com.music.bitchord.ui.components.ListenBrainzTokenAlert
 import com.music.bitchord.ui.components.MiniPlayer
@@ -649,6 +651,8 @@ private fun BitChordApp(
     /** An addon whose "Outdated addon" line was tapped; see [SourceConfig.needsAddonUpdate]. */
     var explainingOutdatedAddon by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
+    var showTidalLogin by remember { mutableStateOf(false) }
+    var confirmTidalSignOut by remember { mutableStateOf(false) }
     var confirmBitPerfect by remember { mutableStateOf<BitPerfectMode?>(null) }
     var confirmFixedVolume by remember { mutableStateOf(false) }
     /** An addon search row tapped while the quality setting skips its addon; see [AddonBlockedAlert]. */
@@ -3067,6 +3071,8 @@ private fun BitChordApp(
                                 onEditWebDav = { showWebDavEditor = true },
                                 onEditSmb = { showSmbEditor = true },
                                 onConfirmJioSaavn = { confirmJioSaavn = true },
+                                onSignInTidal = { showTidalLogin = true },
+                                onSignOutTidal = { confirmTidalSignOut = true },
                             )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
@@ -5812,6 +5818,38 @@ private fun BitChordApp(
             }
         }
 
+        if (showTidalLogin) {
+            BackHandler { showTidalLogin = false }
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { showTidalLogin = false }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.close),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        Text(
+                            stringResource(R.string.tidal_sign_in),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    TidalLoginScreen(
+                        modifier = Modifier.navigationBarsPadding(),
+                        onConnected = { showTidalLogin = false },
+                    )
+                }
+            }
+        }
+
         if (showSpotifyCanvasAuth) {
             BackHandler { showSpotifyCanvasAuth = false }
             SpotifyCanvasAuthScreen(
@@ -5900,6 +5938,20 @@ private fun BitChordApp(
                     confirmJioSaavn = false
                 },
                 onDismiss = { confirmJioSaavn = false },
+            )
+        }
+
+        if (confirmTidalSignOut) {
+            ConfirmationAlert(
+                hazeState = hazeState,
+                title = stringResource(R.string.tidal_sign_out_confirm_title),
+                description = stringResource(R.string.tidal_sign_out_confirm_message),
+                confirmLabel = stringResource(R.string.tidal_sign_out),
+                onConfirm = {
+                    TidalAccountStore.signOut()
+                    confirmTidalSignOut = false
+                },
+                onDismiss = { confirmTidalSignOut = false },
             )
         }
 

@@ -36,7 +36,9 @@ import androidx.media3.common.audio.SonicAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
+import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.FileDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DecoderReuseEvaluation
@@ -1717,11 +1719,23 @@ class PlaybackService : MediaLibraryService() {
         // well would not override that — OkHttpDataSource *appends* the
         // factory's agent after the request's, and the fetch would go out
         // carrying two contradictory User-Agent headers.
+        // Innermost, so it chunks the real googlevideo URL the resolver
+        // above has already substituted in — see [ChunkedDataSource] for
+        // why an open-ended read of one is worth avoiding.
+        val chunkedFactory = ChunkedDataSource.Factory(OkHttpDataSource.Factory(Http.client), STREAM_CHUNK_BYTES)
         val resolvingFactory = ResolvingDataSource.Factory(
-            // Innermost, so it chunks the real googlevideo URL the resolver
-            // above has already substituted in — see [ChunkedDataSource] for
-            // why an open-ended read of one is worth avoiding.
-            ChunkedDataSource.Factory(OkHttpDataSource.Factory(Http.client), STREAM_CHUNK_BYTES),
+            // A resolver answer can be a *local file* — a source whose manifest
+            // arrives inline (Tidal's base64 MPD, written to cache) hands back
+            // a file:// URL, which OkHttp would refuse. The router below sends
+            // those to FileDataSource and everything else to the chunked
+            // client, on the scheme the resolver left behind. Same shape as
+            // [SmbDataSource.RoutingFactory], one level down: it sits *under*
+            // the resolver rather than over it, which is the only place the
+            // resolved scheme exists at all.
+            object : BaseDataSource.Factory() {
+                override fun createDataSource(): DataSource =
+                    ResolvedFileRoutingDataSource(chunkedFactory.createDataSource())
+            },
         ) { dataSpec ->
             // Wrapped rather than folded into the resolver above so the record
             // is made in one place for every branch of it, and made from what
@@ -3899,6 +3913,34 @@ class PlaybackService : MediaLibraryService() {
      * Everything else keeps the default behaviour, which is right: a shaped
      * response or a dropped connection is worth another go.
      */
+    /**
+     * Sends a resolved `file://` answer to [FileDataSource] and everything
+     * else to the DataSource the resolver's answers always went to. Exists
+     * for the sources whose manifest arrives inline and is written to cache
+     * rather than served over HTTP — see the factory it is built in.
+     */
+    private class ResolvedFileRoutingDataSource(private val inner: DataSource) : DataSource {
+        private val file = FileDataSource()
+        private var active: DataSource = inner
+
+        override fun addTransferListener(transferListener: TransferListener) {
+            inner.addTransferListener(transferListener)
+            file.addTransferListener(transferListener)
+        }
+
+        override fun open(dataSpec: DataSpec): Long {
+            active = if (dataSpec.uri.scheme == "file") file else inner
+            return active.open(dataSpec)
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+            active.read(buffer, offset, length)
+
+        override fun getUri(): Uri? = active.uri
+
+        override fun close() = active.close()
+    }
+
     private class PermanentAwareLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {
         override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
             if (isPermanent(loadErrorInfo.exception)) return C.TIME_UNSET

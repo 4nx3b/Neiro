@@ -112,6 +112,11 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // nothing that runs after startup can see any of them half open.
         val backgroundInit = thread(name = "startup-init") {
             SourceRegistry.init(this)
+            // The Tidal source's manifest directory and session store: opened
+            // beside the registry's own encrypted store, after AuthStore, for
+            // the same master-key reason that thread exists at all.
+            com.music.bitchord.data.tidal.TidalService.init(this)
+            com.music.bitchord.data.tidal.TidalAccountStore.init(this)
             AndroidStreamHooks.initInnerTubeX(this)
             // Its own directory: canvas clips are looping video, not audio, and
             // belong in a cache AudioCache's own limit and eviction policy were

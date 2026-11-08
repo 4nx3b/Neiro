@@ -127,6 +127,29 @@ enum class SourceKind(
         rank = 1,
     ),
 
+    /**
+     * The listener's own Tidal account, signed into on the Sources screen.
+     *
+     * Sits above JioSaavn for the same reason an addon does: when both hold the
+     * recording, FLAC beats 320kbps AAC. Opt-in by the sign-in itself rather
+     * than by the row's switch — a signed-out Tidal answers nothing, so a
+     * switched-on-but-signed-out row would be a light that lies.
+     *
+     * `worthPrefetching` because the account API answers in a few hundred
+     * milliseconds — the same budget JioSaavn's prefetch judgement was measured
+     * against — unlike a module index whose walk takes seconds.
+     */
+    TIDAL(
+        label = "Tidal",
+        detail = "Your Tidal account: FLAC up to 24-bit/192 kHz, searched and streamed " +
+            "against the account you sign in with.",
+        labels = listOf("FLAC", "Lossless", "Hi-Res"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = 2,
+    ),
+
     JIOSAAVN(
         label = "JioSaavn",
         detail = "Optional JioSaavn streams up to 320kbps AAC/MP4. Catalogue matching can select the wrong song.",
@@ -134,7 +157,7 @@ enum class SourceKind(
         needsServer = false,
         canServeLossless = false,
         worthPrefetching = true,
-        rank = 2,
+        rank = 3,
     ),
 
     /**
@@ -150,7 +173,7 @@ enum class SourceKind(
         labels = listOf("Lossy", "Full catalogue", "Radio"),
         needsServer = false,
         canServeLossless = false,
-        rank = 3,
+        rank = 4,
     ),
     ;
 

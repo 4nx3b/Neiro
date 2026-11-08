@@ -66,14 +66,32 @@ internal object ManifestFile {
             }
         }
 
-        val base = url.toHttpUrlOrNull() ?: error("Invalid manifest URL")
-        val index = String(fetch(url), Charsets.UTF_8)
+        val localManifest = url.startsWith("file:")
+        val index = if (localManifest) {
+            val file = runCatching { File(java.net.URI(url).path) }.getOrNull()
+                ?: error("Invalid manifest URL")
+            if (!file.isFile) error("Manifest file is gone")
+            file.readText()
+        } else {
+            String(fetch(url), Charsets.UTF_8)
+        }
+        // A manifest handed over as a local file (written from an inline
+        // payload — Tidal's base64 MPD) has no URL to resolve its segment
+        // references against, so its own BaseURL is the base; a reference
+        // that is absolute in its own right wins either way.
+        val base = if (localManifest) {
+            Regex("<BaseURL\\s*>([^<]+)</BaseURL>", RegexOption.IGNORE_CASE)
+                .find(index)?.groupValues?.get(1)?.trim()?.toHttpUrlOrNull()
+        } else {
+            url.toHttpUrlOrNull()
+        } ?: error("Invalid manifest URL")
         val (initRef, mediaRefs) = if (dash) {
             OfflineDash.parse(index).let { it.initialization to it.media }
         } else {
             hlsSegments(index)
         }
-        fun resolve(ref: String) = base.resolve(ref)?.toString() ?: error("Invalid segment URL")
+        fun resolve(ref: String) =
+            base.resolve(ref)?.toString() ?: ref.toHttpUrlOrNull()?.toString() ?: error("Invalid segment URL")
         val total = mediaRefs.size + 1L
 
         val init = fetch(resolve(initRef))
