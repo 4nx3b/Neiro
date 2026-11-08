@@ -1475,4 +1475,7 @@
     <string name="diwali_title">BitChord מאחל לך חג דיוואלי שמח</string>
     <string name="diwali_subtitle">שחג האורות הזה ימלא את ביתך בשמחה ואת ימיך במוזיקה.</string>
     <string name="diwali_cta">בוא נחגוג</string>
+    <string name="scrobble_service">שירות scrobbling</string>
+    <string name="scrobble_service_choice_message">לאן נשלחים ה-scrobble.‏ Libre.fm נכנס עם המפתח המובנה; מעבר בין שירותים מנתק אותך מהנוכחי.</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

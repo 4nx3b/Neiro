@@ -1320,4 +1320,7 @@
     <string name="diwali_title">BitChord가 디왈리를 축하드립니다</string>
     <string name="diwali_subtitle">빛의 축제가 여러분의 집에 기쁨을, 하루하루에 음악을 가득 채워주길 바랍니다.</string>
     <string name="diwali_cta">함께 축하해요</string>
+    <string name="scrobble_service">Scrobbling 서비스</string>
+    <string name="scrobble_service_choice_message">Scrobble을 보낼 곳입니다. Libre.fm은 내장 키로 로그인하며, 서비스를 전환하면 현재 세션에서 로그아웃됩니다.</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

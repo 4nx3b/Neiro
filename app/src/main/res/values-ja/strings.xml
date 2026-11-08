@@ -1448,4 +1448,7 @@
     <string name="diwali_title">BitChord がディーワーリーのお祝いをお届けします</string>
     <string name="diwali_subtitle">光の祭典があなたの家に喜びを、日々に音楽をもたらしますように。</string>
     <string name="diwali_cta">祝おう</string>
+    <string name="scrobble_service">Scrobblingサービス</string>
+    <string name="scrobble_service_choice_message">Scrobbleの送信先です。Libre.fmは内蔵キーでログインします。サービスを切り替えると現在のセッションからログアウトします。</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

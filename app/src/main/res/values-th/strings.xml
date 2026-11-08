@@ -1453,4 +1453,7 @@
     <string name="diwali_title">BitChord ขออวยพรให้คุณมีความสุขในเทศกาลดิวาลี</string>
     <string name="diwali_subtitle">ขอให้เทศกาลแห่งแสงนี้เติมเต็มบ้านของคุณด้วยความสุข และเติมเต็มทุกวันของคุณด้วยดนตรี</string>
     <string name="diwali_cta">มาฉลองกันเถอะ</string>
+    <string name="scrobble_service">บริการ scrobbling</string>
+    <string name="scrobble_service_choice_message">ส่ง scrobble ไปที่ใด Libre.fm เข้าสู่ระบบด้วยคีย์ในตัว การสลับบริการจะออกจากระบบปัจจุบัน</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

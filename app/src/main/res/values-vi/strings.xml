@@ -1387,4 +1387,7 @@
     <string name="diwali_title">BitChord chúc bạn một Diwali vui vẻ</string>
     <string name="diwali_subtitle">Chúc lễ hội ánh sáng này tràn ngập ngôi nhà bạn bằng niềm vui và những ngày của bạn bằng âm nhạc.</string>
     <string name="diwali_cta">Cùng ăn mừng nào</string>
+    <string name="scrobble_service">Dịch vụ scrobbling</string>
+    <string name="scrobble_service_choice_message">Scrobble được gửi đi đâu. Libre.fm đăng nhập bằng khóa tích hợp sẵn; chuyển dịch vụ sẽ đăng xuất phiên hiện tại.</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

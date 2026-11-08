@@ -1427,4 +1427,7 @@
     <string name="diwali_title">BitChord size mutlu bir Diwali diler</string>
     <string name="diwali_subtitle">Umut edelim ki ışıklar bayramı evinizi sevince, günlerinizi müzikle doldurur.</string>
     <string name="diwali_cta">Kutlayalım</string>
+    <string name="scrobble_service">Scrobbling hizmeti</string>
+    <string name="scrobble_service_choice_message">Scrobble\'lar nereye gönderilir. Libre.fm yerleşik anahtarla oturum açar; hizmet değiştirmek sizi mevcut oturumdan çıkarır.</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

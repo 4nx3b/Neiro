@@ -696,6 +696,9 @@
     <string name="scrobble_tracks">Scrobble tracks</string>
     <string name="scrobble_tracks_subtitle">Log plays to your Last.fm timeline</string>
     <string name="scrobbling_footer">Scrobble your listens to Last.fm and ListenBrainz.</string>
+    <string name="scrobble_service">Scrobbling service</string>
+    <string name="scrobble_service_choice_message">Where scrobbles are sent. Libre.fm signs in with the built-in key; switching services signs you out of the current one.</string>
+    <string name="libre_fm">Libre.fm</string>
     <string name="scrobbling_paused_footer">Last.fm and ListenBrainz are paused for this release and will return later. Existing connections remain saved.</string>
     <string name="search_this_folder">Search this folder</string>
     <string name="search_this_list">Search this list</string>

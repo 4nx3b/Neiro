@@ -1502,4 +1502,7 @@
     <string name="diwali_title">BitChord поздравляет вас с Дивали</string>
     <string name="diwali_subtitle">Пусть этот праздник огней наполнит ваш дом радостью, а дни — музыкой.</string>
     <string name="diwali_cta">Отпразднуем</string>
+    <string name="scrobble_service">Сервис скробблинга</string>
+    <string name="scrobble_service_choice_message">Куда отправляются скробблы. Libre.fm входит со встроенным ключом; смена сервиса выходит из текущей сессии.</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

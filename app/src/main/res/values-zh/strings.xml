@@ -1447,4 +1447,7 @@
     <string name="diwali_title">BitChord 祝你排灯节快乐</string>
     <string name="diwali_subtitle">愿这个灯火之节让你的家充满欢乐，让你的每一天都有音乐相伴。</string>
     <string name="diwali_cta">一起庆祝吧</string>
+    <string name="scrobble_service">Scrobbling 服务</string>
+    <string name="scrobble_service_choice_message">Scrobble 的发送目标。Libre.fm 使用内置密钥登录；切换服务会退出当前登录。</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

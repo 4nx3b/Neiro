@@ -14,6 +14,7 @@ import android.widget.Toast
 import android.os.Bundle
 import android.os.Handler
 import android.os.SystemClock
+import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.TelemetryProvenance
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -7554,12 +7555,20 @@ class PlaybackService : MediaLibraryService() {
                     delaySeconds = values[10] as Int,
                 )
             }.collectLatest { snapshot ->
+                val endpoint = snapshot.endpoint.ifBlank { LastFM.DEFAULT_API_ENDPOINT }
+                val (apiKey, secret) = LastFM.credentialsFor(
+                    endpoint = endpoint,
+                    storedApiKey = snapshot.apiKey,
+                    storedSecret = snapshot.secret,
+                    defaultApiKey = BuildConfig.LASTFM_API_KEY,
+                    defaultSecret = BuildConfig.LASTFM_SECRET,
+                )
                 val shouldEnable = AppSettings.scrobblingAvailable &&
                     snapshot.lastfmEnabled &&
                     snapshot.scrobbleEnabled &&
                     snapshot.sessionKey.isNotBlank() &&
-                    snapshot.apiKey.isNotBlank() &&
-                    snapshot.secret.isNotBlank()
+                    apiKey.isNotBlank() &&
+                    secret.isNotBlank()
 
                 if (!shouldEnable) {
                     scrobbleManager?.destroy()
@@ -7568,9 +7577,9 @@ class PlaybackService : MediaLibraryService() {
                 }
 
                 LastFM.configure(
-                    endpoint = snapshot.endpoint.ifBlank { LastFM.DEFAULT_API_ENDPOINT },
-                    apiKey = snapshot.apiKey,
-                    secret = snapshot.secret,
+                    endpoint = endpoint,
+                    apiKey = apiKey,
+                    secret = secret,
                     sessionKey = snapshot.sessionKey,
                 )
                 val manager = scrobbleManager ?: ScrobbleManager(scope).also {

@@ -12,6 +12,7 @@ import com.music.bitchord.BuildConfig
 import com.music.bitchord.auth.AuthStore
 import com.music.bitchord.data.canvas.SpotifyToken
 import com.music.bitchord.data.lyrics.LyricsSource
+import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.playback.EqLayout
 import com.music.bitchord.playback.EqualizerPreset
@@ -753,6 +754,21 @@ object AppSettings {
     val lastfmScrobbleEnabled = MutableStateFlow(false)
     val lastfmNowPlaying = MutableStateFlow(false)
     val lastfmPrimaryArtistOnly = MutableStateFlow(false)
+
+    /**
+     * Which AudioScrobbler service the Last.fm rows speak to, carried by the
+     * endpoint setting itself so there is one truth: blank is Last.fm,
+     * [LastFM.LIBREFM_API_ENDPOINT] is Libre.fm. A provider switch is a
+     * different service, so the session belongs to the old one and the
+     * caller clears it — the same five writes as signing out.
+     */
+    val libreFmActive: Boolean
+        get() = lastfmEndpoint.value == LastFM.LIBREFM_API_ENDPOINT
+
+    fun setLastfmProvider(libreFm: Boolean) {
+        setLastfmEndpoint(if (libreFm) LastFM.LIBREFM_API_ENDPOINT else "")
+    }
+
     val scrobbleMinDuration = MutableStateFlow(30)
     val scrobbleDelayPercent = MutableStateFlow(0.5f)
     val scrobbleDelaySeconds = MutableStateFlow(180)

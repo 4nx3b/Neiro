@@ -670,6 +670,7 @@ private fun BitChordApp(
     var showAccountSelector by remember { mutableStateOf(false) }
     var showListenBrainzLogin by remember { mutableStateOf(false) }
     var showLastfmLogin by remember { mutableStateOf(false) }
+    var choosingLastfmService by remember { mutableStateOf(false) }
     var showWebDavEditor by remember { mutableStateOf(false) }
     var showSmbEditor by remember { mutableStateOf(false) }
     // Discord Rich Presence: its own page under Account & integrations (a
@@ -3058,6 +3059,7 @@ private fun BitChordApp(
                                 onSignOut = { viewModel.signOut() },
                                 onOpenListenBrainzLogin = { showListenBrainzLogin = true },
                                 onOpenLastfmLogin = { showLastfmLogin = true },
+                                onChooseLastfmService = { choosingLastfmService = true },
                                 onOpenDiscord = { navigator.push(AppRoute.Discord) },
                                 onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 contentPadding = listPadding,
@@ -5598,9 +5600,22 @@ private fun BitChordApp(
                     lastfmError = null
                     scope.launch {
                         try {
+                            val endpoint = AppSettings.lastfmEndpoint.value.ifBlank { LastFM.DEFAULT_API_ENDPOINT }
+                            val (apiKey, secret) = LastFM.credentialsFor(
+                                endpoint = endpoint,
+                                storedApiKey = AppSettings.lastfmApiKey.value,
+                                storedSecret = AppSettings.lastfmSecret.value,
+                                defaultApiKey = BuildConfig.LASTFM_API_KEY,
+                                defaultSecret = BuildConfig.LASTFM_SECRET,
+                            )
                             LastFM.initialize(
-                                apiKey = AppSettings.lastfmApiKey.value,
-                                secret = AppSettings.lastfmSecret.value,
+                                apiKey = apiKey,
+                                secret = secret,
+                            )
+                            LastFM.configure(
+                                endpoint = endpoint,
+                                apiKey = apiKey,
+                                secret = secret,
                             )
                             LastFM.getMobileSession(usernameInput.trim(), passwordInput)
                                 .onSuccess { auth ->
@@ -5620,6 +5635,37 @@ private fun BitChordApp(
                     }
                 },
                 onDismiss = { if (!lastfmLoading) showLastfmLogin = false },
+            )
+        }
+
+        if (choosingLastfmService) {
+            val lastfmEndpoint by AppSettings.lastfmEndpoint.collectAsStateWithLifecycle()
+            val lastfmSessionKey by AppSettings.lastfmSessionKey.collectAsStateWithLifecycle()
+            val lastfmLabel = "Last.fm"
+            val libreLabel = stringResource(R.string.libre_fm)
+            val libreFmActive = lastfmEndpoint == LastFM.LIBREFM_API_ENDPOINT
+            ChoiceAlert(
+                hazeState = hazeState,
+                title = stringResource(R.string.scrobble_service),
+                message = stringResource(R.string.scrobble_service_choice_message),
+                options = listOf(lastfmLabel, libreLabel),
+                selected = if (libreFmActive) libreLabel else lastfmLabel,
+                label = { it },
+                onSelect = { option ->
+                    val wantLibre = option == libreLabel
+                    if (wantLibre != libreFmActive) {
+                        AppSettings.setLastfmProvider(wantLibre)
+                        if (lastfmSessionKey.isNotBlank()) {
+                            AppSettings.setLastfmSessionKey("")
+                            AppSettings.setLastfmUsername("")
+                            AppSettings.setLastfmEnabled(false)
+                            AppSettings.setLastfmScrobbleEnabled(false)
+                            AppSettings.setLastfmNowPlaying(false)
+                        }
+                    }
+                    choosingLastfmService = false
+                },
+                onDismiss = { choosingLastfmService = false },
             )
         }
 

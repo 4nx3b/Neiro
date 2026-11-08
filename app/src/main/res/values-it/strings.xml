@@ -1409,4 +1409,7 @@
     <string name="diwali_title">BitChord ti augura un felice Diwali</string>
     <string name="diwali_subtitle">Che questa festa delle luci riempia la tua casa di gioia e le tue giornate di musica.</string>
     <string name="diwali_cta">Festeggiamo</string>
+    <string name="scrobble_service">Servizio di scrobbling</string>
+    <string name="scrobble_service_choice_message">Dove vengono inviati gli scrobble. Libre.fm accede con la chiave integrata; cambiare servizio ti disconnette da quello attuale.</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

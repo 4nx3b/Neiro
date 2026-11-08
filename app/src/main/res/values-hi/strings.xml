@@ -1470,4 +1470,7 @@
     <string name="diwali_subtitle">रोशनी का यह त्योहार आपके घर को खुशियों से और आपके दिनों को संगीत से भर दे।</string>
     <string name="diwali_cta">चलो जश्न मनाएँ</string>
     <string name="automix_overview">ऑटोमिक्स ओवरव्यू</string>
+    <string name="scrobble_service">स्क्रॉबल सेवा</string>
+    <string name="scrobble_service_choice_message">स्क्रॉबल कहाँ भेजे जाते हैं। Libre.fm बिल्ट-इन कुंजी से साइन इन करता है; सेवा बदलने पर आप मौजूदा सेवा से साइन आउट हो जाएँगे।</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

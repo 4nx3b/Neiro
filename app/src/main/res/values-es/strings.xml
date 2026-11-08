@@ -1442,4 +1442,7 @@
     <string name="diwali_title">BitChord te desea un feliz Diwali</string>
     <string name="diwali_subtitle">Que este festival de las luces llene tu hogar de alegría y tus días de música.</string>
     <string name="diwali_cta">¡A celebrar!</string>
+    <string name="scrobble_service">Servicio de scrobbling</string>
+    <string name="scrobble_service_choice_message">A dónde se envían los scrobbles. Libre.fm inicia sesión con la clave integrada; cambiar de servicio cierra tu sesión actual.</string>
+    <string name="libre_fm">Libre.fm</string>
 </resources>

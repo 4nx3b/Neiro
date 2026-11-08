@@ -299,8 +299,13 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         val sessionKey = AppSettings.lastfmSessionKey.value
         if (sessionKey.isBlank()) return
         val endpoint = AppSettings.lastfmEndpoint.value.ifBlank { LastFM.DEFAULT_API_ENDPOINT }
-        val apiKey = AppSettings.lastfmApiKey.value.trim()
-        val secret = AppSettings.lastfmSecret.value.trim()
+        val (apiKey, secret) = LastFM.credentialsFor(
+            endpoint = endpoint,
+            storedApiKey = AppSettings.lastfmApiKey.value.trim(),
+            storedSecret = AppSettings.lastfmSecret.value.trim(),
+            defaultApiKey = BuildConfig.LASTFM_API_KEY,
+            defaultSecret = BuildConfig.LASTFM_SECRET,
+        )
         if (apiKey.isBlank() || secret.isBlank()) return
         LastFM.configure(
             endpoint = endpoint,

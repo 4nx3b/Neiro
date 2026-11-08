@@ -22,6 +22,17 @@ object LastFM {
     const val DEFAULT_API_ENDPOINT = "https://ws.audioscrobbler.com/2.0/"
     const val LIBREFM_API_ENDPOINT = "https://libre.fm/2.0/"
 
+    /*
+     * Libre.fm speaks the AudioScrobbler protocol but does not validate API
+     * key registrations, so a build without its own pair can still sign in
+     * with any non-empty one. Last.fm keys never work there and vice versa,
+     * which is what credentialsFor decides: on the Libre.fm endpoint, the
+     * build's Last.fm pair (or a blank store) is swapped for the compat pair,
+     * while an override the user actually typed is always theirs.
+     */
+    const val LIBREFM_COMPAT_API_KEY = "bitchord"
+    const val LIBREFM_COMPAT_SECRET = "bitchord"
+
     @Serializable
     data class Session(val name: String, val key: String, val subscriber: Int)
 
@@ -224,6 +235,22 @@ object LastFM {
     fun currentConfig(): RuntimeConfig = runtimeConfig
 
     fun isInitialized(): Boolean = runtimeConfig.apiKey.isNotEmpty() && runtimeConfig.secret.isNotEmpty()
+
+    fun credentialsFor(
+        endpoint: String,
+        storedApiKey: String,
+        storedSecret: String,
+        defaultApiKey: String,
+        defaultSecret: String,
+    ): Pair<String, String> =
+        if (endpoint == LIBREFM_API_ENDPOINT &&
+            (storedApiKey.isBlank() || storedApiKey == defaultApiKey) &&
+            (storedSecret.isBlank() || storedSecret == defaultSecret)
+        ) {
+            LIBREFM_COMPAT_API_KEY to LIBREFM_COMPAT_SECRET
+        } else {
+            storedApiKey to storedSecret
+        }
 
     fun normalizeEndpoint(endpoint: String): String {
         val uri = URI(endpoint.trim())
