@@ -1444,4 +1444,8 @@
     <string name="bit_perfect_status_inexact">%1$s · 正確ではありません： このソースはロスレス PCM ではありません</string>
     <string name="bit_perfect_status_waiting">対応する出力でロスレスのトラックを待っています</string>
     <string name="bit_perfect_status_unavailable">このトラックでは利用できません（%1$s）</string>
+    <string name="automix_overview">Automix の概要</string>
+    <string name="diwali_title">BitChord がディーワーリーのお祝いをお届けします</string>
+    <string name="diwali_subtitle">光の祭典があなたの家に喜びを、日々に音楽をもたらしますように。</string>
+    <string name="diwali_cta">祝おう</string>
 </resources>

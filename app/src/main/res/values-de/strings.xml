@@ -1466,4 +1466,8 @@
     <string name="bit_perfect_status_inexact">%1$s · nicht exakt: Diese Quelle ist kein verlustfreies PCM</string>
     <string name="bit_perfect_status_waiting">Warte auf einen verlustfreien Titel an einem unterstützten Ausgang</string>
     <string name="bit_perfect_status_unavailable">Für diesen Titel nicht verfügbar (%1$s)</string>
+    <string name="automix_overview">Automix-Überblick</string>
+    <string name="diwali_title">BitChord wünscht dir ein frohes Diwali</string>
+    <string name="diwali_subtitle">Möge dieses Fest der Lichter dein Zuhause mit Freude und deine Tage mit Musik füllen.</string>
+    <string name="diwali_cta">Lasst uns feiern</string>
 </resources>
