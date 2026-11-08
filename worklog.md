@@ -347,3 +347,50 @@ Stage Summary:
   the code-touching sha; the signed arm64-v8a nightly pipeline). On-device
   sign-in, FLAC playback and download verification pending user testing. Next
   in the roadmap: the Qobuz source.
+
+---
+
+Task ID: 7
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Close the Deezer port's CI and port the Qobuz source — task 3's roadmap
+item (b) — onto the same account-first machinery.
+
+Work Log:
+- The Deezer push failed on a real compile error my pre-push review missed:
+  the two no-payload gateway calls against a parameter with no default
+  (43ec8fa1 gives `payload` its default). Check/TV/Release all failed on that
+  one line; pushed the repair and re-ran.
+- Researched ArchiveTune's qobuz package: the official API path (token
+  backends) and the instance path (self-hosted `/api/get-music` +
+  `/api/download-music` mirrors with health probing, cooldowns and a backend
+  race). The instance/pool half is its own settings surface in ArchiveTune and
+  is left for a follow-up; this port is the account path.
+- `data/qobuz/QobuzService.kt`: track/search, track/getFileUrl with the MD5
+  request signature over the sorted parameter string (the exact protocol
+  string, byte for byte), user/get subscription standing (the lossless/hi-res
+  marker regex), the payload parsers (both the tracks.items and flat item
+  shapes, preview detection, mime->codec), and a test-only apiBase seam.
+- `data/qobuz/QobuzAccountStore.kt` + `auth/QobuzLoginScreen.kt`: the
+  encrypted account store and the sign-in — the WebView loads play.qobuz.com,
+  a JS hook reads the X-User-Auth-Token/X-App-Id off the player's own
+  requests, and a bundle scraper recovers the 32-hex app secret; when
+  scraping comes up empty the credentials pair with a manual paste field.
+  Every path verifies through user/get before anything is stored.
+- `data/sources/QobuzSource.kt` + `SourceKind.QOBUZ` (rank 2) + registry
+  seeding with the MAX/Hi-Res/FLAC/MP3-320 quality options. Lossless asks at
+  the picked tier defaulting to 16-bit FLAC; Best/Capped ask at MP3 320;
+  `sample: true` answers are rejected as previews (the free-account case) and
+  failure-cached.
+- Strings: 13 keys translated into all 19 catalogues plus English.
+- Tests (QobuzSourceTest): the signature MD5 vector, search/file-url payload
+  decodes incl. the preview flag, the account-standing markers, the tier
+  mapping, and an end-to-end signed getFileUrl over a MockWebServer asserting
+  the request shape (path, request_sig, format_id, track_id, both auth
+  headers) and the preview rejection.
+
+Stage Summary:
+- Deezer repair pushed (43ec8fa1) and monitored; Qobuz follows on green. Next
+  in the roadmap: the SoundCloud source, then Spotify direct streaming, then
+  the settings-page features that ride existing machinery (lyrics
+  romanisation + language packs, Android Auto).

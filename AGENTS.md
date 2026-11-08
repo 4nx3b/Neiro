@@ -173,3 +173,21 @@ its own source system. Porting rules:
 
 - Never commit credentials, tokens, keystores or agent session state.
 - Local working notes are scratch memory — never ship them.
+
+- **Qobuz source**: `app/.../data/qobuz/` (`QobuzService` — the official API's
+  `track/search`, `track/getFileUrl` with the MD5 `request_sig` over the
+  sorted parameter string (`trackgetFileUrlformat_id{n}intentstreamtrack_id{id}{ts}{secret}`),
+  `user/get` subscription standing, and the pure payload parsers;
+  `QobuzAccountStore` — the encrypted user_auth_token + app id + app secret +
+  premium flag) + `data/sources/QobuzSource.kt` + `SourceKind.QOBUZ`
+  (rank 2, beside Tidal/Deezer). The credentials come from the sign-in
+  WebView: the web player's own X-User-Auth-Token and X-App-Id read off its
+  requests, and the app secret scraped from its JS bundles (32-char hex), with
+  a manual paste field when scraping fails — see `auth/QobuzLoginScreen.kt`.
+  Streams are plain signed HTTPS URLs (no decryption layer, unlike Deezer);
+  format ids ride the quality picker (MAX 27 / Hi-Res 7 / FLAC 6 / MP3 5) and
+  a Lossless request defaults to 16-bit FLAC (6) — 24-bit is an opt-in, the
+  same rule as Tidal's Hi-Res. `sample: true` answers are previews: rejected
+  and failure-cached, never played. Tests: `QobuzSourceTest` (the signature
+  MD5, payload decodes, preview rejection, the tier mapping, and a signed
+  end-to-end getFileUrl through a MockWebServer via `apiBaseForTest`).
