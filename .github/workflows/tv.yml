@@ -74,6 +74,29 @@ jobs:
           echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
 
       - run: chmod +x gradlew
+      # The wrapper JVM's own download dies inside its hardcoded 10s connect
+      # timeout whenever the route to the distribution CDN degrades - which is
+      # exactly what an incident window looks like from a runner. Seeding the
+      # zip with a patient curl sidesteps it: the wrapper skips a download
+      # whose zip already sits in its expected slot (Installer: "if
+      # (!localZipFile.exists())"), so gradlew proceeds straight to unzip.
+      # The hash directory is Gradle's own PathAssembler scheme - base36 of the
+      # MD5 of the distributionUrl - and is stable for this URL.
+      - name: Pre-seed the Gradle distribution
+        run: |
+          DIST="$HOME/.gradle/wrapper/dists/gradle-8.11.1-bin/ch07yfcfywmhguk3iz62k0jum"
+          mkdir -p "$DIST"
+          if [ ! -f "$DIST/gradle-8.11.1-bin.zip" ]; then
+            for attempt in 1 2 3 4 5; do
+              curl -L --retry 5 --retry-delay 10 --retry-all-errors \
+                --connect-timeout 60 --max-time 900 --fail \
+                -o "$DIST/gradle-8.11.1-bin.zip.part" \
+                https://github.com/gradle/gradle-distributions/releases/download/v8.11.1/gradle-8.11.1-bin.zip && break
+              echo "download attempt $attempt failed; retrying" >&2
+              sleep 15
+            done
+            mv "$DIST/gradle-8.11.1-bin.zip.part" "$DIST/gradle-8.11.1-bin.zip"
+          fi
 
       - name: Build the TV dev APK
         run: ./gradlew :tv:assembleDevDebug
