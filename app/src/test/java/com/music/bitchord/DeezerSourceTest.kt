@@ -267,7 +267,7 @@ class DeezerSourceTest {
 
     @Test
     fun `stream shape carries the flac specs`() {
-        val stream = DeezerService.anonymousStreamFromMedia(
+        val stream = DeezerService.streamFor(
             "313074336",
             DeezerService.MediaAnswer(
                 url = "https://e-cdns.example/a.flac",

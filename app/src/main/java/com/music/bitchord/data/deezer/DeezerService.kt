@@ -364,7 +364,7 @@ object DeezerService {
         )
     }
 
-    private fun streamFor(trackId: String, media: MediaAnswer): Stream = Stream(
+    internal fun streamFor(trackId: String, media: MediaAnswer): Stream = Stream(
         uri = DeezerCrypto.buildUri(media.url, trackId),
         codec = if (media.format.equals(FORMAT_FLAC, ignoreCase = true)) CODEC_FLAC else CODEC_MP3,
         kbps = when (media.format.uppercase()) {
