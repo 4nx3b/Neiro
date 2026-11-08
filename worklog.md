@@ -101,3 +101,24 @@ Stage Summary:
 - Tidal source ported end-to-end on BitChord's own machinery; pushed to dev
   for CI. On-device verification (sign-in, FLAC playback, lossless download)
   pending user testing.
+
+---
+
+Task ID: 2a
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Repair the CI loop — every Check/Android run on dev (three attempts
+across half an hour, including a docs-only commit) died before Gradle started:
+`Downloading from https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+failed: timeout` on the runner.
+
+Work Log:
+- services.gradle.org serves that URL as a 307 redirect to
+  github.com/gradle/gradle-distributions/releases/download/v8.11.1/... — the
+  same artifact. Pointed the wrapper's distributionUrl at the GitHub URL
+  directly so the runner skips the redirect hop that is timing out. Same zip,
+  same version; the wrapper stores no checksum to invalidate.
+
+Stage Summary:
+- gradle-wrapper.properties now downloads from the Gradle GitHub mirror;
+  next push re-runs the Tidal commit's CI.
