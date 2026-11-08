@@ -34,11 +34,11 @@ jobs:
         echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> local.properties
         echo "LISTEN_TOGETHER_SERVER=${{ secrets.LISTEN_TOGETHER_SERVER }}" >> local.properties
 
-        # Forks do not inherit the signing secrets. With no keystore written,
-        # the build scripts' own absent-keystore path takes over and the
-        # release comes out unsigned — the whole pipeline still verified.
-        # Writing the files anyway hands the build an empty store and signing
-        # dies inside the keystore parser.
+        # Nightlies are signed: the fork's own release key lives in the
+        # KEYSTORE_* secrets, so every nightly APK installs over the one
+        # before it. With the secrets absent (a fresh clone's PR), the
+        # build scripts' own absent-keystore path takes over and the
+        # release comes out unsigned instead of failing.
         if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > bitchord-release.jks
           {
@@ -75,20 +75,18 @@ jobs:
           mv "$DIST/gradle-8.11.1-bin.zip.part" "$DIST/gradle-8.11.1-bin.zip"
         fi
 
-    - name: Build Signed Prod Release APK
-      run: ./gradlew assembleProdRelease
+    # The nightly artifact is the arm64-v8a phone APK only: that is the ABI
+    # every phone this fork targets ships, and building the one split (not
+    # the armeabi/x86_64/universal siblings, not the watch app) keeps the
+    # per-push pipeline as short as it can be. The ABI restriction rides
+    # AGP's injected-build-abi, which narrows the enabled splits to exactly
+    # this one; the upload path below still matches on the file name so a
+    # packaging-name change can never let a wrong-ABI APK through.
+    - name: Build Signed Prod Release APK (arm64-v8a)
+      run: ./gradlew :app:assembleProdRelease -Pandroid.injected.build.abi=arm64-v8a
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: bitchord-prod-release-signed
-        path: app/build/outputs/apk/prod/release/*.apk
-
-    # Built by the same assembleProdRelease, with the same key. The watch app
-    # only pairs with a phone app signed by the same key, so a prod watch APK
-    # for these phone builds can only come from here, never a local build.
-    - name: Upload Wear OS APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: bitchord-wear-prod-release-signed
-        path: wearos/build/outputs/apk/prod/release/*.apk
+        name: bitchord-prod-release-arm64-v8a-signed
+        path: app/build/outputs/apk/prod/release/*arm64*v8a*.apk

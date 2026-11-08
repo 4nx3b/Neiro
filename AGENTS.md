@@ -94,10 +94,16 @@ its own source system. Porting rules:
   the untested `values-b+zh+Hant`/`values-zh-rHK`, which are maintained in
   parallel. Upstream itself is currently missing `automix_overview` + the
   Diwali strings outside Hindi; the fork carries the full set.
-- **Release signing is secret-gated** (`android.yml`): the fork has no
-  `KEYSTORE_BASE64`, so the workflow writes no keystore and the build scripts'
-  absent-keystore path produces an unsigned release APK. With the owner's
-  signing secrets set, the signed flow is upstream's unchanged.
+- **Release signing is secret-gated** (`android.yml`): the fork's release key
+  lives in the `KEYSTORE_*` repo secrets (set 2026-11-08; the keystore backup
+  and its password were handed to the owner out-of-band — losing them means no
+  build can update an existing install). Nightlies are therefore signed and
+  install over one another. The nightly artifact is the **arm64-v8a phone APK
+  only** (`:app:assembleProdRelease -Pandroid.injected.build.abi=arm64-v8a`,
+  artifact `bitchord-prod-release-arm64-v8a-signed`): the armeabi/x86_64/
+  universal splits and the wear APK are deliberately not built or uploaded.
+  With the secrets absent (a PR from a fresh clone), the build scripts' own
+  absent-keystore path produces an unsigned release APK instead of failing.
 - **Protected files**: `applicationId` (`com.music.bitchord` dev/prod flavors) is
   upstream identity — never adopt changes that move the shipped package. The
   upstream `bitchord-auth` addon attestation and its server stay untouched.

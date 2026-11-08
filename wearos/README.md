@@ -40,8 +40,10 @@ the same signing key. So the watch app takes the phone app's ids:
 A watch build only finds a phone build of the same flavor **and** signed with
 the same key. Published phone APKs are signed in CI with the key from
 `secrets.KEYSTORE_BASE64`, which is not the keystore in a local checkout, so
-the prod watch APK for those phones has to come from CI too. `android.yml`
-uploads it as `bitchord-wear-prod-release-signed`.
+the prod watch APK for those phones has to come from CI too. The nightly
+pipeline (`android.yml`) ships only the phone's arm64-v8a APK, so the watch
+APK is produced by running `:wearos:assembleProdRelease` in CI with the same
+secrets, or locally with the release keystore.
 
 ## Build and install
 
