@@ -182,6 +182,7 @@ object SourceRegistry {
                 when (kind) {
                     SourceKind.TIDAL -> SourceConfig(kind = kind, qualityOptions = TidalSource.QUALITY_OPTIONS)
                     SourceKind.DEEZER -> SourceConfig(kind = kind, qualityOptions = DeezerSource.QUALITY_OPTIONS)
+                    SourceKind.QOBUZ -> SourceConfig(kind = kind, qualityOptions = QobuzSource.QUALITY_OPTIONS)
                     else -> SourceConfig(kind = kind)
                 }
             }
@@ -594,6 +595,7 @@ object SourceRegistry {
         SourceKind.MODULE -> ModuleSource(config)
         SourceKind.TIDAL -> TidalSource(config)
         SourceKind.DEEZER -> DeezerSource(config)
+        SourceKind.QOBUZ -> QobuzSource(config)
         SourceKind.JIOSAAVN -> JioSaavnSource(config)
         SourceKind.YOUTUBE -> YouTubeSource(config)
     }
@@ -642,6 +644,7 @@ object SourceRegistry {
     private val BUILT_IN_KINDS = listOf(
         SourceKind.TIDAL,
         SourceKind.DEEZER,
+        SourceKind.QOBUZ,
         SourceKind.JIOSAAVN,
         SourceKind.YOUTUBE,
     )

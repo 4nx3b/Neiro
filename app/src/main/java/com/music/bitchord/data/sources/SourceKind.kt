@@ -174,6 +174,28 @@ enum class SourceKind(
         rank = 2,
     ),
 
+    /**
+     * The listener's own Qobuz account, signed into on the Sources screen.
+     *
+     * Same tier again. Qobuz is the one catalogue whose lossless rungs go
+     * past everyone else's — MAX and Hi-Res are 24-bit — so its quality
+     * picker carries tiers the others don't offer.
+     *
+     * The credentials are the web player's own X-User-Auth-Token plus the
+     * app id and app secret its bundle carries, captured from the sign-in
+     * WebView; streams are ordinary signed HTTPS URLs, no decryption layer.
+     */
+    QOBUZ(
+        label = "Qobuz",
+        detail = "Your Qobuz account: FLAC up to 24-bit from the Qobuz catalogue, " +
+            "searched and streamed against the account you sign in with.",
+        labels = listOf("FLAC", "Lossless", "Hi-Res", "MAX"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = 2,
+    ),
+
     JIOSAAVN(
         label = "JioSaavn",
         detail = "Optional JioSaavn streams up to 320kbps AAC/MP4. Catalogue matching can select the wrong song.",

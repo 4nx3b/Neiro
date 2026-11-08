@@ -118,6 +118,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             com.music.bitchord.data.tidal.TidalService.init(this)
             com.music.bitchord.data.tidal.TidalAccountStore.init(this)
             com.music.bitchord.data.deezer.DeezerAccountStore.init(this)
+            com.music.bitchord.data.qobuz.QobuzAccountStore.init(this)
             AndroidStreamHooks.initInnerTubeX(this)
             // Its own directory: canvas clips are looping video, not audio, and
             // belong in a cache AudioCache's own limit and eviction policy were

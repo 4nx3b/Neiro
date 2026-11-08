@@ -79,6 +79,7 @@ import com.music.bitchord.data.sources.SourceHealth
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.deezer.DeezerAccountStore
+import com.music.bitchord.data.qobuz.QobuzAccountStore
 import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.ui.components.AddonEditorAlert
 import dev.chrisbanes.haze.HazeState
@@ -135,6 +136,10 @@ fun SourcesScreen(
     onSignInDeezer: () -> Unit,
     /** Opens the Deezer sign-out confirmation, raised for the same reason. */
     onSignOutDeezer: () -> Unit,
+    /** Opens the Qobuz account sign-in screen, raised for the same reason. */
+    onSignInQobuz: () -> Unit,
+    /** Opens the Qobuz sign-out confirmation, raised for the same reason. */
+    onSignOutQobuz: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -357,6 +362,29 @@ fun SourcesScreen(
                     null
                 },
                 onClick = if (deezerSignedIn) onSignOutDeezer else onSignInDeezer,
+            )
+        }
+
+        // The Qobuz account, same tier as the two above. Its lossless rungs go
+        // past everyone else's — MAX and Hi-Res are 24-bit — which is why its
+        // quality picker is the only one with more than three tiers.
+        val qobuzAccount by QobuzAccountStore.account.collectAsStateWithLifecycle()
+        val qobuzSignedIn = qobuzAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.qobuz_account),
+            footer = stringResource(R.string.qobuz_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.SurroundSound,
+                title = stringResource(R.string.qobuz_account),
+                subtitle = qobuzAccount?.label
+                    ?: stringResource(R.string.qobuz_not_signed_in),
+                value = if (qobuzAccount?.premium == true) {
+                    stringResource(R.string.qobuz_lossless_account)
+                } else {
+                    null
+                },
+                onClick = if (qobuzSignedIn) onSignOutQobuz else onSignInQobuz,
             )
         }
 
@@ -876,6 +904,7 @@ private fun SourceRow(
                 SourceKind.MODULE -> SfIcons.Extension
                 SourceKind.TIDAL -> SfIcons.Waves
                 SourceKind.DEEZER -> SfIcons.MusicNote
+                SourceKind.QOBUZ -> SfIcons.SurroundSound
                 SourceKind.JIOSAAVN -> SfIcons.GraphicEq // or some other icon
                 SourceKind.YOUTUBE -> SfIcons.PlayCircle
             },

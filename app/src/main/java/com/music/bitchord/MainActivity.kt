@@ -128,6 +128,7 @@ import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
 import com.music.bitchord.auth.TidalLoginScreen
 import com.music.bitchord.auth.DeezerLoginScreen
+import com.music.bitchord.auth.QobuzLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
@@ -275,6 +276,7 @@ import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.data.deezer.DeezerAccountStore
+import com.music.bitchord.data.qobuz.QobuzAccountStore
 import com.music.bitchord.ui.components.ChoiceAlert
 import com.music.bitchord.ui.components.ListenBrainzTokenAlert
 import com.music.bitchord.ui.components.MiniPlayer
@@ -657,6 +659,8 @@ private fun BitChordApp(
     var confirmTidalSignOut by remember { mutableStateOf(false) }
     var showDeezerLogin by remember { mutableStateOf(false) }
     var confirmDeezerSignOut by remember { mutableStateOf(false) }
+    var showQobuzLogin by remember { mutableStateOf(false) }
+    var confirmQobuzSignOut by remember { mutableStateOf(false) }
     var confirmBitPerfect by remember { mutableStateOf<BitPerfectMode?>(null) }
     var confirmFixedVolume by remember { mutableStateOf(false) }
     /** An addon search row tapped while the quality setting skips its addon; see [AddonBlockedAlert]. */
@@ -3081,6 +3085,8 @@ private fun BitChordApp(
                                 onSignOutTidal = { confirmTidalSignOut = true },
                                 onSignInDeezer = { showDeezerLogin = true },
                                 onSignOutDeezer = { confirmDeezerSignOut = true },
+                                onSignInQobuz = { showQobuzLogin = true },
+                                onSignOutQobuz = { confirmQobuzSignOut = true },
                             )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
@@ -6023,6 +6029,52 @@ private fun BitChordApp(
                     )
                 }
             }
+        }
+
+        if (showQobuzLogin) {
+            BackHandler { showQobuzLogin = false }
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { showQobuzLogin = false }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.close),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        Text(
+                            stringResource(R.string.qobuz_sign_in),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    QobuzLoginScreen(
+                        modifier = Modifier.navigationBarsPadding(),
+                        onConnected = { showQobuzLogin = false },
+                    )
+                }
+            }
+        }
+
+        if (confirmQobuzSignOut) {
+            ConfirmationAlert(
+                hazeState = hazeState,
+                title = stringResource(R.string.qobuz_sign_out_confirm_title),
+                description = stringResource(R.string.qobuz_sign_out_confirm_message),
+                confirmLabel = stringResource(R.string.qobuz_sign_out),
+                onConfirm = {
+                    QobuzAccountStore.signOut()
+                    confirmQobuzSignOut = false
+                },
+                onDismiss = { confirmQobuzSignOut = false },
+            )
         }
 
         if (confirmDeezerSignOut) {

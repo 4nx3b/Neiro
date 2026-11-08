@@ -962,6 +962,19 @@
     <string name="deezer_arl_apply">Dùng ARL này</string>
     <string name="deezer_arl_invalid">ARL đó không được Deezer chấp nhận</string>
     <string name="deezer_login_success">Đã đăng nhập với tư cách %1$s</string>
+    <string name="qobuz_account">Qobuz</string>
+    <string name="qobuz_account_footer">Tài khoản Qobuz của bạn phát FLAC lên đến 24 bit ở bất cứ nơi nào có bản ghi. Đăng nhập diễn ra trên play.qobuz.com; ứng dụng chỉ lưu token phiên và thông tin xác thực ứng dụng của trình phát.</string>
+    <string name="qobuz_not_signed_in">Chưa đăng nhập</string>
+    <string name="qobuz_sign_in">Đăng nhập bằng Qobuz</string>
+    <string name="qobuz_lossless_account">Không hao tổn</string>
+    <string name="qobuz_sign_out">Đăng xuất</string>
+    <string name="qobuz_sign_out_confirm_title">Đăng xuất khỏi Qobuz?</string>
+    <string name="qobuz_sign_out_confirm_message">Luồng Qobuz sẽ dừng cho đến khi bạn đăng nhập lại. Thư viện và hàng đợi của bạn không bị ảnh hưởng.</string>
+    <string name="qobuz_app_secret_title">Cần app secret</string>
+    <string name="qobuz_app_secret_hint">App secret của Qobuz (32 ký tự)</string>
+    <string name="qobuz_app_secret_apply">Dùng app secret này</string>
+    <string name="qobuz_credentials_invalid">Qobuz không chấp nhận thông tin xác thực đó</string>
+    <string name="qobuz_login_success">Đã đăng nhập vào Qobuz</string>
     <string name="enable_jiosaavn">Bật JioSaavn?</string>
     <string name="enable_anyway">Vẫn bật</string>
 
