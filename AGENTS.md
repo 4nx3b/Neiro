@@ -99,11 +99,18 @@ its own source system. Porting rules:
   and its password were handed to the owner out-of-band — losing them means no
   build can update an existing install). Nightlies are therefore signed and
   install over one another. The nightly artifact is the **arm64-v8a phone APK
-  only** (`:app:assembleProdRelease -Pandroid.injected.build.abi=arm64-v8a`,
-  artifact `bitchord-prod-release-arm64-v8a-signed`): the armeabi/x86_64/
-  universal splits and the wear APK are deliberately not built or uploaded.
-  With the secrets absent (a PR from a fresh clone), the build scripts' own
-  absent-keystore path produces an unsigned release APK instead of failing.
+  only** (`:app:assembleProdRelease -Pbitchord.abis=arm64-v8a`, artifact
+  `bitchord-prod-release-arm64-v8a-signed`). The `bitchord.abis` property
+  (comma-separated) narrows `:app`'s `splits.abi` at configuration time and
+  turns the universal split off — NEVER substitute AGP's
+  `android.injected.build.abi`: that IDE-deployment property is process-global
+  and reaches `:wearos`, where it leaves the module without its single normal
+  APK output and `bundleWearApkProdRelease` dies on "Expected exactly one
+  watch APK". The wear APK still builds and rides INSIDE the phone APK as the
+  in-app watch-install asset (Settings → Wear OS); it is just not uploaded as
+  a pipeline artifact of its own. With the secrets absent (a PR from a fresh
+  clone), the build scripts' own absent-keystore path produces an unsigned
+  release APK instead of failing.
 - **Protected files**: `applicationId` (`com.music.bitchord` dev/prod flavors) is
   upstream identity — never adopt changes that move the shipped package. The
   upstream `bitchord-auth` addon attestation and its server stay untouched.

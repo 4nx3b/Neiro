@@ -107,8 +107,18 @@ android {
         abi {
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86_64")
-            isUniversalApk = true
+            val restrictedAbis = providers.gradleProperty("bitchord.abis").orNull
+                ?.split(',')
+                ?.map(String::trim)
+                ?.filter(String::isNotEmpty)
+                ?.takeIf { it.isNotEmpty() }
+            if (restrictedAbis == null) {
+                include("armeabi-v7a", "arm64-v8a", "x86_64")
+                isUniversalApk = true
+            } else {
+                include(*restrictedAbis.toTypedArray())
+                isUniversalApk = false
+            }
         }
     }
 

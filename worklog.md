@@ -233,3 +233,51 @@ Stage Summary:
   Feature 2 of the expanded porting scope is CI-verified; on-device
   Libre.fm sign-in/scrobble verification pending user testing. Next in the
   pipeline per the task-3 roadmap: the Deezer source.
+
+---
+
+Task ID: 5
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Repair the nightly release pipeline after the signing + arm64-v8a-only
+change (commit 12a64bac) left `build-prod-release` red on dev.
+
+Work Log:
+- Read the failing run (42494542074) end to end: `:wearos:packageProdRelease`
+  and the whole wear build completed, and the only failure was
+  `:app:bundleWearApkProdRelease` — "Expected exactly one watch APK in
+  wearos/build/outputs/apk/prod/release". Check and TV were green on the same
+  sha, so the regression was confined to the release job's new build command.
+- Root cause: the command switched to
+  `:app:assembleProdRelease -Pandroid.injected.build.abi=arm64-v8a`. That
+  AGP property is the IDE-deployment channel and is process-global: it
+  reaches the `:wearos` module too, where the module has no abi splits of
+  its own, so the injected restriction leaves the watch bundling without its
+  single expected APK output. The phone app still wires
+  `bundleWearApk<Variant>` into its asset sources (the watch APK rides inside
+  the phone APK as the in-app watch-install feature), so the wear build is
+  always part of `:app:assembleProdRelease` and anything that disturbs the
+  wear module's output discovery breaks the phone build.
+- Fix: the ABI restriction now rides a fork-local property instead.
+  `app/build.gradle.kts` reads `bitchord.abis` (comma-separated) and, when
+  set, narrows `splits.abi` to exactly those ABIs at configuration time and
+  turns the universal split off; unset, the split matrix is byte-for-byte the
+  old one. The nightly builds with
+  `:app:assembleProdRelease -Pbitchord.abis=arm64-v8a`, which produces
+  exactly one phone APK (`*-arm64-v8a-release.apk`) and leaves `:wearos`
+  untouched. The workflow comment, the AGENTS.md signing invariant and
+  wearos/README.md now describe the property and the never-use-injected-abi
+  rule; the README also documents that nightlies still embed the watch APK
+  (Settings → Wear OS installs it from the phone), only the standalone watch
+  upload is gone.
+- Verified the local-file trigger lines are intact: the earlier
+  `branches: ain, dev]` reading was a display artifact of this session's tool
+  transport eating `[m` sequences, not repo content (boolean byte-probe
+  confirms `[main, dev]` is on disk; the Edit tool refuses to match the
+  "mangled" form). No changes made there.
+
+Stage Summary:
+- dev pushed with the pipeline repair; Check/Android/TV monitored for 7
+  minutes. The nightly contract after this task: signed arm64-v8a phone APK
+  only (artifact `bitchord-prod-release-arm64-v8a-signed`), watch APK embedded
+  in-phone but not uploaded, everything else discarded.

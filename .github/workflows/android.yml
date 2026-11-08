@@ -77,13 +77,19 @@ jobs:
 
     # The nightly artifact is the arm64-v8a phone APK only: that is the ABI
     # every phone this fork targets ships, and building the one split (not
-    # the armeabi/x86_64/universal siblings, not the watch app) keeps the
-    # per-push pipeline as short as it can be. The ABI restriction rides
-    # AGP's injected-build-abi, which narrows the enabled splits to exactly
-    # this one; the upload path below still matches on the file name so a
-    # packaging-name change can never let a wrong-ABI APK through.
+    # the armeabi/x86_64/universal siblings) keeps the per-push pipeline as
+    # short as it can be. The ABI restriction rides the fork's bitchord.abis
+    # Gradle property, which narrows :app's abi splits at configuration time.
+    # Never use AGP's android.injected.build.abi here: the IDE-deployment
+    # property is process-global, so it reaches :wearos too, where it leaves
+    # the phone's embedded watch-app bundling without its single APK output
+    # ("Expected exactly one watch APK"). The watch APK still rides inside
+    # the phone APK as the in-app watch install - it is just no longer a
+    # pipeline artifact of its own. The upload path below still matches on
+    # the file name so a packaging-name change can never let a wrong-ABI APK
+    # through.
     - name: Build Signed Prod Release APK (arm64-v8a)
-      run: ./gradlew :app:assembleProdRelease -Pandroid.injected.build.abi=arm64-v8a
+      run: ./gradlew :app:assembleProdRelease -Pbitchord.abis=arm64-v8a
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
