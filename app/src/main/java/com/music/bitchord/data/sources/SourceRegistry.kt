@@ -182,7 +182,7 @@ object SourceRegistry {
                 if (kind == SourceKind.TIDAL) {
                     SourceConfig(kind = kind, qualityOptions = TidalSource.QUALITY_OPTIONS)
                 } else {
-                    SourceConfig(kind = it)
+                    SourceConfig(kind = kind)
                 }
             }
 
