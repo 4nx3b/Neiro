@@ -90,14 +90,21 @@ class TidalSource(
     }
 
     /**
-     * The API tier to ask at: the lossless pick for a lossless request, and
-     * the best lossy tier for everything else, because a `Best` request means
-     * best *lossy* — the rungs below Lossless exist to cap what a metered
-     * connection pays for, and a FLAC is the one thing they never meant to buy.
+     * The API tier to ask at: the pick for a lossless request — an explicit
+     * Hi-Res or 16-bit choice, with a lossy pick read as "no lossless tier
+     * chosen" and no pick at all defaulting to 16-bit LOSSLESS rather than
+     * the list's first entry, because Hi-Res bandwidth is something to opt
+     * into, not to land in — and the best lossy tier for everything else,
+     * because a `Best` request means best *lossy*: the rungs below Lossless
+     * exist to cap what a metered connection pays for, and a FLAC is the one
+     * thing they never meant to buy.
      */
     internal fun tierFor(request: StreamRequest): String = when (request) {
-        is StreamRequest.Lossless -> config.activeQuality?.value?.takeIf { it != QUALITY_HIGH && it != QUALITY_LOW }
-            ?: QUALITY_LOSSLESS
+        is StreamRequest.Lossless ->
+            config.pickedQuality
+                ?.let { pick -> config.qualityOptions.firstOrNull { it.value == pick }?.value }
+                ?.takeIf { it != QUALITY_HIGH && it != QUALITY_LOW }
+                ?: QUALITY_LOSSLESS
         is StreamRequest.Best -> QUALITY_HIGH
         is StreamRequest.Capped -> QUALITY_HIGH
     }

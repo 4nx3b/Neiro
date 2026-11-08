@@ -940,6 +940,15 @@
     <string name="translation_language_subtitle">Follows the app language</string>
 
     <string name="jiosaavn_mismatch_warning">Có thể khớp nhầm phiên bản bài hát. Hãy tự chịu rủi ro khi bật.</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">Tài khoản Tidal của bạn phát FLAC tới 24 bit/192 kHz ở mọi nơi nó có bản thu. Đăng nhập diễn ra trên tidal.com; ứng dụng chỉ lưu token phiên.</string>
+    <string name="tidal_not_signed_in">Chưa đăng nhập</string>
+    <string name="tidal_sign_in">Đăng nhập bằng Tidal</string>
+    <string name="tidal_full_access">Truy cập đầy đủ</string>
+    <string name="tidal_session_limited">Phiên 1 giờ</string>
+    <string name="tidal_sign_out">Đăng xuất</string>
+    <string name="tidal_sign_out_confirm_title">Đăng xuất khỏi Tidal?</string>
+    <string name="tidal_sign_out_confirm_message">Luồng Tidal sẽ dừng cho đến khi bạn đăng nhập lại. Thư viện và hàng đợi của bạn không bị ảnh hưởng.</string>
     <string name="enable_jiosaavn">Bật JioSaavn?</string>
     <string name="enable_anyway">Vẫn bật</string>
 

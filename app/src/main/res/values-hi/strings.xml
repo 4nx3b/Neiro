@@ -463,6 +463,15 @@
     <string name="sources_order_header">स्रोत, इसी क्रम में आज़माए जाते हैं</string>
     <string name="sources_quality_capped">यह कनेक्शन हाई क्वालिटी से नीचे सेट है, इसलिए स्ट्रीम को उस सीमा में फिट करने के लिए ट्रांसकोड किया जाता है। डाउनलोड पर कोई असर नहीं पड़ता।</string>
     <string name="jiosaavn_mismatch_warning">गाने का गलत वर्शन मिल सकता है। अपने जोखिम पर चालू करें।</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">आपका Tidal अकाउंट जहाँ रिकॉर्डिंग उपलब्ध हो, वहाँ 24-बिट/192 kHz तक की FLAC स्ट्रीम करता है। साइन-इन tidal.com पर होता है; ऐप केवल सेशन टोकन संग्रहीत करता है।</string>
+    <string name="tidal_not_signed_in">साइन इन नहीं है</string>
+    <string name="tidal_sign_in">Tidal से साइन इन करें</string>
+    <string name="tidal_full_access">पूर्ण एक्सेस</string>
+    <string name="tidal_session_limited">1 घंटे का सेशन</string>
+    <string name="tidal_sign_out">साइन आउट करें</string>
+    <string name="tidal_sign_out_confirm_title">Tidal से साइन आउट करें?</string>
+    <string name="tidal_sign_out_confirm_message">दोबारा साइन इन करने तक Tidal स्ट्रीम रुक जाएँगे। आपकी लाइब्रेरी और क्यू प्रभावित नहीं होंगे।</string>
     <string name="enable_jiosaavn">JioSaavn चालू करें?</string>
     <string name="enable_anyway">फिर भी चालू करें</string>
     <string name="sources_subtitle">ऑडियो कहां से आता है और किस क्रम में इस्तेमाल होता है</string>

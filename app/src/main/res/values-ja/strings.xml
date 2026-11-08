@@ -449,6 +449,15 @@
     <string name="sources_order_header">ソース（この順番で試行）</string>
     <string name="sources_quality_capped">この接続は「高音質」より低く設定されているため、ストリームはその上限に合わせてトランスコードされます。ダウンロードには影響しません。</string>
     <string name="jiosaavn_mismatch_warning">曲の別バージョンに一致してしまうことがあります。自己責任で有効にしてください。</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">Tidal アカウントは、楽曲を保持している場合に最大 24 ビット/192 kHz の FLAC をストリーミングします。ログインは tidal.com 上で行われ、アプリが保存するのはセッショントークンのみです。</string>
+    <string name="tidal_not_signed_in">ログインしていません</string>
+    <string name="tidal_sign_in">Tidal でログイン</string>
+    <string name="tidal_full_access">フルアクセス</string>
+    <string name="tidal_session_limited">1 時間セッション</string>
+    <string name="tidal_sign_out">ログアウト</string>
+    <string name="tidal_sign_out_confirm_title">Tidal からログアウトしますか？</string>
+    <string name="tidal_sign_out_confirm_message">再度ログインするまで Tidal のストリーミングは停止します。ライブラリとキューには影響しません。</string>
     <string name="enable_jiosaavn">JioSaavnを有効にしますか？</string>
     <string name="enable_anyway">有効にする</string>
     <string name="sources_subtitle">音声の取得元と使用する順序</string>

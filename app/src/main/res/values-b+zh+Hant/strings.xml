@@ -448,6 +448,15 @@
     <string name="sources_order_header">來源，按此順序嘗試</string>
     <string name="sources_quality_capped">此連線的設定低於高品質，因此串流會被轉碼以符合該限制，下載不受影響。</string>
     <string name="jiosaavn_mismatch_warning">可能匹配到歌曲的錯誤版本。啟用風險自負。</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">你的 Tidal 帳號在擁有曲目的地方提供最高 24 位元/192 kHz 的 FLAC 串流。登入會在 tidal.com 上進行；應用程式只儲存工作階段權杖。</string>
+    <string name="tidal_not_signed_in">尚未登入</string>
+    <string name="tidal_sign_in">使用 Tidal 登入</string>
+    <string name="tidal_full_access">完整存取</string>
+    <string name="tidal_session_limited">1 小時工作階段</string>
+    <string name="tidal_sign_out">登出</string>
+    <string name="tidal_sign_out_confirm_title">登出 Tidal？</string>
+    <string name="tidal_sign_out_confirm_message">重新登入前，Tidal 串流將會停止。你的媒體庫和佇列不受影響。</string>
     <string name="enable_jiosaavn">啟用 JioSaavn？</string>
     <string name="enable_anyway">仍然啟用</string>
     <string name="sources_subtitle">音訊的來源及使用順序</string>

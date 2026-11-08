@@ -482,6 +482,15 @@
     <string name="sources_order_header">Источники, пробуются в этом порядке</string>
     <string name="sources_quality_capped">Это соединение установлено ниже высокого качества, поэтому потоки перекодируются под это ограничение. На загрузки это не влияет.</string>
     <string name="jiosaavn_mismatch_warning">Может подобрать не ту версию песни. Включайте на свой страх и риск.</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">Ваш аккаунт Tidal транслирует FLAC до 24 бит/192 кГц там, где у него есть запись. Вход выполняется на tidal.com; приложение хранит только токен сессии.</string>
+    <string name="tidal_not_signed_in">Вход не выполнен</string>
+    <string name="tidal_sign_in">Войти через Tidal</string>
+    <string name="tidal_full_access">Полный доступ</string>
+    <string name="tidal_session_limited">Сессия на 1 час</string>
+    <string name="tidal_sign_out">Выйти</string>
+    <string name="tidal_sign_out_confirm_title">Выйти из Tidal?</string>
+    <string name="tidal_sign_out_confirm_message">Потоки Tidal остановятся, пока вы не войдёте снова. Ваша библиотека и очереди не затронуты.</string>
     <string name="enable_jiosaavn">Включить JioSaavn?</string>
     <string name="enable_anyway">Всё равно включить</string>
     <string name="sources_subtitle">Откуда поступает аудио и в каком порядке</string>

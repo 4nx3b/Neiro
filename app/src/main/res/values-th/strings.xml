@@ -477,6 +477,15 @@
     <string name="sources_order_header">แหล่งข้อมูล เรียงตามลำดับที่ลอง</string>
     <string name="sources_quality_capped">การเชื่อมต่อนี้ตั้งไว้ต่ำกว่าคุณภาพสูง สตรีมจึงถูกแปลงให้พอดีกับขีดจำกัดนั้น การดาวน์โหลดไม่ได้รับผลกระทบ</string>
     <string name="jiosaavn_mismatch_warning">อาจจับคู่กับเพลงผิดเวอร์ชัน เปิดใช้โดยยอมรับความเสี่ยงเอง</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">บัญชี Tidal ของคุณสตรีม FLAC ได้สูงสุด 24 บิต/192 kHz ในที่ที่มีเพลงนั้น การลงชื่อเข้าใช้เกิดขึ้นบน tidal.com แอปเก็บเพียงโทเคนเซสชันเท่านั้น</string>
+    <string name="tidal_not_signed_in">ยังไม่ได้ลงชื่อเข้าใช้</string>
+    <string name="tidal_sign_in">ลงชื่อเข้าใช้ด้วย Tidal</string>
+    <string name="tidal_full_access">เข้าถึงแบบเต็มรูปแบบ</string>
+    <string name="tidal_session_limited">เซสชัน 1 ชั่วโมง</string>
+    <string name="tidal_sign_out">ออกจากระบบ</string>
+    <string name="tidal_sign_out_confirm_title">ออกจากระบบ Tidal หรือไม่?</string>
+    <string name="tidal_sign_out_confirm_message">สตรีม Tidal จะหยุดจนกว่าคุณจะลงชื่อเข้าใช้อีกครั้ง คลังและคิวของคุณไม่ได้รับผลกระทบ</string>
     <string name="enable_jiosaavn">เปิดใช้ JioSaavn หรือไม่</string>
     <string name="enable_anyway">เปิดใช้ต่อไป</string>
     <string name="sources_subtitle">เสียงมาจากที่ใดและลำดับที่ใช้</string>

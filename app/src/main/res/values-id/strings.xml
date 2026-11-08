@@ -449,6 +449,15 @@
     <string name="sources_order_header">Sumber, dicoba dalam urutan ini</string>
     <string name="sources_quality_capped">Koneksi ini diatur di bawah Kualitas tinggi, sehingga stream ditranskode agar sesuai dengan batas tersebut. Unduhan tidak terpengaruh.</string>
     <string name="jiosaavn_mismatch_warning">Bisa mencocokkan versi lagu yang salah. Aktifkan dengan risiko sendiri.</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">Akun Tidal Anda mengalirkan FLAC hingga 24 bit/192 kHz bila rekamannya tersedia. Login dilakukan di tidal.com; aplikasi hanya menyimpan token sesi.</string>
+    <string name="tidal_not_signed_in">Belum masuk</string>
+    <string name="tidal_sign_in">Masuk dengan Tidal</string>
+    <string name="tidal_full_access">Akses penuh</string>
+    <string name="tidal_session_limited">Sesi 1 jam</string>
+    <string name="tidal_sign_out">Keluar</string>
+    <string name="tidal_sign_out_confirm_title">Keluar dari Tidal?</string>
+    <string name="tidal_sign_out_confirm_message">Streaming Tidal berhenti sampai Anda masuk lagi. Pustaka dan antrean Anda tidak terpengaruh.</string>
     <string name="enable_jiosaavn">Aktifkan JioSaavn?</string>
     <string name="enable_anyway">Tetap aktifkan</string>
     <string name="sources_subtitle">Dari mana audio berasal dan urutan yang digunakan</string>

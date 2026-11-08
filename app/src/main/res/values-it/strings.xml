@@ -510,6 +510,15 @@
     <string name="sources_order_header">Sorgenti, provate in quest\'ordine</string>
     <string name="sources_quality_capped">Questa connessione è impostata sotto Alta qualità, quindi gli stream vengono transcodificati per rispettare questo limite. I download non ne risentono.</string>
     <string name="jiosaavn_mismatch_warning">Potrebbe trovare la versione sbagliata di un brano. Attivalo a tuo rischio.</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">Il tuo account Tidal trasmette FLAC fino a 24 bit/192 kHz ovunque abbia la registrazione. L\'accesso avviene su tidal.com; l\'app conserva solo il token di sessione.</string>
+    <string name="tidal_not_signed_in">Non connesso</string>
+    <string name="tidal_sign_in">Accedi con Tidal</string>
+    <string name="tidal_full_access">Accesso completo</string>
+    <string name="tidal_session_limited">Sessione di 1 ora</string>
+    <string name="tidal_sign_out">Esci</string>
+    <string name="tidal_sign_out_confirm_title">Uscire da Tidal?</string>
+    <string name="tidal_sign_out_confirm_message">Gli stream di Tidal si fermano finché non accedi di nuovo. La tua libreria e le code restano invariate.</string>
     <string name="enable_jiosaavn">Attivare JioSaavn?</string>
     <string name="enable_anyway">Attiva comunque</string>
     <string name="sources_subtitle">Da dove proviene l\'audio e l\'ordine usato</string>

@@ -492,6 +492,15 @@
     <string name="sources_order_header">Kaynaklar, bu sırayla denenir</string>
     <string name="sources_quality_capped">Bu bağlantı Yüksek kalitenin altına ayarlandığından, akışlar bu sınıra uyacak şekilde yeniden kodlanır. İndirmeler etkilenmez.</string>
     <string name="jiosaavn_mismatch_warning">Bir şarkının yanlış sürümünü eşleştirebilir. Riski sana ait olmak üzere etkinleştir.</string>
+    <string name="tidal_account">Tidal</string>
+    <string name="tidal_account_footer">Tidal hesabın, kaydı bulunduğu her yerde 24 bit/192 kHz\'e kadar FLAC akıtır. Giriş tidal.com üzerinde yapılır; uygulama yalnızca oturum jetonunu saklar.</string>
+    <string name="tidal_not_signed_in">Oturum açılmadı</string>
+    <string name="tidal_sign_in">Tidal ile oturum aç</string>
+    <string name="tidal_full_access">Tam erişim</string>
+    <string name="tidal_session_limited">1 saatlik oturum</string>
+    <string name="tidal_sign_out">Oturumu kapat</string>
+    <string name="tidal_sign_out_confirm_title">Tidal oturumu kapatılsın mı?</string>
+    <string name="tidal_sign_out_confirm_message">Tekrar oturum açana kadar Tidal akışları durur. Kitaplığın ve kuyrukların etkilenmez.</string>
     <string name="enable_jiosaavn">JioSaavn etkinleştirilsin mi?</string>
     <string name="enable_anyway">Yine de etkinleştir</string>
     <string name="sources_subtitle">Sesin nereden geldiği ve kullanılan sıra</string>
