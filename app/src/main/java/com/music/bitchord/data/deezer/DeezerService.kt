@@ -161,7 +161,7 @@ object DeezerService {
         arl: String,
         apiToken: String,
         method: String,
-        payload: JSONObject?,
+        payload: JSONObject? = null,
     ): String {
         val url = GATEWAY.toHttpUrl().newBuilder()
             .addQueryParameter("method", method)
