@@ -117,7 +117,7 @@ object TidalService {
         val challenge = base64UrlNoPad(
             MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)),
         )
-        val uniqueKey = ByteArray(8).also(random::nextBytes())
+        val uniqueKey = ByteArray(8).also(random::nextBytes)
             .joinToString("") { "%02x".format(it) }
         fun enc(value: String) = URLEncoder.encode(value, "UTF-8")
         val authUrl = buildString {
@@ -386,10 +386,10 @@ object TidalService {
         val text = runCatching {
             String(java.util.Base64.getDecoder().decode(manifestB64.trim()), Charsets.UTF_8).trim()
         }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
-        return if (text.startsWith("{")) decodeJsonManifest(text) else decodeDashManifest(text, trackId, quality)
+        return if (text.startsWith("{")) decodeJsonManifest(text, durationSec) else decodeDashManifest(text, trackId, quality)
     }
 
-    private fun decodeJsonManifest(text: String): DecodedManifest? {
+    private fun decodeJsonManifest(text: String, durationSec: Int?): DecodedManifest? {
         val root = runCatching { JSONObject(text) }.getOrNull() ?: return null
         val urls = root.optJSONArray("urls") ?: return null
         val url = (0 until urls.length()).firstNotNullOfOrNull { urls.optString(it).takeIf(String::isNotBlank) }

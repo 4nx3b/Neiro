@@ -121,6 +121,9 @@ object TidalAccountStore {
         prefs.edit().clear().apply()
     }
 
+    /** The account's standing, as the subscription endpoint last told it. */
+    enum class Subscription { PREMIUM, FREE, UNKNOWN }
+
     class UnauthorizedException : Exception("Tidal rejected the access token (401)")
 
     /**

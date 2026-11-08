@@ -82,8 +82,13 @@ target_link_options(bitchord_dst PRIVATE "-Wl,-z,max-page-size=16384")
 # Oboe is Apache-2.0; exclusive_output.cpp is adapted from Mornye (LGPL-3.0).
 include(FetchContent)
 set(OBOE_DISABLE_CONVERSION ON CACHE BOOL "" FORCE)
+# Two URLs, tried in order, both pinned by the same hash: the fork's own
+# release-asset mirror first (GitHub's archive host has flaked with 504s on
+# the CI runners), the canonical upstream archive second. Identical bytes —
+# URL_HASH rejects anything else.
 FetchContent_Declare(oboe
-    URL https://github.com/google/oboe/archive/refs/tags/1.11.0.tar.gz
+    URL https://github.com/4nx3b/Neiro/releases/download/deps/oboe-1.11.0.tar.gz
+         https://github.com/google/oboe/archive/refs/tags/1.11.0.tar.gz
     URL_HASH SHA256=0ccf2110640a2b4489f1c93a404f2978656b434d8c5dc9cb6258f9cc95c79b15)
 FetchContent_MakeAvailable(oboe)
 

@@ -36,7 +36,7 @@ import androidx.media3.common.audio.SonicAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
-import androidx.media3.datasource.BaseDataSource
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.FileDataSource
 import androidx.media3.datasource.ResolvingDataSource
@@ -54,7 +54,6 @@ import androidx.media3.exoplayer.audio.SilenceSkippingAudioProcessor
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.upstream.BandwidthMeter
@@ -1732,7 +1731,7 @@ class PlaybackService : MediaLibraryService() {
             // [SmbDataSource.RoutingFactory], one level down: it sits *under*
             // the resolver rather than over it, which is the only place the
             // resolved scheme exists at all.
-            object : BaseDataSource.Factory() {
+            object : DataSource.Factory {
                 override fun createDataSource(): DataSource =
                     ResolvedFileRoutingDataSource(chunkedFactory.createDataSource())
             },
