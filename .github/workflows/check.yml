@@ -9,6 +9,14 @@ concurrency:
   group: check-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The Gradle wrapper JVM does not read gradle.properties, and its own
+# connect timeout is a hardcoded 10s. Runners whose IPv6 route to the
+# distribution CDN is blackholed die inside it; forcing IPv4 for every
+# JVM the workflow starts (wrapper included) keeps the download on the
+# route that answers.
+env:
+  JAVA_TOOL_OPTIONS: -Djava.net.preferIPv4Stack=true
+
 jobs:
   android:
     name: Android
