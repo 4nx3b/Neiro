@@ -949,6 +949,19 @@
     <string name="tidal_sign_out">Đăng xuất</string>
     <string name="tidal_sign_out_confirm_title">Đăng xuất khỏi Tidal?</string>
     <string name="tidal_sign_out_confirm_message">Luồng Tidal sẽ dừng cho đến khi bạn đăng nhập lại. Thư viện và hàng đợi của bạn không bị ảnh hưởng.</string>
+    <string name="deezer_account">Deezer</string>
+    <string name="deezer_account_footer">Tài khoản Deezer của bạn phát FLAC và MP3 từ danh mục Deezer ở bất cứ nơi nào có bản ghi. Đăng nhập diễn ra trên deezer.com; ứng dụng chỉ lưu cookie phiên.</string>
+    <string name="deezer_not_signed_in">Chưa đăng nhập</string>
+    <string name="deezer_sign_in">Đăng nhập bằng Deezer</string>
+    <string name="deezer_lossless_account">Không hao tổn</string>
+    <string name="deezer_sign_out">Đăng xuất</string>
+    <string name="deezer_sign_out_confirm_title">Đăng xuất khỏi Deezer?</string>
+    <string name="deezer_sign_out_confirm_message">Luồng Deezer sẽ dừng cho đến khi bạn đăng nhập lại. Thư viện và hàng đợi của bạn không bị ảnh hưởng.</string>
+    <string name="deezer_arl_paste">Dán cookie phiên (ARL)</string>
+    <string name="deezer_arl_hint">Deezer không khả dụng ở mọi quốc gia. Đăng nhập từ trình duyệt bất kỳ, sao chép giá trị cookie arl và dán vào đây.</string>
+    <string name="deezer_arl_apply">Dùng ARL này</string>
+    <string name="deezer_arl_invalid">ARL đó không được Deezer chấp nhận</string>
+    <string name="deezer_login_success">Đã đăng nhập với tư cách %1$s</string>
     <string name="enable_jiosaavn">Bật JioSaavn?</string>
     <string name="enable_anyway">Vẫn bật</string>
 

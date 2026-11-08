@@ -150,6 +150,30 @@ enum class SourceKind(
         rank = 2,
     ),
 
+    /**
+     * The listener's own Deezer account, signed into on the Sources screen.
+     *
+     * Same tier and the same reasoning as [TIDAL]: when both hold the
+     * recording, FLAC beats 320kbps AAC — and which of the two is asked
+     * first is decided by their order among the fixed kinds, not by a drag.
+     *
+     * The account is the `arl` session cookie deezer.com sets on a signed-in
+     * browser, so there is no refresh machinery: an ARL works until Deezer
+     * stands it down, and then the sources screen says sign in again. Streams
+     * the account mints are Blowfish-striped and decrypt in flight — see
+     * [DeezerDecryptingDataSource][com.music.bitchord.data.deezer.DeezerDecryptingDataSource].
+     */
+    DEEZER(
+        label = "Deezer",
+        detail = "Your Deezer account: FLAC and MP3 from the Deezer catalogue, " +
+            "searched and streamed against the account you sign in with.",
+        labels = listOf("FLAC", "Lossless", "320kbps"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = 2,
+    ),
+
     JIOSAAVN(
         label = "JioSaavn",
         detail = "Optional JioSaavn streams up to 320kbps AAC/MP4. Catalogue matching can select the wrong song.",

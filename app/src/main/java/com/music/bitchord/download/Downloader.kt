@@ -2,6 +2,7 @@ package com.music.bitchord.download
 
 import com.music.bitchord.data.DebugLog as Log
 import com.music.bitchord.data.Http
+import com.music.bitchord.data.deezer.DeezerService
 import com.music.bitchord.data.innertube.PlayerClient
 import com.music.bitchord.data.innertube.StreamResolver
 import kotlinx.coroutines.CancellationException
@@ -178,6 +179,11 @@ object Downloader {
         if (url.startsWith("file:")) {
             return@withContext copyLocal(url, sink, onProgress)
         }
+        if (url.startsWith("deezer:")) {
+            val ref = DeezerService.parseStreamUri(url)
+                ?: error("Download failed: unreadable Deezer stream URI")
+            return@withContext DeezerService.fetchDecrypted(ref, sink, onProgress)
+        }
         val request = Request.Builder().url(url)
             .apply { headers.forEach { (name, value) -> header(name, value) } }
             .build()
@@ -271,6 +277,9 @@ object Downloader {
         if (url.startsWith("file:")) {
             return@withContext localProbe(url, statedCodec)
         }
+        if (url.startsWith("deezer:")) {
+            return@withContext deezerProbe(url, statedCodec)
+        }
         runCatching {
             val request = Request.Builder().url(url)
                 .header("Range", "bytes=0-${PROBE_BYTES - 1}")
@@ -337,6 +346,19 @@ object Downloader {
                 sniff(head.copyOf(read), "", statedCodec, file.length().takeIf { it > 0 })
             }
         }.getOrNull()
+    }
+
+    /**
+     * [probe] for a Deezer stream, whose opening bytes are Blowfish-striped
+     * and arrive meaningless until the first chunk has been decrypted with
+     * the track's key — see [DeezerService.probeDecryptedHead]. The judgement
+     * is the same [sniff] every other probe makes, on the plain bytes.
+     */
+    private suspend fun deezerProbe(url: String, statedCodec: String?): Probe? {
+        val ref = DeezerService.parseStreamUri(url) ?: return null
+        val probed = DeezerService.probeDecryptedHead(ref, PROBE_BYTES) ?: return null
+        val (head, total) = probed
+        return sniff(head, "", statedCodec, total)
     }
 
     /** [probe]'s judgement, apart from the request so it can be tested on bytes alone. */

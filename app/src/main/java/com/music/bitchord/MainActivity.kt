@@ -127,6 +127,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
 import com.music.bitchord.auth.TidalLoginScreen
+import com.music.bitchord.auth.DeezerLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
@@ -273,6 +274,7 @@ import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.tidal.TidalAccountStore
+import com.music.bitchord.data.deezer.DeezerAccountStore
 import com.music.bitchord.ui.components.ChoiceAlert
 import com.music.bitchord.ui.components.ListenBrainzTokenAlert
 import com.music.bitchord.ui.components.MiniPlayer
@@ -653,6 +655,8 @@ private fun BitChordApp(
     var confirmJioSaavn by remember { mutableStateOf(false) }
     var showTidalLogin by remember { mutableStateOf(false) }
     var confirmTidalSignOut by remember { mutableStateOf(false) }
+    var showDeezerLogin by remember { mutableStateOf(false) }
+    var confirmDeezerSignOut by remember { mutableStateOf(false) }
     var confirmBitPerfect by remember { mutableStateOf<BitPerfectMode?>(null) }
     var confirmFixedVolume by remember { mutableStateOf(false) }
     /** An addon search row tapped while the quality setting skips its addon; see [AddonBlockedAlert]. */
@@ -3075,6 +3079,8 @@ private fun BitChordApp(
                                 onConfirmJioSaavn = { confirmJioSaavn = true },
                                 onSignInTidal = { showTidalLogin = true },
                                 onSignOutTidal = { confirmTidalSignOut = true },
+                                onSignInDeezer = { showDeezerLogin = true },
+                                onSignOutDeezer = { confirmDeezerSignOut = true },
                             )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
@@ -5984,6 +5990,52 @@ private fun BitChordApp(
                     confirmJioSaavn = false
                 },
                 onDismiss = { confirmJioSaavn = false },
+            )
+        }
+
+        if (showDeezerLogin) {
+            BackHandler { showDeezerLogin = false }
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { showDeezerLogin = false }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.close),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        Text(
+                            stringResource(R.string.deezer_sign_in),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    DeezerLoginScreen(
+                        modifier = Modifier.navigationBarsPadding(),
+                        onConnected = { showDeezerLogin = false },
+                    )
+                }
+            }
+        }
+
+        if (confirmDeezerSignOut) {
+            ConfirmationAlert(
+                hazeState = hazeState,
+                title = stringResource(R.string.deezer_sign_out_confirm_title),
+                description = stringResource(R.string.deezer_sign_out_confirm_message),
+                confirmLabel = stringResource(R.string.deezer_sign_out),
+                onConfirm = {
+                    DeezerAccountStore.signOut()
+                    confirmDeezerSignOut = false
+                },
+                onDismiss = { confirmDeezerSignOut = false },
             )
         }
 

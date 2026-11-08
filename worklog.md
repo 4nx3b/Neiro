@@ -281,3 +281,69 @@ Stage Summary:
   minutes. The nightly contract after this task: signed arm64-v8a phone APK
   only (artifact `bitchord-prod-release-arm64-v8a-signed`), watch APK embedded
   in-phone but not uploaded, everything else discarded.
+
+---
+
+Task ID: 6
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Port the Deezer source — task 3's roadmap item (a) — end-to-end onto
+BitChord's source machinery: ARL sign-in, search, tiered streams, in-flight
+decryption, downloads, and the sources-screen integration.
+
+Work Log:
+- Researched ArchiveTune's deezer package first (DeezerCrypto, the 1033-line
+  DeezerAudioProvider, DeezerDecryptingDataSource, DeezerInstances) and the
+  pool machinery it leans on, then mapped it onto the contracts the Tidal port
+  established instead of transplanting them.
+- `data/deezer/DeezerCrypto.kt`: the Blowfish/CBC stripe (2048-byte chunks,
+  every third starting at zero, key = MD5(trackId) hex XOR the salt), with
+  buildUri/parseUri in pure Kotlin — android.net.Uri returns nulls under the
+  stubbed JVM test jar, so the URI layer had to be framework-free to be
+  testable at all.
+- `data/deezer/DeezerService.kt`: the gw-light.php gateway with the arl cookie,
+  the 45-minute session (checkForm api_token + license_token + lossless flags),
+  public-API search with a gateway fallback, song.getData + media.deezer.com
+  get_url with the BF_CBC_STRIPE cipher ladder (FLAC falls to 320 on a
+  standard account), the three anonymous resolvers as a signed-in fallback
+  (their expiry honoured in the stream cache), ISRC lookup, and the decrypting
+  probe/fetch helpers downloads need. Stream/failure caches mirror the
+  ArchiveTune TTLs (30 min / 10 min).
+- `data/deezer/DeezerAccountStore.kt` + `auth/DeezerLoginScreen.kt`: the
+  encrypted arl store and the sign-in surface — a WebView that watches for the
+  arl cookie plus the manual-ARL paste field underneath, because Deezer is
+  geo-fenced and the cookie never appears in exactly the countries that need
+  the escape hatch. Both paths verify through deezer.getUserData before
+  anything is stored. Hosted as a root overlay in MainActivity exactly like
+  the Tidal login.
+- `data/sources/DeezerSource.kt` + `SourceKind.DEEZER` (rank 2 beside Tidal,
+  canServeLossless, worthPrefetching) + registry seeding with the
+  FLAC/MP3_320/MP3_128 quality options. Signed out, search and stream answer
+  nothing and health says why — the anonymous resolvers are a fallback for a
+  signed-in session whose get_url failed, not a default-on catalogue.
+- Playback: no new playback code. `ResolvedFileRoutingDataSource` grew a
+  `deezer` branch routing to `DeezerDecryptingDataSource` over the same chunked
+  client, so the resolver's `deezer://stream` answer decrypts under the
+  cache — the cache stores PLAIN bytes under the phone key, and seeking,
+  read-ahead, quality upgrade and the watch speaker need no Deezer-specific
+  code. Downloads: `Downloader.probe`/`fetchDirect` grew deezer branches that
+  decrypt (the probe has to — chunk zero is encrypted, so the container sniff
+  sees "fLaC" only after decryption).
+- Strings: 13 new keys translated into all 19 locale catalogues plus English
+  (values-hi and the parallel zh-Hant trio included). LocaleStringsTest
+  enforces the parity.
+- Tests (DeezerSourceTest): key derivation determinism and track-binding,
+  short-salt fallback, chunk schedule, in-place decrypt round trip, URI round
+  trip incl. custom salt and rejection cases, user-data/session/search/get_url/
+  anonymous-resolver payload decodes, resolver ordering, the tier ladder, the
+  request->format mapping, the FLAC stream shape, the decrypting head, and an
+  end-to-end decrypting fetch over a striped MockWebServer body.
+- Self-review fixes before pushing: a val-shadowing compile error in
+  resolveWithAccount's failure path, the CookieManager third-party-cookie call
+  binding to the wrong receiver in the login WebView, and unused imports.
+
+Stage Summary:
+- Pushed to dev for CI (Check 1271+13 unit tests + assembleDevDebug + Go; TV on
+  the code-touching sha; the signed arm64-v8a nightly pipeline). On-device
+  sign-in, FLAC playback and download verification pending user testing. Next
+  in the roadmap: the Qobuz source.

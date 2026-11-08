@@ -75,6 +75,28 @@ its own source system. Porting rules:
   ArchiveTune — those constants are protocol, do not change them. Tests:
   `TidalSourceTest` (manifest decode, tier selection, token payload, the local
   MPD download through a real MockWebServer).
+- **Deezer source**: `app/.../data/deezer/` (`DeezerCrypto` — the
+  Blowfish/CBC stripe over 2048-byte chunks, every third chunk starting at
+  zero, key = MD5(trackId) hex XOR the salt `g4el58wc0zvf9na1`, and the
+  `deezer://stream?u=&k=&s=` URI built/parsed in pure Kotlin so the JVM tests
+  reach it; `DeezerService` — gw-light.php gateway with the arl cookie, the
+  45-minute session (checkForm api_token + license_token), public-API search
+  with gateway fallback, `media.deezer.com/v1/get_url` with the
+  BF_CBC_STRIPE cipher ladder, the three anonymous resolvers as the
+  signed-in fallback, ISRC lookup, and the decrypting probe/fetch for
+  downloads; `DeezerAccountStore` — the encrypted arl + account name +
+  lossless flag; `DeezerDecryptingDataSource` — the Media3 DataSource) +
+  `data/sources/DeezerSource.kt` + `SourceKind.DEEZER` (rank 2, beside Tidal).
+  The account is the `arl` cookie deezer.com sets — no refresh machinery, an
+  ARL works until it is stood down. Signed out, search and stream answer
+  nothing (the anonymous resolvers are a signed-in fallback, not a
+  default-on catalogue). Streams answer `deezer://stream?...`, which
+  `ResolvedFileRoutingDataSource` routes to the decrypting DataSource under
+  the resolver, so the cache stores PLAIN bytes under the phone key and
+  downloads ride `Downloader.probe`/`fetchDirect`'s deezer branches with no
+  Deezer-specific code outside the deezer package. Tests: `DeezerSourceTest`
+  (key derivation, chunk schedule, URI round trip, payload decodes, tier
+  ladder, the decrypting download over a striped MockWebServer body).
 - **CI dependency mirrors** (GitHub's archive/release CDN flakes on the
   runners): the Gradle wrapper downloads from the gradle-distributions GitHub
   mirror and the workflows pre-seed it with a patient curl; CMake's Oboe and

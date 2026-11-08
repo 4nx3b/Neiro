@@ -78,6 +78,7 @@ import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceHealth
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.data.deezer.DeezerAccountStore
 import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.ui.components.AddonEditorAlert
 import dev.chrisbanes.haze.HazeState
@@ -130,6 +131,10 @@ fun SourcesScreen(
     onSignInTidal: () -> Unit,
     /** Opens the sign-out confirmation, raised for the same reason. */
     onSignOutTidal: () -> Unit,
+    /** Opens the Deezer account sign-in screen, raised for the same reason. */
+    onSignInDeezer: () -> Unit,
+    /** Opens the Deezer sign-out confirmation, raised for the same reason. */
+    onSignOutDeezer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -329,6 +334,29 @@ fun SourcesScreen(
                     else -> stringResource(R.string.tidal_session_limited)
                 },
                 onClick = if (tidalSignedIn) onSignOutTidal else onSignInTidal,
+            )
+        }
+
+        // The Deezer account, one tier down from Tidal for the same reason the
+        // source ranks sit that way — both hold the recording, and Tidal's
+        // FLAC is the copy this fork has shipped the longest.
+        val deezerAccount by DeezerAccountStore.account.collectAsStateWithLifecycle()
+        val deezerSignedIn = deezerAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.deezer_account),
+            footer = stringResource(R.string.deezer_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.MusicNote,
+                title = stringResource(R.string.deezer_account),
+                subtitle = deezerAccount?.name
+                    ?: stringResource(R.string.deezer_not_signed_in),
+                value = if (deezerAccount?.lossless == true) {
+                    stringResource(R.string.deezer_lossless_account)
+                } else {
+                    null
+                },
+                onClick = if (deezerSignedIn) onSignOutDeezer else onSignInDeezer,
             )
         }
 
@@ -847,6 +875,7 @@ private fun SourceRow(
                 SourceKind.CUSTOM_MODULE -> SfIcons.Extension
                 SourceKind.MODULE -> SfIcons.Extension
                 SourceKind.TIDAL -> SfIcons.Waves
+                SourceKind.DEEZER -> SfIcons.MusicNote
                 SourceKind.JIOSAAVN -> SfIcons.GraphicEq // or some other icon
                 SourceKind.YOUTUBE -> SfIcons.PlayCircle
             },

@@ -179,10 +179,10 @@ object SourceRegistry {
         val seeded = stored + BUILT_IN_KINDS
             .filter { kind -> stored.none { it.kind == kind } }
             .map { kind ->
-                if (kind == SourceKind.TIDAL) {
-                    SourceConfig(kind = kind, qualityOptions = TidalSource.QUALITY_OPTIONS)
-                } else {
-                    SourceConfig(kind = kind)
+                when (kind) {
+                    SourceKind.TIDAL -> SourceConfig(kind = kind, qualityOptions = TidalSource.QUALITY_OPTIONS)
+                    SourceKind.DEEZER -> SourceConfig(kind = kind, qualityOptions = DeezerSource.QUALITY_OPTIONS)
+                    else -> SourceConfig(kind = kind)
                 }
             }
 
@@ -593,6 +593,7 @@ object SourceRegistry {
         SourceKind.CUSTOM_MODULE -> ModuleSource(config)
         SourceKind.MODULE -> ModuleSource(config)
         SourceKind.TIDAL -> TidalSource(config)
+        SourceKind.DEEZER -> DeezerSource(config)
         SourceKind.JIOSAAVN -> JioSaavnSource(config)
         SourceKind.YOUTUBE -> YouTubeSource(config)
     }
@@ -638,7 +639,12 @@ object SourceRegistry {
             .build()
             .toString()
 
-    private val BUILT_IN_KINDS = listOf(SourceKind.TIDAL, SourceKind.JIOSAAVN, SourceKind.YOUTUBE)
+    private val BUILT_IN_KINDS = listOf(
+        SourceKind.TIDAL,
+        SourceKind.DEEZER,
+        SourceKind.JIOSAAVN,
+        SourceKind.YOUTUBE,
+    )
 
     private const val KEY_SOURCES = "sources"
     /** One-shot migration: existing users must explicitly opt in again. */

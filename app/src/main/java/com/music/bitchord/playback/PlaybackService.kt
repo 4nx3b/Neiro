@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.SystemClock
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.TelemetryProvenance
+import com.music.bitchord.data.deezer.DeezerDecryptingDataSource
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import android.util.Log
@@ -1734,7 +1735,7 @@ class PlaybackService : MediaLibraryService() {
             // resolved scheme exists at all.
             object : DataSource.Factory {
                 override fun createDataSource(): DataSource =
-                    ResolvedFileRoutingDataSource(chunkedFactory.createDataSource())
+                    ResolvedFileRoutingDataSource(chunkedFactory.createDataSource(), chunkedFactory)
             },
         ) { dataSpec ->
             // Wrapped rather than folded into the resolver above so the record
@@ -3914,22 +3915,39 @@ class PlaybackService : MediaLibraryService() {
      * response or a dropped connection is worth another go.
      */
     /**
-     * Sends a resolved `file://` answer to [FileDataSource] and everything
-     * else to the DataSource the resolver's answers always went to. Exists
-     * for the sources whose manifest arrives inline and is written to cache
-     * rather than served over HTTP — see the factory it is built in.
+     * Sends a resolved `file://` answer to [FileDataSource], a `deezer://`
+     * answer to [DeezerDecryptingDataSource], and everything else to the
+     * DataSource the resolver's answers always went to. Exists for the sources
+     * whose manifest arrives inline and is written to cache rather than served
+     * over HTTP — see the factory it is built in — and for Deezer, whose
+     * answers are Blowfish-striped at the CDN and decrypt on the fly.
      */
-    private class ResolvedFileRoutingDataSource(private val inner: DataSource) : DataSource {
+    private class ResolvedFileRoutingDataSource(
+        private val inner: DataSource,
+        deezerUpstream: DataSource.Factory,
+    ) : DataSource {
         private val file = FileDataSource()
+
+        // A Deezer answer is a deezer://stream URI carrying the real CDN URL
+        // and the track id for the Blowfish stripe key. Decrypting here — under
+        // the resolver, over the same chunked client — means the cache above
+        // stores plain FLAC/MP3 bytes and downloads, seeking and quality
+        // upgrade need no Deezer-specific code of their own.
+        private val deezer = DeezerDecryptingDataSource(deezerUpstream)
         private var active: DataSource = inner
 
         override fun addTransferListener(transferListener: TransferListener) {
             inner.addTransferListener(transferListener)
             file.addTransferListener(transferListener)
+            deezer.addTransferListener(transferListener)
         }
 
         override fun open(dataSpec: DataSpec): Long {
-            active = if (dataSpec.uri.scheme == "file") file else inner
+            active = when (dataSpec.uri.scheme) {
+                "file" -> file
+                "deezer" -> deezer
+                else -> inner
+            }
             return active.open(dataSpec)
         }
 
