@@ -394,3 +394,38 @@ Stage Summary:
   in the roadmap: the SoundCloud source, then Spotify direct streaming, then
   the settings-page features that ride existing machinery (lyrics
   romanisation + language packs, Android Auto).
+
+---
+
+Task ID: 8
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Session close-out — verify the delivered state and hand the roadmap to
+the next session.
+
+Work Log:
+- Verified the pipeline end to end at HEAD (571c8cf3): Check (1271+26 unit
+  tests incl. DeezerSourceTest and QobuzSourceTest, assembleDevDebug), Backend
+  Go, Android TV and the signed arm64-v8a nightly all green; the nightly
+  artifact is `bitchord-prod-release-arm64-v8a-signed` alone.
+- This session delivered: the nightly-signing/arm64 repair (3cf31dc5), the
+  Deezer source (b88d6ea0 + repairs 43ec8fa1/39bd590f), and the Qobuz source
+  (571c8cf3) — each CI-verified, each with its locale-parity strings and its
+  contract tests.
+
+Stage Summary:
+- Porting pipeline continues next session in this order (task 3 roadmap,
+  updated): (c) the SoundCloud source — client-id scraping from the sndcdn
+  bundles, api-v2 search/resolve/transcodings, the AAC_160/AAC_96/MP3_128
+  quality ladder, the auth token option, and the HLS-vs-progressive answer
+  (check first whether Neiro's manifest sniff already routes a .m3u8 answer
+  through its HLS machinery); (d) Spotify direct streaming behind the
+  existing SPDC token; then the settings-page features that ride existing
+  machinery: lyrics romanisation + the Japanese language pack, Android Auto,
+  storage/cache limits per type, backup & restore, the Internet group (DoH,
+  proxy, IP rotation), the privacy/behavior group, the Listen-Together
+  settings rows, downloads extras (auto-download-on-like, external
+  downloader, source order), the developer options + logcat viewer, and the
+  appearance details (UI scale, blur intensity, custom font, backgrounds).
+  After those: the Qobuz instance/mirror support, the account-pool, and the
+  Telegram/AI-integration ports, which each need their own research pass.
