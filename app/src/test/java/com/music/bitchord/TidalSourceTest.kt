@@ -7,6 +7,7 @@ import com.music.bitchord.data.sources.StreamRequest
 import com.music.bitchord.data.sources.TidalSource
 import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.data.tidal.TidalService
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -87,8 +88,8 @@ class TidalSourceTest {
                   <Representation id="0" codecs="flac" mimeType="audio/mp4"
                       audioSamplingRate="192000" bitDepth="24" bandwidth="3841000">
                     <BaseURL>https://ts.tidal.com/ondemand/</BaseURL>
-                    <SegmentTemplate initialization="$RepresentationID$/init.mp4"
-                        media="$RepresentationID$/$Number$.m4s" startNumber="1">
+                    <SegmentTemplate initialization="${'$'}RepresentationID${'$'}/init.mp4"
+                        media="${'$'}RepresentationID${'$'}/${'$'}Number${'$'}.m4s" startNumber="1">
                       <SegmentTimeline><S t="0" d="196608" r="42"/></SegmentTimeline>
                     </SegmentTemplate>
                   </Representation>
@@ -254,15 +255,17 @@ class TidalSourceTest {
 
             val sink = java.io.ByteArrayOutputStream()
             var lastProgress: Pair<Long, Long>? = null
-            com.music.bitchord.download.ManifestFile.write(
-                cacheDir = scratch.root,
-                url = manifestFile.toURI().toString(),
-                headers = emptyMap(),
-                dash = true,
-                extension = "m4a",
-                sink = sink,
-                onProgress = { done, total -> lastProgress = done to total },
-            )
+            runBlocking {
+                com.music.bitchord.download.ManifestFile.write(
+                    cacheDir = scratch.root,
+                    url = manifestFile.toURI().toString(),
+                    headers = emptyMap(),
+                    dash = true,
+                    extension = "m4a",
+                    sink = sink,
+                    onProgress = { done, total -> lastProgress = done to total },
+                )
+            }
 
             val expected = init + box("moof") + box("mdat", byteArrayOf(1, 1, 1)) +
                 box("moof") + box("mdat", byteArrayOf(2, 2, 2))
