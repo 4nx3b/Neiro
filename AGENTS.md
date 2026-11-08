@@ -53,21 +53,51 @@ its own source system. Porting rules:
 
 ## Fork invariants — never break
 
-- **Tidal source**: `app/.../data/tidal/` (`TidalApi` — search, playbackinfo,
-  manifest decode, PKCE; `TidalAccountStore` — encrypted token persistence and
-  refresh) + `data/sources/TidalSource.kt` (the `MusicSource` implementation) +
-  `SourceKind.TIDAL` (rank 1, `canServeLossless`, `worthPrefetching`). Quality
+- **Tidal source**: `app/.../data/tidal/` (`TidalService` — search, playbackinfo,
+  manifest decode, PKCE; `TidalAccountStore` — encrypted token persistence,
+  refresh, and the `Subscription` enum) + `data/sources/TidalSource.kt` (the
+  `MusicSource` implementation) + `SourceKind.TIDAL` (rank 2, above JioSaavn,
+  `canServeLossless`, `worthPrefetching`). Quality
   tiers ride `SourceConfig.qualityOptions`/`pickedQuality` (seeded
-  `TidalQualityOptions`). Streams: AAC/HIGH answers a JSON manifest with a direct
+  `TidalSource.QUALITY_OPTIONS`); a Lossless request asks at the picked tier,
+  with no pick, a stale pick, or a lossy pick all defaulting to 16-bit LOSSLESS
+  — Hi-Res is an opt-in, never a landing spot. Streams: AAC/HIGH answers a JSON
+  manifest with a direct
   URL; LOSSLESS/HI_RES answers an MPD, which the source writes to
   `cacheDir/tidal-manifests/<trackId>-<tier>.mpd` and hands back as a
   `file://…mpd` URL — playback rides BitChord's DASH machinery
   (`StreamContainer.manifestMimeOf` off the `.mpd` extension, progressive
-  sniff-failure → `replayAsManifest` reopen), downloads ride
+  sniff-failure → `replayAsManifest` reopen) through
+  `ResolvedFileRoutingDataSource` under the resolver, downloads ride
   `Downloader.probe`'s local-file branch → `ManifestFile` assembly. The account
   is a single session (PKCE primary, listen.tidal.com Bearer-capture fallback),
   refreshed through `auth.tidal.com` with the same client id/secret pair as
-  ArchiveTune — those constants are protocol, do not change them.
+  ArchiveTune — those constants are protocol, do not change them. Tests:
+  `TidalSourceTest` (manifest decode, tier selection, token payload, the local
+  MPD download through a real MockWebServer).
+- **CI dependency mirrors** (GitHub's archive/release CDN flakes on the
+  runners): the Gradle wrapper downloads from the gradle-distributions GitHub
+  mirror and the workflows pre-seed it with a patient curl; CMake's Oboe and
+  libusb `FetchContent_Declare` list the fork's own `deps` release asset
+  (https://github.com/4nx3b/Neiro/releases/tag/deps) before the canonical URL,
+  both hash-pinned; `settings.gradle.kts` declares Google's Maven Central
+  mirror (`maven-central.storage-download.googleapis.com`) before `mavenCentral()`
+  in BOTH `pluginManagement` and `dependencyResolutionManagement` — do not
+  reorder, the original redirects its largest jars to GitHub and 504s. Bumping
+  Oboe/libusb means uploading the new tarball to the `deps` release (hash
+  pinned in the same change) and updating both URLs.
+- **Locale parity is test-enforced**: `LocaleStringsTest` fails the build when
+  any of the 17 offered languages misses a key from `values/strings.xml`
+  (string/plurals/string-array, `translatable="false"` exempt). Every new
+  string ships translated into all locale catalogues — including `values-hi`
+  (upstream's Diwali strings live there already; never append a duplicate) and
+  the untested `values-b+zh+Hant`/`values-zh-rHK`, which are maintained in
+  parallel. Upstream itself is currently missing `automix_overview` + the
+  Diwali strings outside Hindi; the fork carries the full set.
+- **Release signing is secret-gated** (`android.yml`): the fork has no
+  `KEYSTORE_BASE64`, so the workflow writes no keystore and the build scripts'
+  absent-keystore path produces an unsigned release APK. With the owner's
+  signing secrets set, the signed flow is upstream's unchanged.
 - **Protected files**: `applicationId` (`com.music.bitchord` dev/prod flavors) is
   upstream identity — never adopt changes that move the shipped package. The
   upstream `bitchord-auth` addon attestation and its server stay untouched.
