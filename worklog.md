@@ -191,3 +191,45 @@ Stage Summary:
   lyrics romanisation, Android Auto), (f) UI-design ports re-expressed in
   BitChord's components. Dependencies land with the feature that needs
   them, via the mirrored repositories.
+
+---
+
+Task ID: 4
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Port the expanded scope's first settings-page feature — Libre.fm as a
+selectable scrobbling service (ArchiveTune's Last.fm/Libre.fm provider
+choice) — adapted to BitChord's UI principles, one feature per commit.
+
+Work Log:
+- Researched both sides first: ArchiveTune models it as LastFmProvider
+  {LASTFM, LIBREFM, CUSTOM} with per-provider credential overrides and the
+  compat pair ("any non-empty key works — libre.fm does not validate
+  registrations"); BitChord already ships LIBREFM_API_ENDPOINT, the
+  libre.fm auth-URL branch in LastFM.getAuthUrl, a lastfmEndpoint setting
+  the playback service reconfigures on, and a mobile-session login alert.
+- The provider state rides the endpoint setting itself — one truth, no new
+  persistence: AppSettings.setLastfmProvider writes the libre.fm endpoint
+  or blank, and the sign-in row, login alert and the ScrobblingSnapshot
+  collector all follow it with zero new wiring.
+- Credentials: LastFM.credentialsFor (pure, unit-tested) swaps the build's
+  Last.fm pair or a blank store for the compat pair on the Libre.fm
+  endpoint and never touches a pair the user typed. Wired into
+  BitChordApplication.initLastfm, the PlaybackService collector (whose
+  shouldEnable now judges the effective pair — Libre.fm scrobbling works
+  on builds whose LASTFM_API_KEY is unset), and the login alert.
+- UI: a "Scrobbling service" row in Account & integrations (SfIcons.Cloud,
+  subtitle naming the active service) opening the standard ChoiceAlert;
+  the Last.fm row retitles to Libre.fm when it is active; switching
+  services clears the session — the same five writes as signing out,
+  because a session belongs to the service it was made on.
+- Strings translated into all 19 catalogues; LastFmProviderTest pins the
+  credential mapping (default passthrough, custom-endpoint passthrough,
+  compat swap for build pair and for blank store, user override kept,
+  half-override kept whole).
+
+Stage Summary:
+- dev @ 49d6dfdf: all four workflows green (Check, Go, TV, Release).
+  Feature 2 of the expanded porting scope is CI-verified; on-device
+  Libre.fm sign-in/scrobble verification pending user testing. Next in the
+  pipeline per the task-3 roadmap: the Deezer source.
