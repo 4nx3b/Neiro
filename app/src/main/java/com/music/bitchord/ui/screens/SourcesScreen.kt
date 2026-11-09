@@ -934,6 +934,7 @@ private fun SourceRow(
                 SourceKind.TIDAL -> SfIcons.Waves
                 SourceKind.DEEZER -> SfIcons.MusicNote
                 SourceKind.QOBUZ -> SfIcons.SurroundSound
+                SourceKind.SOUNDCLOUD -> SfIcons.Cloud
                 SourceKind.JIOSAAVN -> SfIcons.GraphicEq // or some other icon
                 SourceKind.YOUTUBE -> SfIcons.PlayCircle
             },
