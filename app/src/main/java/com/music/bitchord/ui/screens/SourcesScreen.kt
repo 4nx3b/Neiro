@@ -80,6 +80,7 @@ import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.deezer.DeezerAccountStore
 import com.music.bitchord.data.qobuz.QobuzAccountStore
+import com.music.bitchord.data.soundcloud.SoundCloudAccountStore
 import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.ui.components.AddonEditorAlert
 import dev.chrisbanes.haze.HazeState
@@ -140,6 +141,10 @@ fun SourcesScreen(
     onSignInQobuz: () -> Unit,
     /** Opens the Qobuz sign-out confirmation, raised for the same reason. */
     onSignOutQobuz: () -> Unit,
+    /** Opens the SoundCloud account sign-in screen, raised for the same reason. */
+    onSignInSoundCloud: () -> Unit,
+    /** Opens the SoundCloud sign-out confirmation, raised for the same reason. */
+    onSignOutSoundCloud: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -385,6 +390,30 @@ fun SourcesScreen(
                     null
                 },
                 onClick = if (qobuzSignedIn) onSignOutQobuz else onSignInQobuz,
+            )
+        }
+
+        // The SoundCloud account — optional, unlike the three above: search
+        // and streams work anonymously, and the sign-in only widens what the
+        // account can play. Its row sits under the source switch, which is
+        // the opt-in that actually gates whether SoundCloud is asked at all.
+        val soundCloudAccount by SoundCloudAccountStore.account.collectAsStateWithLifecycle()
+        val soundCloudSignedIn = soundCloudAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.soundcloud_account),
+            footer = stringResource(R.string.soundcloud_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.Cloud,
+                title = stringResource(R.string.soundcloud_account),
+                subtitle = soundCloudAccount?.username
+                    ?: stringResource(R.string.soundcloud_not_signed_in),
+                value = if (soundCloudSignedIn) {
+                    stringResource(R.string.soundcloud_signed_in_value)
+                } else {
+                    null
+                },
+                onClick = if (soundCloudSignedIn) onSignOutSoundCloud else onSignInSoundCloud,
             )
         }
 

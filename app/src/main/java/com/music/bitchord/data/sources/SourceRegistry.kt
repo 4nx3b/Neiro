@@ -38,8 +38,8 @@ data class SourceConfig(
     /** What the user called it. Blank falls back to the server's host, or the kind's own label. */
     val label: String = "",
     val baseUrl: String = "",
-    /** JioSaavn is opt-in because catalogue matches can select the wrong recording. */
-    val enabled: Boolean = kind != SourceKind.JIOSAAVN,
+    /** JioSaavn and SoundCloud are opt-in because catalogue matches can select the wrong recording. */
+    val enabled: Boolean = kind != SourceKind.JIOSAAVN && kind != SourceKind.SOUNDCLOUD,
     /**
      * The addon's `allowDownloads`, as its manifest last said. Stored rather
      * than asked each time so the answer is there without a request — see
@@ -175,7 +175,7 @@ object SourceRegistry {
     ): List<SourceConfig> {
         // Seeded rather than persisted-on-first-write, so a build adding a new
         // built-in kind picks it up for existing installs too. SourceConfig's
-        // default is the policy: JioSaavn off, YouTube on.
+        // default is the policy: JioSaavn and SoundCloud off, YouTube on.
         val seeded = stored + BUILT_IN_KINDS
             .filter { kind -> stored.none { it.kind == kind } }
             .map { kind ->
@@ -183,6 +183,7 @@ object SourceRegistry {
                     SourceKind.TIDAL -> SourceConfig(kind = kind, qualityOptions = TidalSource.QUALITY_OPTIONS)
                     SourceKind.DEEZER -> SourceConfig(kind = kind, qualityOptions = DeezerSource.QUALITY_OPTIONS)
                     SourceKind.QOBUZ -> SourceConfig(kind = kind, qualityOptions = QobuzSource.QUALITY_OPTIONS)
+                    SourceKind.SOUNDCLOUD -> SourceConfig(kind = kind, qualityOptions = SoundCloudSource.QUALITY_OPTIONS)
                     else -> SourceConfig(kind = kind)
                 }
             }
@@ -596,6 +597,7 @@ object SourceRegistry {
         SourceKind.TIDAL -> TidalSource(config)
         SourceKind.DEEZER -> DeezerSource(config)
         SourceKind.QOBUZ -> QobuzSource(config)
+        SourceKind.SOUNDCLOUD -> SoundCloudSource(config)
         SourceKind.JIOSAAVN -> JioSaavnSource(config)
         SourceKind.YOUTUBE -> YouTubeSource(config)
     }
@@ -645,6 +647,7 @@ object SourceRegistry {
         SourceKind.TIDAL,
         SourceKind.DEEZER,
         SourceKind.QOBUZ,
+        SourceKind.SOUNDCLOUD,
         SourceKind.JIOSAAVN,
         SourceKind.YOUTUBE,
     )

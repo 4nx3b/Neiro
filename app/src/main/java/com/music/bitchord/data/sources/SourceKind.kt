@@ -196,6 +196,28 @@ enum class SourceKind(
         rank = 2,
     ),
 
+    /**
+     * SoundCloud's own catalogue, searched anonymously through the web app's
+     * scraped client id.
+     *
+     * Opt-in like [JIOSAAVN] rather than on by default like the account
+     * sources above: the catalogue is user uploads, so a title match can be a
+     * remix, a cover or a sped-up edit of the recording asked for, and nothing
+     * above YouTube's own tier is on offer to pay for that risk — 160kbps AAC
+     * at best. The sign-in is optional and only widens what the account can
+     * play (geo- and login-gated uploads); search and streams work without it.
+     */
+    SOUNDCLOUD(
+        label = "SoundCloud",
+        detail = "SoundCloud's catalogue, up to 160 kbps AAC. Works without an " +
+            "account; signing in unlocks login-gated uploads.",
+        labels = listOf("160kbps", "User uploads"),
+        needsServer = false,
+        canServeLossless = false,
+        worthPrefetching = true,
+        rank = 3,
+    ),
+
     JIOSAAVN(
         label = "JioSaavn",
         detail = "Optional JioSaavn streams up to 320kbps AAC/MP4. Catalogue matching can select the wrong song.",

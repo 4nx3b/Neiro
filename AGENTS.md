@@ -191,3 +191,37 @@ its own source system. Porting rules:
   and failure-cached, never played. Tests: `QobuzSourceTest` (the signature
   MD5, payload decodes, preview rejection, the tier mapping, and a signed
   end-to-end getFileUrl through a MockWebServer via `apiBaseForTest`).
+- **SoundCloud source**: `app/.../data/soundcloud/` (`SoundCloudService` —
+  the web app's client id + app version scraped off soundcloud.com's HTML and
+  sndcdn JS bundles, 12h TTL with a force-refresh retry; api-v2
+  `search/tracks`, `tracks/{id}`, and the transcoding walk
+  `media.transcodings[]` → selected rendition → its `url` endpoint answered
+  with `client_id` + `track_authorization`; the AAC_160/MP3_128/AAC_96 tier
+  ladder where the *tier match* outranks progressive-vs-HLS — a deliberate
+  deviation from ArchiveTune, which hard-prefers progressive because its HLS
+  was a concatenating shim, while Neiro's HlsMediaSource is first-class;
+  SNIP-policy and unstreamable rows dropped; stream/failure caches with
+  5/10-minute TTLs; `normalizeAuthToken` for the OAuth token, applied as
+  `Authorization: OAuth` on api-v2 calls — ArchiveTune captured the token but
+  never attached it, so login-gated uploads stayed gated there;
+  `SoundCloudAccountStore` — the encrypted OAuth token + username) +
+  `data/sources/SoundCloudSource.kt` + `SourceKind.SOUNDCLOUD` (rank 3, beside
+  JioSaavn, **opt-in**: `SourceConfig.enabled` defaults false for it — the
+  catalogue is user uploads and a title match can be the wrong recording).
+  Anonymous search/stream works signed-out (health stays `Ok`); the optional
+  sign-in (`auth/SoundCloudLoginScreen.kt`) loads soundcloud.com/signin and
+  sweeps cookies, localStorage, sessionStorage and the runtime `SC.connector`
+  for the token, verified through `/me`, with a manual paste field below.
+  HLS answers declare `StreamContainer.declare(url, "hls")` so the extension
+  sniff is not load-bearing; progressive answers carry
+  `SoundCloudService.mediaHeaders()` on the DataSpec, and the shared
+  `Http.client` gained a sndcdn/media-streaming host interceptor that stamps
+  the browser UA + Referer/Origin **only when absent** — Media3's HLS loader
+  builds its own playlist/segment requests, which never see a DataSpec's
+  headers, so the interceptor is the only layer that reaches them (the same
+  reason WebDAV's auth rides there). Tests: `SoundCloudSourceTest` (the
+  scraping regexes, the search decode with SNIP/unstreamable filters, the
+  tier ladder, the preset bitrate fallbacks, token normalization, the
+  request-tier mapping, the end-to-end transcoding walk over a MockWebServer
+  via `apiBaseForTest`/`clientIdForTest`/`appVersionForTest`, and the
+  failure cache).

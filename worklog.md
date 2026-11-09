@@ -429,3 +429,77 @@ Stage Summary:
   appearance details (UI scale, blur intensity, custom font, backgrounds).
   After those: the Qobuz instance/mirror support, the account-pool, and the
   Telegram/AI-integration ports, which each need their own research pass.
+
+---
+
+Task ID: 9
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Port the SoundCloud source from ArchiveTune — roadmap item (c) — onto
+the account-first source machinery.
+
+Work Log:
+- Researched ArchiveTune's soundcloud package end to end:
+  `SoundCloudAudioProvider` (client-id + app_version scraping off
+  soundcloud.com's HTML and the sndcdn JS bundles, api-v2 search/resolve/
+  tracks, the transcoding walk with its candidate scoring, the 5-minute
+  stream cache), `SoundCloudAuthUtils` (the OAuth token normalizer),
+  `SoundCloudHlsDataSource` (a concatenating HLS shim behind a
+  base64url `soundcloud-hls:` scheme), and the `SoundCloudLoginSheet`
+  WebView sweep (cookies + localStorage + sessionStorage + the runtime
+  `SC.connector.oauth_token`). Noted that ArchiveTune captures the auth
+  token but never attaches it to a request — its OAuth support is
+  cache-key decoration only.
+- `data/soundcloud/SoundCloudService.kt`: the scrape (12h TTL, mutex, a
+  capped 16-bundle parallel walk, force-refresh retry), search/tracks and
+  tracks/{id} with client_id + app_locale + app_version and browser
+  Referer/Origin, the transcoding selection and its `url` fetch with
+  track_authorization, stream/failure caches (5/10 min), the SNIP and
+  unstreamable filters, `-large` → `-t500x500` artwork, the preset bitrate
+  fallbacks, and `normalizeAuthToken` applied as `Authorization: OAuth` on
+  every api-v2 call when an account exists — the fix for ArchiveTune's
+  dangling token. `apiBaseForTest`/`clientIdForTest`/`appVersionForTest`
+  seams for the JVM tests.
+- The tier ladder deviates from ArchiveTune deliberately: the tier match
+  (AAC_160/MP3_128/AAC_96 by bitrate+mime) outranks progressive-vs-HLS.
+  ArchiveTune hard-prefers any progressive rendition because its HLS went
+  through a byte-concatenating DataSource; Neiro's HlsMediaSource is
+  first-class, so the picker is honest — AAC 160 lands on the HLS AAC
+  rendition even when a progressive MP3 128 exists.
+- `data/soundcloud/SoundCloudAccountStore.kt` + `auth/SoundCloudLoginScreen.kt`:
+  the encrypted token store and the sign-in — the WebView loads
+  soundcloud.com/signin and sweeps cookies, both storages and the runtime
+  SDK object at staggered delays, every path verified through `/me` before
+  anything is stored, with the manual paste field underneath (Deezer/Qobuz
+  pattern).
+- `data/sources/SoundCloudSource.kt` + `SourceKind.SOUNDCLOUD` (rank 3,
+  beside JioSaavn) + registry seeding. Opt-in like JioSaavn — the catalogue
+  is user uploads, so a title match can be a remix or a cover, and 160 kbps
+  AAC is not a tier that pays for that risk; `SourceConfig.enabled`
+  defaults false for the kind. HLS answers declare
+  `StreamContainer.declare(url, "hls")` (the AddonSource pattern), so the
+  `.m3u8` extension sniff is never load-bearing; progressive answers carry
+  the browser media headers on the DataSpec.
+- `shared/.../Http.kt`: a sndcdn/media-streaming host interceptor that
+  stamps the browser UA + Referer/Origin only when absent. Media3's HLS
+  loader builds its own playlist and segment requests, which never see a
+  DataSpec's headers — the interceptor is the only layer that reaches them,
+  the same reason WebDAV's auth rides there.
+- Strings: 13 keys translated into all 17 locale catalogues plus English,
+  with the parallel zh-Hant trio and values-hi carried (apostrophes escaped
+  for fr/it). LocaleStringsTest enforces the parity.
+- Tests (SoundCloudSourceTest): the scraping regexes, the search decode
+  (SNIP/unstreamable dropped, artists split and deduped, artwork upsized),
+  the tier ladder at all three rungs, the bitrate fallbacks, the token
+  normalizer (raw/OAuth/Bearer/cookie/JSON inputs and the implausible
+  rejects), the request-tier mapping (pick vs connection cap), the
+  end-to-end transcoding walk over a MockWebServer (asserting client_id,
+  app_version, track_authorization, Referer, and the Authorization header
+  when signed in), and the failure cache's single-request guarantee.
+
+Stage Summary:
+- Pushed to dev for CI (Check: unit tests + dev APK; TV; the signed arm64
+  nightly on the merge). On-device playback, download and sign-in
+  verification pending user testing. Next in the roadmap: (d) Spotify
+  direct streaming behind the existing SPDC token, then the settings-page
+  features that ride existing machinery.

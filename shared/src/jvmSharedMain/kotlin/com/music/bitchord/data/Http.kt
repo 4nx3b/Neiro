@@ -130,6 +130,37 @@ object Http {
         chain.proceed(request)
     }
 
+    /**
+     * SoundCloud's CDN binds its playlist and segment links to a browser
+     * context: a fetch without the web app's Referer and User-Agent is refused
+     * on some of its distributions.
+     *
+     * Applied per host rather than per request because Media3's HLS loader
+     * builds its own playlist and segment requests — the headers a playback
+     * DataSpec carries never reach them, so this is the only layer that sees
+     * every SoundCloud fetch. Only the headers a request does not already have
+     * are added, so a stream that arrived with its own set keeps it.
+     */
+    private val soundCloudMediaInterceptor = okhttp3.Interceptor { chain ->
+        val request = chain.request()
+        val host = request.url.host
+        val isSoundCloudMedia = host.endsWith(".sndcdn.com") ||
+            host == "sndcdn.com" ||
+            host.endsWith(".media-streaming.soundcloud.cloud")
+        if (!isSoundCloudMedia) {
+            chain.proceed(request)
+        } else {
+            val filled = request.newBuilder().apply {
+                if (request.header("User-Agent") == null) {
+                    header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36")
+                }
+                if (request.header("Referer") == null) header("Referer", "https://soundcloud.com/")
+                if (request.header("Origin") == null) header("Origin", "https://soundcloud.com")
+            }.build()
+            chain.proceed(filled)
+        }
+    }
+
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -137,6 +168,7 @@ object Http {
         .dispatcher(Dispatcher().apply { maxRequestsPerHost = 16 })
         .connectionPool(ConnectionPool(16, 5, TimeUnit.MINUTES))
         .addInterceptor(webDavInterceptor)
+        .addInterceptor(soundCloudMediaInterceptor)
         .apply { if (USAGE_LOGGING_ENABLED) addNetworkInterceptor(usageInterceptor) }
         .build()
 }
