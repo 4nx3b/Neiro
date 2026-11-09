@@ -197,9 +197,15 @@ its own source system. Porting rules:
   `search/tracks`, `tracks/{id}`, and the transcoding walk
   `media.transcodings[]` → selected rendition → its `url` endpoint answered
   with `client_id` + `track_authorization`; the AAC_160/MP3_128/AAC_96 tier
-  ladder where the *tier match* outranks progressive-vs-HLS — a deliberate
-  deviation from ArchiveTune, which hard-prefers progressive because its HLS
-  was a concatenating shim, while Neiro's HlsMediaSource is first-class;
+  ladder — a deliberate repair of ArchiveTune's, whose
+  `maxWithOrNull(compareByDescending { score })` silently selects the
+  *lowest*-scored candidate (a descending comparator inverts what maxWith
+  calls greatest), so its "progressive preferred" 1000-point bonus actually
+  lost to HLS whenever both existed; Neiro scores with
+  `maxWithOrNull(compareBy { … })` so the tier match genuinely wins, the
+  bitrate comes from the preset (the API's HLS mimes — `audio/mp4`,
+  `audio/mpegurl` — never say "aac", so the preset is the only honest
+  signal), and the codec is preset-first for the same reason;
   SNIP-policy and unstreamable rows dropped; stream/failure caches with
   5/10-minute TTLs; `normalizeAuthToken` for the OAuth token, applied as
   `Authorization: OAuth` on api-v2 calls — ArchiveTune captured the token but

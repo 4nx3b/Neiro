@@ -41,8 +41,8 @@ object SoundCloudService {
     private fun apiBase(): String = apiBaseForTest ?: API_BASE
 
     private val assetScriptRegex = Regex("""https://[a-z0-9-]+\.sndcdn\.com/[^"'<>!]+\.js""")
-    private val clientIdRegex = Regex("""client_?id["']?\s*[:=]\s*["']([A-Za-z0-9]{20,})["']""", RegexOption.IGNORE_CASE)
-    private val appVersionRegex = Regex("""app_?version["']?\s*[:=]\s*["']([0-9]{8,})["']""", RegexOption.IGNORE_CASE)
+    private val clientIdRegex = Regex("""client_?id["']?\s*\]?\s*[:=]\s*["']([A-Za-z0-9]{20,})["']""", RegexOption.IGNORE_CASE)
+    private val appVersionRegex = Regex("""app_?version["']?\s*\]?\s*[:=]\s*["']([0-9]{8,})["']""", RegexOption.IGNORE_CASE)
 
     private val tokenRegex =
         Regex("""(?i)(oauth[_-]?token|access[_-]?token|soundcloud[_-]?oauth[_-]?token)["'\s:=]+["']?([A-Za-z0-9._~+/=-]{16,})""")
@@ -324,7 +324,7 @@ object SoundCloudService {
         Stream(
             url = mediaUrl,
             isHls = candidate.isHls,
-            codec = codecOfMime(candidate.mimeType),
+            codec = codecOf(candidate.preset, candidate.mimeType),
             kbps = candidate.bitrate,
             sampleRateHz = candidate.sampleRate,
             durationSec = durationMs?.let { (it / 1000L).toInt() },
@@ -393,17 +393,17 @@ object SoundCloudService {
         }
         val targetMimePart = if (tier == TIER_MP3_128) "mpeg" else "aac"
         return candidates.maxWithOrNull(
-            compareByDescending<Transcoding> {
+            compareBy<Transcoding> {
                 when {
                     it.bitrate == targetBitrate && it.mimeType.contains(targetMimePart) -> 400
                     it.bitrate == targetBitrate -> 300
                     else -> 0
                 }
-            }.thenByDescending {
+            }.thenBy {
                 if (it.mimeType.contains(targetMimePart)) 200 else 0
-            }.thenByDescending {
+            }.thenBy {
                 if (!it.isHls) 150 else 0
-            }.thenByDescending {
+            }.thenBy {
                 it.bitrate ?: 0
             },
         )
@@ -445,13 +445,23 @@ object SoundCloudService {
         return when {
             lowerPreset.contains("256") -> 256_000
             lowerPreset.contains("192") -> 192_000
-            lowerPreset.contains("160") && lowerMime.contains("aac") -> 160_000
+            lowerPreset.contains("160") -> 160_000
             lowerPreset.contains("128") -> 128_000
-            lowerPreset.contains("96") && lowerMime.contains("aac") -> 96_000
+            lowerPreset.contains("96") -> 96_000
             lowerPreset.contains("64") -> 64_000
             lowerMime.contains("mpeg") || lowerPreset.contains("mp3") -> 128_000
             lowerMime.contains("aac") || lowerMime.contains("mp4") -> 128_000
             else -> null
+        }
+    }
+
+    internal fun codecOf(preset: String, mimeType: String): String {
+        val lowerPreset = preset.lowercase(Locale.US)
+        return when {
+            lowerPreset.contains("aac") -> "aac"
+            lowerPreset.contains("mp3") -> "mp3"
+            lowerPreset.contains("opus") -> "opus"
+            else -> codecOfMime(mimeType)
         }
     }
 
@@ -542,8 +552,8 @@ object SoundCloudService {
     }
 
     private fun splitArtistNames(value: String): List<String> =
-        value.split(Regex("""\s*(?:,|/|&|\+|\bfeat\.?\b|\bft\.?\b|\bwith\b)\s*""", RegexOption.IGNORE_CASE))
-            .map { it.trim() }
+        value.split(Regex("""\s*(?:,|/|&|\+|\bfeat\b\.?|\bft\b\.?|\bwith\b)\s*""", RegexOption.IGNORE_CASE))
+            .map { it.trim().trimStart('.') }
             .filter { it.isNotBlank() }
 
     private fun JSONObject.stringOrNull(name: String): String? =

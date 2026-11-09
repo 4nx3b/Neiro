@@ -154,7 +154,7 @@ class SoundCloudSourceTest {
         assertEquals(160_000, SoundCloudService.bitrateFromPreset("aac_160", "audio/mp4"))
         assertEquals(96_000, SoundCloudService.bitrateFromPreset("aac_96", "audio/mp4"))
         assertEquals(128_000, SoundCloudService.bitrateFromPreset(null, "audio/mpeg"))
-        assertEquals(128_000, SoundCloudService.bitrateFromPreset("mp3_64", "audio/mpeg"))
+        assertEquals(64_000, SoundCloudService.bitrateFromPreset("mp3_64", "audio/mpeg"))
         assertEquals(256_000, SoundCloudService.bitrateFromPreset("Opus 256", "audio/webm"))
         assertNull(SoundCloudService.bitrateFromPreset(null, "audio/ogg"))
     }
@@ -211,8 +211,9 @@ class SoundCloudSourceTest {
             ),
         )
         assertEquals(SoundCloudService.TIER_MP3_128, picked.tierFor(StreamRequest.Lossless))
-        assertEquals(SoundCloudService.TIER_AAC_160, picked.tierFor(StreamRequest.Capped(maxKbps = 200)))
+        assertEquals(SoundCloudService.TIER_MP3_128, picked.tierFor(StreamRequest.Capped(maxKbps = 200)))
         assertEquals(SoundCloudService.TIER_MP3_128, picked.tierFor(StreamRequest.Capped(maxKbps = 140)))
+        assertEquals(SoundCloudService.TIER_AAC_96, picked.tierFor(StreamRequest.Capped(maxKbps = 100)))
     }
 
     // ---- End to end over a MockWebServer ---------------------------------

@@ -503,3 +503,40 @@ Stage Summary:
   verification pending user testing. Next in the roadmap: (d) Spotify
   direct streaming behind the existing SPDC token, then the settings-page
   features that ride existing machinery.
+
+Task ID: 9 (continued — CI repairs)
+Agent: Super Z (main agent, session web-60bd54af)
+
+Task: Close the SoundCloud port's CI.
+
+Work Log:
+- First push failed on one line: the source-row icon `when` in
+  SourcesScreen gained a kind and needed its SOUNDCLOUD branch (5fc5de2f).
+- The unit tests then failed eight ways, and the pattern in the failures
+  was the interesting part: every ladder test picked the candidate my
+  scoring ranked LOWEST. Root cause: `maxWithOrNull(compareByDescending {
+  score })` selects the minimum — a descending comparator inverts what
+  maxWith calls greatest, so the 400/300-point tier match lost to the
+  0-point one. ArchiveTune's SoundCloudAudioProvider carries the same
+  latent inversion: its "progressive preferred" 1000-point bonus has been
+  losing to HLS whenever both transcodings exist, masked by the fact that
+  its HLS path still plays. The port now scores with
+  `maxWithOrNull(compareBy { … })`, so the tier match genuinely wins —
+  which also makes the deliberate tier-over-progressive policy real.
+- The bitrate fallback had the sibling bug the inversion was hiding: the
+  AAC branches required the mime to say "aac", but the API's HLS mimes are
+  `audio/mp4`/`audio/mpegurl`, so every HLS AAC preset fell through to the
+  128 kbps default (in ArchiveTune too). The preset is now the
+  authoritative signal for both bitrate and codec; the mime only breaks
+  ties.
+- Two smaller repairs the tests caught: the client-id regex now accepts
+  bracket-quoted keys (`config["clientId"]='…'`), and the artist splitter's
+  `feat.` boundary no longer strands a leading dot on the second name.
+- Two test expectations were wrong, not the code: `mp3_64` is 64 kbps, not
+  the mime fallback's 128, and a picked tier that fits under a connection
+  cap is honoured (Capped(200) with an MP3 128 pick answers MP3 128).
+
+Stage Summary:
+- Repair pushed for CI. The e2e transcoding walk, the failure cache and
+  the OAuth header assertions were green throughout; on-device
+  verification still pending user testing.
