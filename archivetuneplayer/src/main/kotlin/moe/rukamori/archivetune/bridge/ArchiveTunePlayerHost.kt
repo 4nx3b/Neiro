@@ -215,8 +215,18 @@ private class BridgeNavController(
                 else -> Timber.tag("ArchiveTuneBridge").d("route %s has no bridge — dropped", destination.route)
             }
         }
+        // A root graph carries no route of its own — same as every NavHost's.
+        // NavGraph.addDestination throws "Destination … cannot have the same
+        // route as graph …" the moment a destination's route equals its
+        // graph's, and a graph routed "home" holding the destination "home"
+        // (the TikTok feed's start destination) did exactly that: every
+        // composition of a ported style died building this controller, and
+        // with the style persisted the app could no longer start at all.
+        // The routes this stack navigates are all destinations below; nothing
+        // reads a graph route (the TikTok tabs' popUpTo uses
+        // graph.startDestinationId, resolved from startDestination alone).
         graph =
-            createGraph(startDestination = "home", route = "home") {
+            createGraph(startDestination = "home") {
                 composable("home") {}
                 composable("artist/{id}") {}
                 composable("album/{id}") {}
