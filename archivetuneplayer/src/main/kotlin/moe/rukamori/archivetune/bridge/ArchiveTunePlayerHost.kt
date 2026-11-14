@@ -28,7 +28,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavGraphNavigator
 import androidx.navigation.createGraph
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.compose.DialogNavigator
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -168,12 +171,22 @@ fun ArchiveTunePlayerHost(
 }
 
 /**
- * A NavController whose graph carries the three routes the player stack
- * navigates to — artist/{id}, album/{id} and search — each a composable
- * that immediately hands the id to the host app's own page. Routes beyond
- * those three (ArchiveTune's settings sub-pages, its login flows) have no
- * graph entry and are logged and dropped by the listener below, so nothing
- * the ported player can do takes the app anywhere unexpected.
+ * A NavController whose graph carries the routes the player stack
+ * navigates to — artist/{id}, album/{id} and search, each a composable that
+ * immediately hands the id to the host app's own page, plus the stack's
+ * internal-only ones (home, the TikTok feed's library tab, the login and
+ * po-token routes) as inert composables so navigating them changes back-stack
+ * state without crashing. Routes beyond those (ArchiveTune's settings
+ * sub-pages, its login flows) have no graph entry and are logged and dropped
+ * by the listener below, so nothing the ported player can do takes the app
+ * anywhere unexpected.
+ *
+ * A bare NavController ships with no navigators at all — the graph, composable
+ * and dialog lookups createGraph performs all die with "Could not find
+ * Navigator with name …" without them, the moment a ported style mounts. So
+ * the navigators navigation-compose's own createNavController() registers on
+ * every controller it hands out are installed here, before the graph is
+ * built.
  */
 private class BridgeNavController(
     context: android.content.Context,
@@ -183,6 +196,17 @@ private class BridgeNavController(
 ) : NavController(context) {
 
     init {
+        // What createNavController() puts on every rememberNavController()
+        // controller; without them the graph below cannot even be built.
+        // ComposeNavGraphNavigator carries the same "navigation" name but is
+        // internal in navigation-compose — this public twin is what
+        // non-compose hosts have always used, and the graph is never composed
+        // in a NavHost here, so its compose extras are unneeded.
+        navigatorProvider.apply {
+            addNavigator(NavGraphNavigator(this))
+            addNavigator(ComposeNavigator())
+            addNavigator(DialogNavigator())
+        }
         addOnDestinationChangedListener { _, destination, _ ->
             when (destination.route) {
                 "artist/{id}" -> onOpenArtist(currentBackStackEntry?.arguments?.getString("id").orEmpty())
@@ -197,6 +221,15 @@ private class BridgeNavController(
                 composable("artist/{id}") {}
                 composable("album/{id}") {}
                 composable("search") {}
+                // The stack's own navigations that lead nowhere in this host:
+                // the TikTok feed's library tab, and Player's login/po-token
+                // prompts (built by LoginRouteBridge — with and without the
+                // recovery-url argument). Graphed so navigate() resolves them
+                // instead of throwing; the listener above drops them.
+                composable("library") {}
+                composable("login") {}
+                composable("login?url={url}") {}
+                composable("settings/po_token") {}
             }
     }
 }

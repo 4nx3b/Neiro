@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavGraphNavigator
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.DialogNavigator
 import androidx.navigation.compose.NavHost
@@ -186,12 +187,21 @@ private fun UnportedSettingsPage(onBack: () -> Unit) {
  * A NavHostController whose "up" from the page it was opened on leaves the
  * host (the copied pages' back arrows call navigateUp / popBackStack, which
  * on their own would do nothing at the root of the stack).
+ *
+ * The graph navigator NavHost's createGraph looks up ("navigation") is added
+ * alongside the composable and dialog ones — createNavController() installs
+ * all three on the controllers navigation-compose itself hands out, and the
+ * NavHost below dies with "Could not find Navigator with name 'navigation'"
+ * without it. ComposeNavGraphNavigator would carry the same name but is
+ * internal to navigation-compose; this public twin is what non-compose hosts
+ * use, and nothing on these pages' flat graph misses its compose extras.
  */
 private class BridgeSettingsNavController(
     context: Context,
     private val onExit: () -> Unit,
 ) : NavHostController(context) {
     init {
+        navigatorProvider.addNavigator(NavGraphNavigator(navigatorProvider))
         navigatorProvider.addNavigator(ComposeNavigator())
         navigatorProvider.addNavigator(DialogNavigator())
     }
