@@ -1615,4 +1615,6 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro đã gặp sự cố lần trước — nhật ký đã được lưu vào %1$s</string>
+    <string name="archivetune_settings_group">Trình phát &amp; giao diện ArchiveTune</string>
+    <string name="archivetune_settings_group_footer">Các trang của ArchiveTune. Cài đặt mà Neiro cũng có sẽ được đồng bộ hai chiều.</string>
 </resources>

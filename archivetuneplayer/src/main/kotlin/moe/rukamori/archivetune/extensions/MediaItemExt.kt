@@ -31,7 +31,7 @@ const val ExtraIsMusicVideo = "moe.rukamori.archivetune.extra.IS_MUSIC_VIDEO"
 const val ExtraIsPodcast = "moe.rukamori.archivetune.extra.IS_PODCAST"
 
 val MediaItem.metadata: MediaMetadata?
-    get() = localConfiguration?.tag as? MediaMetadata
+    get() = localConfiguration?.tag as? MediaMetadata ?: moe.rukamori.archivetune.bridge.BridgeMetadata.of(this) // BRIDGE: a controller's items carry no tag
 
 private fun String?.toNotificationArtworkUri() =
     this

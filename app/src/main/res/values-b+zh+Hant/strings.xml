@@ -1435,4 +1435,6 @@
     <string name="download_addon_needs_lossless_output">%1$s 僅在連接有線、USB 或 LDAC 等級耳機時提供音樂。在連接此類耳機前，下載會略過它，因此你的歌曲將從其他來源儲存。</string>
     <string name="source_downloads_on">允許下載</string>
     <string name="crash_log_saved">Neiro 上次當機了 — 記錄已儲存至 %1$s</string>
+    <string name="archivetune_settings_group">ArchiveTune 播放器與外觀</string>
+    <string name="archivetune_settings_group_footer">ArchiveTune 內建的設定頁面。Neiro 也有的設定會雙向同步。</string>
 </resources>

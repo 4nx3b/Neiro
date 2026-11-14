@@ -1604,6 +1604,30 @@ fun SettingsScreen(
             }
         }
 
+        // ---- ArchiveTune's own settings pages ----
+        // Ported byte-for-byte into :archivetuneplayer; each opens full screen
+        // (ArchiveTuneSettingsActivity). Settings Neiro also has — theme, font,
+        // player style and backgrounds, corners, back animation, reduce
+        // animation — are bridged to Neiro's own (ArchiveTunePreferenceBridge),
+        // so a change on either side shows on both.
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.archivetune_settings_group),
+            footer = stringResource(R.string.archivetune_settings_group_footer),
+        ) {
+            moe.rukamori.archivetune.bridge.ArchiveTuneSettingsPageId.entries.forEach { page ->
+                val pageTitle = stringResource(page.title)
+                row(pageTitle, "archivetune", page.route.substringAfterLast('/')) {
+                    SettingsRow(
+                        icon = Icons.Rounded.Tune,
+                        title = pageTitle,
+                        trailing = { Chevron() },
+                        onClick = { com.music.bitchord.ArchiveTuneSettingsActivity.open(context, page) },
+                    )
+                }
+            }
+        }
+
         // ---- The ported Home group ----
         if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.home)) {
             // Ported from ArchiveTune's minimal home mode: the feed keeps only

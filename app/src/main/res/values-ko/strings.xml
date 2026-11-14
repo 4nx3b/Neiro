@@ -1548,4 +1548,6 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">지난번에 Neiro가 비정상 종료되었습니다 — 로그를 %1$s에 저장했습니다</string>
+    <string name="archivetune_settings_group">ArchiveTune 플레이어 및 모양</string>
+    <string name="archivetune_settings_group_footer">ArchiveTune의 설정 페이지입니다. Neiro에도 있는 설정은 양방향으로 동기화됩니다.</string>
 </resources>

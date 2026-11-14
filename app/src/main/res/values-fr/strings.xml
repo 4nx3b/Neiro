@@ -1699,4 +1699,6 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro a planté la dernière fois — journal enregistré dans %1$s</string>
+    <string name="archivetune_settings_group">Lecteur et apparence ArchiveTune</string>
+    <string name="archivetune_settings_group_footer">Les pages d’ArchiveTune. Les réglages que Neiro possède aussi restent synchronisés dans les deux sens.</string>
 </resources>

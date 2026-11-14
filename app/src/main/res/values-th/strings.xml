@@ -1681,4 +1681,6 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro ขัดข้องเมื่อครั้งที่แล้ว — บันทึกล็อกไว้ที่ %1$s</string>
+    <string name="archivetune_settings_group">เครื่องเล่นและรูปลักษณ์ของ ArchiveTune</string>
+    <string name="archivetune_settings_group_footer">หน้าการตั้งค่าของ ArchiveTune การตั้งค่าที่ Neiro มีด้วยจะซิงค์กันทั้งสองทาง</string>
 </resources>
