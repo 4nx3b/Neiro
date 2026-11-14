@@ -1,15 +1,9 @@
 /*
- * BRIDGE — the two symbols ArchiveTune's appearance settings screen
- * exported that the player reads. The settings screens themselves are this
- * app's own (already ported in earlier rounds); the player just wants the
- * dark-mode enum and the po-token route.
+ * BRIDGE — a symbol the player reads from an ArchiveTune settings screen this
+ * port does not carry (PoTokenScreen, an account/integration page). DarkMode,
+ * which used to be shimmed here too, now comes from the ported
+ * AppearanceSettings.kt itself.
  */
 package moe.rukamori.archivetune.ui.screens.settings
-
-enum class DarkMode {
-    ON,
-    OFF,
-    AUTO,
-}
 
 const val PO_TOKEN_ROUTE = "settings/po_token"

@@ -282,6 +282,13 @@
           swap the home-screen icon by enabling one alias and disabling the others
           (see AppIcon). Exactly one is enabled at a time; Default is the shipped one.
         -->
+        <!-- ArchiveTune's own settings pages, ported (see ArchiveTuneSettingsActivity). -->
+        <activity
+            android:name=".ArchiveTuneSettingsActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:theme="@style/Theme.BitChord" />
+
         <activity-alias
             android:name=".LauncherDefault"
             android:enabled="true"

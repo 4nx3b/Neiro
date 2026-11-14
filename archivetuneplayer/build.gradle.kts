@@ -200,4 +200,8 @@ dependencies {
     // The frost behind the ported components' glass surfaces — the app's
     // own pin; the player closure uses only its stable core API.
     implementation("dev.chrisbanes.haze:haze:1.3.1")
+    // The ported settings pages: the palette picker draws its previews from SVG,
+    // and the copied pages carry @Preview functions.
+    implementation("com.caverock:androidsvg-aar:1.4")
+    implementation("androidx.compose.ui:ui-tooling-preview")
 }

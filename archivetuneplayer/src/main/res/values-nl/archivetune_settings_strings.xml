@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copied from ArchiveTune c0c97f7 for the ported settings pages. -->
+<resources>
+    <string name="album_backdrop">Achtergrondvervaging</string>
+    <string name="album_backdrop_desc">Toon artwork als vervaagde achtergrond op de speler</string>
+    <string name="backdrop_blur_amount">Hoeveelheid achtergrondvervaging</string>
+    <string name="backdrop_blur_amount_value">%1$d%%</string>
+</resources>

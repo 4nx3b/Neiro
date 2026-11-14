@@ -1571,4 +1571,6 @@
     <string name="hide_library_on_device_shelf_subtitle">The releases kept on this device, under the links</string>
 
     <string name="crash_log_saved">Neiro crashed last time — log saved to %1$s</string>
+    <string name="archivetune_settings_group">ArchiveTune player &amp; appearance</string>
+    <string name="archivetune_settings_group_footer">ArchiveTune’s own pages. Settings Neiro also has stay in sync both ways.</string>
 </resources>
