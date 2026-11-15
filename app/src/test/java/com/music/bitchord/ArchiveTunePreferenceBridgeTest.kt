@@ -4,6 +4,7 @@ import com.music.bitchord.data.settings.AppFont
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
+import com.music.bitchord.data.settings.LiquidGlassIntensity
 import com.music.bitchord.data.settings.LyricsBackgroundStyle
 import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
 import com.music.bitchord.data.settings.PlayerButtonsStyle
@@ -20,6 +21,7 @@ import org.junit.Test
 import moe.rukamori.archivetune.constants.AppFontPreference as AtFont
 import moe.rukamori.archivetune.constants.AutomixPerformanceMode as AtAutomix
 import moe.rukamori.archivetune.constants.BackAnimationStyle as AtBackAnimation
+import moe.rukamori.archivetune.constants.LiquidGlassIntensity as AtGlassIntensity
 import moe.rukamori.archivetune.constants.LyricsBackgroundStyle as AtLyricsBackground
 import moe.rukamori.archivetune.constants.MiniPlayerBackgroundStyle as AtMiniPlayerBackground
 import moe.rukamori.archivetune.constants.PlayerButtonsStyle as AtButtons
@@ -100,5 +102,11 @@ class ArchiveTunePreferenceBridgeTest {
         AtAutomix.entries.forEach { assertEquals(it, Bridge.toAt(Bridge.fromAt(it))) }
         assertEquals(8f, Bridge.crossfadeLength(8, 5), 0f)
         assertEquals(5f, Bridge.crossfadeLength(0, 5), 0f)
+    }
+
+    @Test
+    fun liquidGlassIntensityRoundTrips() {
+        LiquidGlassIntensity.entries.forEach { assertEquals(it, Bridge.fromAt(Bridge.toAt(it))) }
+        AtGlassIntensity.entries.forEach { assertEquals(it, Bridge.toAt(Bridge.fromAt(it))) }
     }
 }

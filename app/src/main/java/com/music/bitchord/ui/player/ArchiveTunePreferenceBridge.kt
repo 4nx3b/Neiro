@@ -6,6 +6,7 @@ import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
+import com.music.bitchord.data.settings.LiquidGlassIntensity
 import com.music.bitchord.data.settings.LyricsBackgroundStyle
 import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
 import com.music.bitchord.data.settings.PlayerButtonsStyle
@@ -16,6 +17,27 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
+import moe.rukamori.archivetune.constants.ArchiveTuneCanvasKey
+import moe.rukamori.archivetune.constants.BlurRadiusKey
+import moe.rukamori.archivetune.constants.CropThumbnailToSquareKey
+import moe.rukamori.archivetune.constants.DisableBlurKey
+import moe.rukamori.archivetune.constants.FlamingoBackgroundEffectKey
+import moe.rukamori.archivetune.constants.FlamingoHideSlideBarKey
+import moe.rukamori.archivetune.constants.FlamingoShowVolumeBarKey
+import moe.rukamori.archivetune.constants.HidePlayerThumbnailKey
+import moe.rukamori.archivetune.constants.LiquidGlassAdaptiveLuminanceKey
+import moe.rukamori.archivetune.constants.LiquidGlassBackdropVibrancyKey
+import moe.rukamori.archivetune.constants.LiquidGlassBlurRadiusKey
+import moe.rukamori.archivetune.constants.LiquidGlassChromaticAberrationKey
+import moe.rukamori.archivetune.constants.LiquidGlassDepth3DKey
+import moe.rukamori.archivetune.constants.LiquidGlassEnabledKey
+import moe.rukamori.archivetune.constants.LiquidGlassIntensityKey
+import moe.rukamori.archivetune.constants.LiquidGlassRefractionAmountKey
+import moe.rukamori.archivetune.constants.LiquidGlassRefractionHeightKey
+import moe.rukamori.archivetune.constants.LiquidGlassShadowDepthKey
+import moe.rukamori.archivetune.constants.LiquidGlassTintOpacityKey
+import moe.rukamori.archivetune.constants.LyricsLineBlurKey
+import moe.rukamori.archivetune.constants.TikTokMainLyricsEnabledKey
 import moe.rukamori.archivetune.constants.AutomixPerformanceModeKey
 import moe.rukamori.archivetune.constants.BackAnimationStyleKey
 import moe.rukamori.archivetune.constants.CrossfadeDurationKey
@@ -45,6 +67,7 @@ import moe.rukamori.archivetune.utils.BridgedPreferences
 import moe.rukamori.archivetune.utils.mirrorBridgedPreferences
 import moe.rukamori.archivetune.constants.AppFontPreference as AtFont
 import moe.rukamori.archivetune.constants.AutomixPerformanceMode as AtAutomix
+import moe.rukamori.archivetune.constants.LiquidGlassIntensity as AtGlassIntensity
 import moe.rukamori.archivetune.constants.BackAnimationStyle as AtBackAnimation
 import moe.rukamori.archivetune.constants.LyricsBackgroundStyle as AtLyricsBackground
 import moe.rukamori.archivetune.constants.MiniPlayerBackgroundStyle as AtMiniPlayerBackground
@@ -185,6 +208,41 @@ object ArchiveTunePreferenceBridge {
             changes = AppSettings.crossfadeSeconds.map { crossfadeLength(it, lastCrossfadeSeconds) }.distinctUntilChanged(),
         )
 
+        // ---- Twins Neiro already has a row for: one setting, Neiro's row. ----
+        boolKey(HidePlayerThumbnailKey, AppSettings.hidePlayerThumbnail, AppSettings::setHidePlayerThumbnail)
+        boolKey(TikTokMainLyricsEnabledKey, AppSettings.tikTokMainLyrics, AppSettings::setTikTokMainLyrics)
+        boolKey(LyricsLineBlurKey, AppSettings.lyricsBlur, AppSettings::setLyricsBlur)
+        // ArchiveTune's own animated canvas ↔ Neiro's "Animated cover art".
+        boolKey(ArchiveTuneCanvasKey, AppSettings.animatedCanvas, AppSettings::setAnimatedCanvas)
+        boolKey(FlamingoHideSlideBarKey, AppSettings.hideSlideBar, AppSettings::setHideSlideBar)
+        boolKey(FlamingoBackgroundEffectKey, AppSettings.movingBlur, AppSettings::setMovingBlur)
+        boolKey(CropThumbnailToSquareKey, AppSettings.squareVideoThumbnails, AppSettings::setSquareVideoThumbnails)
+        boolKey(DisableBlurKey, AppSettings.reduceDynamicBlur, AppSettings::setReduceDynamicBlur)
+        // Flamingo asks "show the volume bar", Neiro "hide" it — as the
+        // player-wide ShowPlayerVolumeBarKey above.
+        BridgedPreferences.bridge(
+            key = FlamingoShowVolumeBarKey,
+            read = { !AppSettings.hideVolumeBar.value },
+            write = { AppSettings.setHideVolumeBar(!it) },
+            changes = AppSettings.hideVolumeBar.map { !it }.distinctUntilChanged(),
+        )
+        // The full-cover blur, in dp on both sides (0..64, 48 by default).
+        floatKey(BlurRadiusKey, AppSettings.blurIntensity, AppSettings::setBlurIntensity)
+        // Liquid Glass: the same tuning, the same units and defaults on both sides.
+        boolKey(LiquidGlassEnabledKey, AppSettings.liquidGlass, AppSettings::setLiquidGlass)
+        enumKey<LiquidGlassIntensity, AtGlassIntensity>(LiquidGlassIntensityKey, AppSettings.liquidGlassIntensity, { toAt(it) }) {
+            AppSettings.setLiquidGlassIntensity(fromAt(it))
+        }
+        floatKey(LiquidGlassRefractionHeightKey, AppSettings.liquidGlassRefractionHeight, AppSettings::setLiquidGlassRefractionHeight)
+        floatKey(LiquidGlassRefractionAmountKey, AppSettings.liquidGlassRefractionAmount, AppSettings::setLiquidGlassRefractionAmount)
+        floatKey(LiquidGlassBlurRadiusKey, AppSettings.liquidGlassBlurRadius, AppSettings::setLiquidGlassBlurRadius)
+        floatKey(LiquidGlassTintOpacityKey, AppSettings.liquidGlassTintOpacity, AppSettings::setLiquidGlassTintOpacity)
+        floatKey(LiquidGlassShadowDepthKey, AppSettings.liquidGlassShadowDepth, AppSettings::setLiquidGlassShadowDepth)
+        boolKey(LiquidGlassDepth3DKey, AppSettings.liquidGlassDepth3D, AppSettings::setLiquidGlassDepth3D)
+        boolKey(LiquidGlassChromaticAberrationKey, AppSettings.liquidGlassChromaticAberration, AppSettings::setLiquidGlassChromaticAberration)
+        boolKey(LiquidGlassBackdropVibrancyKey, AppSettings.liquidGlassBackdropVibrancy, AppSettings::setLiquidGlassBackdropVibrancy)
+        boolKey(LiquidGlassAdaptiveLuminanceKey, AppSettings.liquidGlassAdaptiveLuminance, AppSettings::setLiquidGlassAdaptiveLuminance)
+
         // Vendored code that reads `dataStore.data` flows (not
         // rememberPreference) sees the bridged values too.
         mirrorBridgedPreferences(context.applicationContext)
@@ -196,6 +254,22 @@ object ArchiveTunePreferenceBridge {
 
     /** The length ArchiveTune's slider shows: the live one, or the last one while off. */
     fun crossfadeLength(seconds: Int, last: Int): Float = (if (seconds > 0) seconds else last).toFloat()
+
+    private fun boolKey(
+        key: androidx.datastore.preferences.core.Preferences.Key<Boolean>,
+        source: kotlinx.coroutines.flow.StateFlow<Boolean>,
+        write: (Boolean) -> Unit,
+    ) {
+        BridgedPreferences.bridge(key = key, read = { source.value }, write = write, changes = source.distinct())
+    }
+
+    private fun floatKey(
+        key: androidx.datastore.preferences.core.Preferences.Key<Float>,
+        source: kotlinx.coroutines.flow.StateFlow<Float>,
+        write: (Float) -> Unit,
+    ) {
+        BridgedPreferences.bridge(key = key, read = { source.value }, write = write, changes = source.distinct())
+    }
 
     private fun <T> Flow<T>.distinct(): Flow<T> = distinctUntilChanged()
 
@@ -383,6 +457,22 @@ object ArchiveTunePreferenceBridge {
             AtAutomix.EFFICIENT -> AutomixPerformanceMode.EFFICIENT
             AtAutomix.BALANCED -> AutomixPerformanceMode.BALANCED
             AtAutomix.PERFORMANCE -> AutomixPerformanceMode.PERFORMANCE
+        }
+
+    // ---- Liquid Glass intensity tier: same names.
+
+    fun toAt(tier: LiquidGlassIntensity): AtGlassIntensity =
+        when (tier) {
+            LiquidGlassIntensity.SUBTLE -> AtGlassIntensity.SUBTLE
+            LiquidGlassIntensity.STANDARD -> AtGlassIntensity.STANDARD
+            LiquidGlassIntensity.VIVID -> AtGlassIntensity.VIVID
+        }
+
+    fun fromAt(tier: AtGlassIntensity): LiquidGlassIntensity =
+        when (tier) {
+            AtGlassIntensity.SUBTLE -> LiquidGlassIntensity.SUBTLE
+            AtGlassIntensity.STANDARD -> LiquidGlassIntensity.STANDARD
+            AtGlassIntensity.VIVID -> LiquidGlassIntensity.VIVID
         }
 
     // ---- Tab the app opens on.

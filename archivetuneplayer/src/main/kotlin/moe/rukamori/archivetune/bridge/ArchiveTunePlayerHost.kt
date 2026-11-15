@@ -34,6 +34,8 @@ import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.DialogNavigator
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.LocalDatabase
 import moe.rukamori.archivetune.LocalDownloadUtil
@@ -48,6 +50,8 @@ import moe.rukamori.archivetune.playback.DownloadUtil
 import moe.rukamori.archivetune.playback.PlayerConnection
 import moe.rukamori.archivetune.ui.component.BottomSheetPageState
 import moe.rukamori.archivetune.ui.component.BottomSheetState
+import moe.rukamori.archivetune.ui.component.COLLAPSED_ANCHOR
+import moe.rukamori.archivetune.ui.component.DISMISSED_ANCHOR
 import moe.rukamori.archivetune.ui.component.LocalBottomSheetPageState
 import moe.rukamori.archivetune.ui.component.LocalMenuState
 import moe.rukamori.archivetune.ui.component.MenuState
@@ -128,7 +132,7 @@ fun ArchiveTunePlayerHost(
     }
 
     val database = remember { MusicDatabase() }
-    val downloadUtil = remember { DownloadUtil(context) }
+    val downloadUtil = remember { DownloadUtil.get(context) }
     val syncUtils = remember { SyncUtils() }
     val menuState = remember { MenuState() }
     val bottomSheetPageState = remember { BottomSheetPageState() }
@@ -146,7 +150,23 @@ fun ArchiveTunePlayerHost(
                 dismissedBound = 0.dp,
                 collapsedBound = collapsedBound,
                 expandedBound = maxHeight,
+                // ArchiveTune's activity collapsed the sheet itself once media
+                // was present; nothing here did, so after a style switch the
+                // sheet stayed dismissed and no mini player showed (while the
+                // app's own player had been put away). Start collapsed when a
+                // song is loaded — composition is on the controller's looper.
+                initialAnchor =
+                    if (playerConnection.player.currentMediaItem != null) COLLAPSED_ANCHOR else DISMISSED_ANCHOR,
             )
+        // A song started later brings the mini player up too. Only from the
+        // dismissed state, so a drag, an open player or the drift is never
+        // fought.
+        LaunchedEffect(state, playerConnection) {
+            playerConnection.mediaMetadata
+                .map { it != null }
+                .distinctUntilChanged()
+                .collect { hasMedia -> if (hasMedia && state.isDismissed) state.collapseSoft() }
+        }
 
         CompositionLocalProvider(
             LocalPlayerConnection provides playerConnection,

@@ -1675,7 +1675,5 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro 上次崩溃了 — 日志已保存到 %1$s</string>
-    <string name="archivetune_settings_group">ArchiveTune 播放器与外观</string>
-    <string name="archivetune_settings_group_footer">ArchiveTune 自带的设置页面。Neiro 也有的设置会双向同步。</string>
     <string name="player_style_reset">%1$s 播放器反复崩溃，Neiro 已切换回自带播放器。崩溃日志位于 Downloads/Neiro。</string>
 </resources>

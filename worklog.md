@@ -280,3 +280,14 @@ Stage Summary:
   - TikTok is a video feed;
   - V10 uses a die-cut shape;
   - SimpMusic, Looper and Flamingo use artwork pagers.
+
+## Follow-up 5: style-switch crashes, missing mini player, settings spacing, settings merge (part 1)
+
+- **SimpleCache crash** (logs 112718, 112801): every mount of `ArchiveTunePlayerHost` built a new `DownloadUtil`, and with it a second `SimpleCache` on `cache/at_download_bridge`. `DownloadUtil` is now a process singleton (`DownloadUtil.get`), with its cache and manager built lazily. `BridgeManagerHolder` uses the same one.
+- **Haze crash** (log 120335): haze 1.3.1 throws without a backgroundColor, and the two ported `HazeStyle` calls had none (settings header, player backdrop). Both now pass one.
+- **Mini player missing after a style switch**: the host's sheet started DISMISSED and nothing collapsed it. It now starts COLLAPSED when a song is loaded, and collapses from DISMISSED when one arrives later.
+- **Settings cards ran together**: `SearchableSettingsGroup` dropped the header and the top gap for every card on a category page. Now only the first card sits flush, and a header is hidden only when it repeats the page title. Pure rule in `SettingsGroupSpacing.kt`, tested by `SettingsGroupSpacingTest`.
+- **Merge, part 1**:
+  - the separate ArchiveTune group and `ArchiveTuneSettingsActivity` are removed;
+  - 21 more twin keys are bridged to Neiro's existing rows: Liquid Glass (switch, tier and 9 tuning values), hide thumbnail, TikTok lyrics, lyric blur, animated canvas, slide bar, moving blur, square thumbnails, reduce blur, blur strength, Flamingo volume bar.
+- **Merge, part 2 is still open**: native rows for the ported-only keys. They are listed in `docs/archivetune-settings-map.md`.

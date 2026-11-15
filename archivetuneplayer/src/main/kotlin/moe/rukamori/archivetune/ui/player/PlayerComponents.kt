@@ -2749,6 +2749,7 @@ fun PlayerBackground(
                                             state = backgroundHazeState,
                                             style =
                                                 HazeStyle(
+                                                    backgroundColor = Color.Black, // BRIDGE: haze 1.3.1 throws without it
                                                     blurRadius = 80.dp,
                                                     tint = HazeTint(Color.Black.copy(alpha = 0.30f)),
                                                     noiseFactor = 0.15f,

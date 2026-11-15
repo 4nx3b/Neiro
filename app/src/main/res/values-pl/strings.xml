@@ -1738,7 +1738,5 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro ostatnio uległo awarii — dziennik zapisano w %1$s</string>
-    <string name="archivetune_settings_group">Odtwarzacz i wygląd ArchiveTune</string>
-    <string name="archivetune_settings_group_footer">Strony z ArchiveTune. Ustawienia, które ma też Neiro, są synchronizowane w obie strony.</string>
     <string name="player_style_reset">Odtwarzacz %1$s wielokrotnie się zawieszał, więc Neiro wróciło do własnego odtwarzacza. Dziennik awarii jest w Downloads/Neiro.</string>
 </resources>
