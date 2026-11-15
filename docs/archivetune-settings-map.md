@@ -11,7 +11,7 @@ Generated from the ported pages (`archivetuneplayer/.../ui/screens/settings/`) b
   - **local**: it persists in the module's own DataStore and the ported stack reads it there.
   - **dead**: nothing in this port reads it. The switch is stored, but changes nothing.
 
-Totals: 23 bridged, 50 local, 40 dead.
+Totals: 44 bridged, 29 local, 40 dead.
 
 Pure black: Neiro has no pure-black setting, so `ArchiveTunePlayerHost(pureBlack = false)` in MainActivity stays as it is
 until one exists.
@@ -22,7 +22,7 @@ until one exists.
 | `AlbumCanvasEnabledKey` | CanvasSettingsScreen | — | — | dead |
 | `AppleMusicAnimatedArtworkKey` | AppearanceSettings | — | — | dead |
 | `AppleMusicExperienceKey` | AppearanceSettings | — | — | dead |
-| `ArchiveTuneCanvasKey` | CanvasSettingsScreen | Player, PlayerMenu, Thumbnail | — | local |
+| `ArchiveTuneCanvasKey` | CanvasSettingsScreen | Player, PlayerMenu, Thumbnail | `AppSettings.animatedCanvas` | **bridge** |
 | `ArtistSeparatorsKey` | PlayerSettings | FlamingoPlayer, PlayerMenu | — | local |
 | `ArtworkProviderOrderKey` | CanvasSettingsScreen | — | — | dead |
 | `AutoHideLyricsPlayerControlsKey` | LyricsSettings | LyricsScreen | — | local |
@@ -33,10 +33,10 @@ until one exists.
 | `BackAnimationStyleKey` | AppearanceSettings | — | `AppSettings.backAnimationStyle` | **bridge** |
 | `BackdropBlurAmountKey` | AppearanceSettings | Player, Thumbnail | — | local |
 | `BackdropEnabledKey` | AppearanceSettings | Player, Thumbnail | — | local |
-| `BlurRadiusKey` | AppearanceSettings | LyricsScreen, Player | — | local |
+| `BlurRadiusKey` | AppearanceSettings | LyricsScreen, Player | `AppSettings.blurIntensity` | **bridge** |
 | `CanvasAudioReactiveKey` | CanvasSettingsScreen | ProceduralCanvas | — | local |
 | `CanvasResolverEndpointsKey` | CanvasSettingsScreen | — | — | dead |
-| `CropThumbnailToSquareKey` | AppearanceSettings | Items, Thumbnail | — | local |
+| `CropThumbnailToSquareKey` | AppearanceSettings | Items, Thumbnail | `AppSettings.squareVideoThumbnails` | **bridge** |
 | `CrossfadeDurationKey` | PlayerSettings | — | `AppSettings.crossfadeSeconds` (length kept while off) | **bridge** |
 | `CrossfadeEnabledKey` | PlayerSettings | — | `AppSettings.crossfadeSeconds > 0` | **bridge** |
 | `CrossfadeGaplessKey` | PlayerSettings | — | — | dead |
@@ -47,7 +47,7 @@ until one exists.
 | `DefaultOpenTabKey` | AppearanceSettings | — | `AppSettings.defaultOpenTab` | **bridge** |
 | `DeviceMutePlaybackRecoveryVolumeKey` | PlayerSettings | — | — | dead |
 | `DisableAnimationsKey` | AppearanceSettings | FloatingNavigationToolbar | `AppSettings.reduceAnimation` | **bridge** |
-| `DisableBlurKey` | AppearanceSettings | LyricsScreen, Player, Thumbnail | — | local |
+| `DisableBlurKey` | AppearanceSettings | LyricsScreen, Player, Thumbnail | `AppSettings.reduceDynamicBlur` | **bridge** |
 | `DolbyFfmpegDecoderKey` | PlayerSettings | — | — | dead |
 | `EnableBetterLyricsKey` | LyricsSettings | — | — | dead |
 | `EnableBetterLyricsPortatoKey` | LyricsSettings | — | — | dead |
@@ -59,33 +59,33 @@ until one exists.
 | `EnableVideoPlaybackKey` | PlayerSettings | Player | — | local |
 | `EnableYouLyPlusLyricsKey` | LyricsSettings | — | — | dead |
 | `EnhancedLyricsStyleKey` | LyricsSettings | LyricsEnhanced | — | local |
-| `FlamingoBackgroundEffectKey` | AppearanceSettings | FlamingoPlayer | — | local |
-| `FlamingoHideSlideBarKey` | AppearanceSettings | FlamingoPlayer | — | local |
-| `FlamingoShowVolumeBarKey` | AppearanceSettings | FlamingoPlayer | — | local |
+| `FlamingoBackgroundEffectKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.movingBlur` | **bridge** |
+| `FlamingoHideSlideBarKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.hideSlideBar` | **bridge** |
+| `FlamingoShowVolumeBarKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.!hideVolumeBar` | **bridge** |
 | `FontPreferenceKey` | AppearanceSettings | — | `AppSettings.appFont` | **bridge** |
 | `GridItemsSizeKey` | AppearanceSettings | — | — | dead |
 | `HideCachedCardKey` | AppearanceExtrasSettings | — | — | dead |
 | `HideLikedSongsCardKey` | AppearanceExtrasSettings | — | — | dead |
 | `HideLocalFilesCardKey` | AppearanceExtrasSettings | — | — | dead |
 | `HideOfflineCardKey` | AppearanceExtrasSettings | — | — | dead |
-| `HidePlayerThumbnailKey` | AppearanceSettings | Thumbnail | — | local |
+| `HidePlayerThumbnailKey` | AppearanceSettings | Thumbnail | `AppSettings.hidePlayerThumbnail` | **bridge** |
 | `HideScrollbarKey` | AppearanceSettings | — | — | dead |
 | `HideStatusBarKey` | AppearanceSettings | — | `AppSettings.hideStatusBar` | **bridge** |
 | `HideTop50CardKey` | AppearanceExtrasSettings | — | — | dead |
-| `LiquidGlassAdaptiveLuminanceKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassBackdropVibrancyKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassBlurRadiusKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassChromaticAberrationKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassDepth3DKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassEnabledKey` | AppearanceSettings, LiquidGlassSettings | GlassSurface, HomeFeedDesignBridge, MiniPlayer | Neiro's `liquidGlass` is the nav bar only; ArchiveTune's is app-wide, so not the same switch | local |
-| `LiquidGlassIntensityKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassRefractionAmountKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassRefractionHeightKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassShadowDepthKey` | LiquidGlassSettings | LiquidGlass | — | local |
-| `LiquidGlassTintOpacityKey` | LiquidGlassSettings | LiquidGlass | — | local |
+| `LiquidGlassAdaptiveLuminanceKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassAdaptiveLuminance` | **bridge** |
+| `LiquidGlassBackdropVibrancyKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassBackdropVibrancy` | **bridge** |
+| `LiquidGlassBlurRadiusKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassBlurRadius` | **bridge** |
+| `LiquidGlassChromaticAberrationKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassChromaticAberration` | **bridge** |
+| `LiquidGlassDepth3DKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassDepth3D` | **bridge** |
+| `LiquidGlassEnabledKey` | AppearanceSettings, LiquidGlassSettings | GlassSurface, HomeFeedDesignBridge, MiniPlayer | `AppSettings.liquidGlass` | **bridge** |
+| `LiquidGlassIntensityKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassIntensity` | **bridge** |
+| `LiquidGlassRefractionAmountKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassRefractionAmount` | **bridge** |
+| `LiquidGlassRefractionHeightKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassRefractionHeight` | **bridge** |
+| `LiquidGlassShadowDepthKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassShadowDepth` | **bridge** |
+| `LiquidGlassTintOpacityKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassTintOpacity` | **bridge** |
 | `LyricsBackgroundStyleKey` | AppearanceSettings | BitChordPlayer, LyricsScreen, SimpMusicFullscreenLyricsSheet | `AppSettings.lyricsBackgroundStyle (CUSTOM → DEFAULT)` | **bridge** |
 | `LyricsClickKey` | LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
-| `LyricsLineBlurKey` | LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
+| `LyricsLineBlurKey` | LyricsSettings | LyricsEnhanced, LyricsV2 | `AppSettings.lyricsBlur` | **bridge** |
 | `LyricsLineSpacingKey` | LyricsSettings | LyricsV2 | — | local |
 | `LyricsProviderOrderKey` | LyricsSettings | — | — | dead |
 | `LyricsRomanizeChineseKey` | LyricsRomanisationSettings, LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
@@ -127,7 +127,24 @@ until one exists.
 | `ThumbnailCornerRadiusKey` | AppearanceSettings | Player, Thumbnail, ThumbnailCornerRadiusSelector | `AppSettings.thumbnailCornerRadius` | **bridge** |
 | `TidalArtworkFallbackEnabledKey` | CanvasSettingsScreen | — | — | dead |
 | `TidalEnabledKey` | CanvasSettingsScreen | — | — | dead |
-| `TikTokMainLyricsEnabledKey` | AppearanceSettings | TikTokMainLyrics, TikTokSongPage | — | local |
+| `TikTokMainLyricsEnabledKey` | AppearanceSettings | TikTokMainLyrics, TikTokSongPage | `AppSettings.tikTokMainLyrics` | **bridge** |
 | `UiScaleFactorKey` | AppearanceSettings | — | `AppSettings.uiScale` | **bridge** |
 | `UsbExclusiveAudioKey` | PlayerSettings | — | — | dead |
 | `WakelockKey` | PlayerSettings | — | — | dead |
+
+## Status after follow-up 5
+
+The separate ArchiveTune pages group and its activity are gone; the vendored pages still compile but nothing opens them.
+Native Neiro rows for the remaining `local` keys are **not built yet**. They are listed below with the category they belong in,
+and they keep ArchiveTune's defaults until then:
+
+- Appearance, player card: Backdrop blur, backdrop blur amount, ArchiveTune player background style (shown in place of Neiro's
+  row while a ported style is active), Customize background (image plus blur/brightness/contrast).
+- Lyrics: text size, line spacing, tap to seek, auto-scroll, enhanced style, show and auto-hide controls, Romanization
+  (JP/KR/ZH/HI/other).
+- Playback: swipe to change song, swipe sensitivity, swipe song rows, video playback.
+- Canvas: Spotify Canvas, animate static artwork, motion style.
+
+Not ported (no engine in Neiro): AI romanisation, audio-reactive canvas (needs a microphone permission Neiro doesn't
+request), PiP, auto-start on Bluetooth, wakelock, USB exclusive, Dolby FFmpeg, Tidal, palette theming, grid size, library
+cards and chips, preload counts.

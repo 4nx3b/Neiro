@@ -31,31 +31,53 @@ import kotlinx.coroutines.flow.map
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.constants.DownloadSource
 
-class DownloadUtil(
-    @Suppress("UNUSED_PARAMETER") context: Context,
+class DownloadUtil private constructor(
+    private val appContext: Context,
 ) {
     /** Real but always-empty: this port's downloads are the host's own. A
      *  StateFlow, as the copied UI collects it without an initial value. */
     val downloads: StateFlow<Map<String, Download>> = MutableStateFlow(emptyMap())
 
-    val downloadCache: Cache =
+    private val databaseProvider by lazy { StandaloneDatabaseProvider(appContext) }
+
+    /*
+     * One per process. A SimpleCache locks its folder, and media3 throws
+     * "Another SimpleCache instance uses the folder" for a second one, which
+     * is what a style switch did: every remount of ArchiveTunePlayerHost
+     * built a new DownloadUtil, so a new cache on at_download_bridge.
+     * Built lazily on first use (not during composition), and never
+     * released: the process owns it.
+     */
+    val downloadCache: Cache by lazy {
         SimpleCache(
-            java.io.File(context.cacheDir, "at_download_bridge"),
+            java.io.File(appContext.cacheDir, "at_download_bridge"),
             NoOpCacheEvictor(),
-            StandaloneDatabaseProvider(context.applicationContext),
+            databaseProvider,
         )
+    }
 
-    private val dataSourceFactory =
-        DefaultDataSource.Factory(context.applicationContext)
+    private val dataSourceFactory by lazy { DefaultDataSource.Factory(appContext) }
 
-    val downloadManager: DownloadManager =
+    val downloadManager: DownloadManager by lazy {
         DownloadManager(
-            context.applicationContext,
-            StandaloneDatabaseProvider(context.applicationContext),
+            appContext,
+            databaseProvider,
             downloadCache,
             dataSourceFactory,
             java.util.concurrent.Executors.newFixedThreadPool(3),
         )
+    }
+
+    companion object {
+        @Volatile
+        private var instance: DownloadUtil? = null
+
+        /** The process's one DownloadUtil. */
+        fun get(context: Context): DownloadUtil =
+            instance ?: synchronized(this) {
+                instance ?: DownloadUtil(context.applicationContext).also { instance = it }
+            }
+    }
 
     fun getDownload(songId: String): kotlinx.coroutines.flow.Flow<Download?> = downloads.map { it[songId] }
 
@@ -156,11 +178,9 @@ class ExoDownloadService : DownloadService(
 }
 
 internal object BridgeManagerHolder {
-    private var manager: DownloadManager? = null
     private var helper: androidx.media3.exoplayer.offline.DownloadNotificationHelper? = null
 
-    fun get(context: Context): DownloadManager =
-        manager ?: DownloadUtil(context).downloadManager.also { manager = it }
+    fun get(context: Context): DownloadManager = DownloadUtil.get(context).downloadManager
 
     fun notificationHelper(context: Context): androidx.media3.exoplayer.offline.DownloadNotificationHelper =
         helper ?: androidx.media3.exoplayer.offline.DownloadNotificationHelper(

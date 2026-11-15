@@ -62,6 +62,9 @@ fun ScreenHeaderHaze(
                     state = hazeState,
                     style =
                         HazeStyle(
+                            // haze 1.3.1 throws "backgroundColor not specified"
+                            // at draw time without one.
+                            backgroundColor = surface,
                             blurRadius = 24.dp,
                             tint = HazeTint(surface.copy(alpha = 0.55f)),
                             noiseFactor = 0f,

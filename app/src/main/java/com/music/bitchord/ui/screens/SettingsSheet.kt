@@ -76,7 +76,6 @@ import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SurroundSound
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.WebAssetOff
@@ -459,7 +458,11 @@ fun SettingsScreen(
     // A category page shows all of its rows, so it searches for nothing. The
     // main page searches every category at once: typed into, it lays out the
     // rows that answer from all of them, as the single page Settings once was.
-    val search = SettingsSearch(if (section == null) searchQuery else "", inPage = section != null)
+    val search = SettingsSearch(
+        if (section == null) searchQuery else "",
+        inPage = section != null,
+        pageTitle = section?.let { stringResource(it.title) },
+    )
     val searching = section == null && searchQuery.isNotBlank()
     fun shows(category: SettingsCategory) = section == category || searching
     val watchAvailable = remember { WatchInstaller.available(context) }
@@ -1601,30 +1604,6 @@ fun SettingsScreen(
                     trailing = { Chevron() },
                     onClick = { onOpenChoice(SettingsChoiceKind.AOD) },
                 )
-            }
-        }
-
-        // ---- ArchiveTune's own settings pages ----
-        // Ported byte-for-byte into :archivetuneplayer; each opens full screen
-        // (ArchiveTuneSettingsActivity). Settings Neiro also has — theme, font,
-        // player style and backgrounds, corners, back animation, reduce
-        // animation — are bridged to Neiro's own (ArchiveTunePreferenceBridge),
-        // so a change on either side shows on both.
-        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(
-            search,
-            header = stringResource(R.string.archivetune_settings_group),
-            footer = stringResource(R.string.archivetune_settings_group_footer),
-        ) {
-            moe.rukamori.archivetune.bridge.ArchiveTuneSettingsPageId.entries.forEach { page ->
-                val pageTitle = stringResource(page.title)
-                row(pageTitle, "archivetune", page.route.substringAfterLast('/')) {
-                    SettingsRow(
-                        icon = Icons.Rounded.Tune,
-                        title = pageTitle,
-                        trailing = { Chevron() },
-                        onClick = { com.music.bitchord.ArchiveTuneSettingsActivity.open(context, page) },
-                    )
-                }
             }
         }
 
@@ -2874,7 +2853,12 @@ private class SettingsSearch(
     query: String,
     /** Drawing one category's page rather than the main one: its top bar names it. */
     val inPage: Boolean = false,
+    /** That page's title, so a card header that only repeats it can be dropped. */
+    val pageTitle: String? = null,
 ) {
+    /** Cards drawn so far this composition; the first may sit flush under the title. */
+    var groupsDrawn = 0
+
     // Trimmed, because a trailing space is a typo rather than a search for
     // something ending in one — and on a phone keyboard it is one keystroke
     // away from every word typed.
@@ -2947,11 +2931,19 @@ private inline fun SearchableSettingsGroup(
     // A category's page is titled by its large heading; the header over its
     // first card would only say the same word again. The card takes the
     // header's place, straight under the heading, as on Account's page.
-    val inPageHeader = header != null && search.inPage
+    // Only the first card, and only when its header would just repeat the
+    // page's title: every later card keeps its header and its gap, as on
+    // the main page (see settingsGroupChrome).
+    val chrome = settingsGroupChrome(
+        inPage = search.inPage,
+        first = search.groupsDrawn++ == 0,
+        header = header,
+        pageTitle = search.pageTitle,
+    )
     SettingsGroup(
-        header = header.takeUnless { inPageHeader },
+        header = header.takeIf { chrome.showHeader },
         footer = footer,
-        topSpacing = if (inPageHeader) 0.dp else topSpacing,
+        topSpacing = if (chrome.flush) 0.dp else topSpacing,
     ) {
         scope.entries.forEachIndexed { index, entry ->
             when {
