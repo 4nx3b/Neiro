@@ -9,6 +9,7 @@
 
 package moe.rukamori.archivetune.ui.player
 
+import moe.rukamori.archivetune.bridge.driftArtworkSlot // BRIDGE: drift
 import moe.rukamori.archivetune.ui.utils.ShowMediaInfo
 import android.content.Context
 import android.content.Intent
@@ -2067,6 +2068,7 @@ private fun V9PortraitContent(
                         isPlaying = isPlaying,
                         placeholderColor = textBackgroundColor.copy(alpha = 0.08f),
                         modifier = Modifier.aspectRatio(1f)
+                            .driftArtworkSlot() // BRIDGE: drift
                     )
                 }
 
