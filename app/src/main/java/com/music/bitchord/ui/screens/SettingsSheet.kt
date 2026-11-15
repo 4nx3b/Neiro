@@ -2456,7 +2456,11 @@ private fun PlayerDesignStyle.customizesLyricsBackground(): Boolean =
         this == PlayerDesignStyle.SPATIALFLOW || this == PlayerDesignStyle.SIMPMUSIC)
 
 @Composable
-private fun PlayerDesignStyle.localizedLabel(): String = stringResource(
+private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes())
+
+/** The style's name string, for places outside composition (a toast). */
+@StringRes
+internal fun PlayerDesignStyle.labelRes(): Int =
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord
         PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic
@@ -2469,8 +2473,7 @@ private fun PlayerDesignStyle.localizedLabel(): String = stringResource(
         PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic
         PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow
         PlayerDesignStyle.LOOPER -> R.string.player_design_looper
-    },
-)
+    }
 
 @Composable
 private fun PlayerDesignStyle.localizedDetail(): String = stringResource(
