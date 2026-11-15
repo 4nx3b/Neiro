@@ -262,3 +262,21 @@ Stage Summary:
 - `docs/archivetune-settings-map.md` lists every key, with its bridge / local / dead status.
 - Tests: `ArchiveTunePreferenceBridgeTest` (7 cases) and `CrashLoopGuardTest` (8) pass locally with kotlinc against the real enum entry names. Android compile is CI only.
 - **Not started:** the drift collapse for the ported styles.
+
+## Follow-up 3: drift collapse for the ported styles (branch feat/ported-drift)
+
+- `bridge/DriftDock.kt`:
+  - `driftRect(mini, open, t, travel)` is the app's own sleeve path: `offset = (1 - t) * travel`, `ride = clamp((mini.top - open.top) / travel)`, `rect = lerp(mini, open.translate(0, offset * ride), t)`. x is linear, y lands tangentially and never passes the cover. Covered by `DriftDockTest` (5 cases).
+  - `DriftState` holds the mini cover and the open artwork slot in sheet-local coordinates. Each is read against the sheet at the same instant, so the sheet's translation cancels out.
+  - `Modifier.driftArtworkSlot()` reports a style's artwork slot and hides that artwork while the copy flies.
+  - `DriftArtworkLayer` draws the flying copy in BottomSheet's shared layer, as a translate + scale + corner in graphicsLayer only, so a drag recomposes nothing.
+- Vendored hooks, every line marked `// BRIDGE: drift`:
+  - `Player.kt`: DriftState per sheet and style, the `sharedLayer` for every style except SpatialFlow, and `reportMini` in the mini slot callback;
+  - `Thumbnail.kt`: the current page only;
+  - `PlayerComponents.kt`: V9's artwork.
+- Off for SpatialFlow (it keeps its own floating artwork) and under reduce-animation (`DisableAnimationsKey`, bridged to Neiro).
+- Drifting now: Cinematic (V4) and Material Extended (V9), the two styles with one square artwork slot. The other styles keep their existing fade:
+  - BitChord-port and V7 use full-bleed artwork;
+  - TikTok is a video feed;
+  - V10 uses a die-cut shape;
+  - SimpMusic, Looper and Flamingo use artwork pagers.
