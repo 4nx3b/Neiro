@@ -1657,4 +1657,5 @@
     <string name="crash_log_saved">Neiro son seferde çöktü — günlük %1$s konumuna kaydedildi</string>
     <string name="archivetune_settings_group">ArchiveTune oynatıcı ve görünüm</string>
     <string name="archivetune_settings_group_footer">ArchiveTune’un kendi sayfaları. Neiro’da da bulunan ayarlar iki yönlü eşitlenir.</string>
+    <string name="player_style_reset">%1$s oynatıcısı sürekli çöktüğü için Neiro kendi oynatıcısına döndü. Çökme günlüğü Downloads/Neiro konumunda.</string>
 </resources>

@@ -189,6 +189,14 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             CoroutineScope(Dispatchers.IO).launch { Innertube.ensureSessionScope() }
         }
         AppSettings.init(this, authStore)
+        // A ported player style that crashed the last two launches within
+        // seconds of starting is switched back to the app's own player before
+        // any screen mounts it again (MainActivity says so).
+        com.music.bitchord.data.CrashLoopGuard.checkOnLaunch(this)
+        // The settings Neiro shares with the ported ArchiveTune stack read and
+        // write Neiro's own AppSettings, whichever player style is active —
+        // after AppSettings is open and the preference store is started.
+        com.music.bitchord.ui.player.ArchiveTunePreferenceBridge.install(this)
         // Restores the addon token, so the first search after a process restart
         // doesn't have to attest the device again.
         com.music.bitchord.data.sources.addon.AddonAuth.init(this)

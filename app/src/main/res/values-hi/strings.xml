@@ -1700,4 +1700,5 @@
     <string name="crash_log_saved">Neiro पिछली बार क्रैश हो गया — लॉग %1$s में सहेजा गया</string>
     <string name="archivetune_settings_group">ArchiveTune प्लेयर और रूप</string>
     <string name="archivetune_settings_group_footer">ArchiveTune के अपने पेज। जो सेटिंग Neiro में भी हैं, वे दोनों तरफ़ सिंक रहती हैं।</string>
+    <string name="player_style_reset">%1$s प्लेयर बार-बार क्रैश हो रहा था, इसलिए Neiro अपने प्लेयर पर लौट आया। क्रैश लॉग Downloads/Neiro में है।</string>
 </resources>

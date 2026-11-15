@@ -133,6 +133,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.music.bitchord.ui.screens.labelRes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
@@ -423,6 +424,23 @@ class MainActivity : AppCompatActivity() {
         // it was saved. Off the main thread — it may retry the Downloads copy.
         if (savedInstanceState == null) {
             val appContext = applicationContext
+            // A ported player style kept crashing at launch and was switched
+            // back to the app's own player (see CrashLoopGuard): say so once.
+            lifecycleScope.launch {
+                val resetFrom = withContext(Dispatchers.IO) {
+                    com.music.bitchord.data.CrashLoopGuard.consumeStyleReset(appContext)
+                }
+                if (resetFrom != null) {
+                    Toast.makeText(
+                        appContext,
+                        getString(
+                            R.string.player_style_reset,
+                            getString(resetFrom.labelRes()),
+                        ),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
             lifecycleScope.launch {
                 val crashed = withContext(Dispatchers.IO) {
                     runCatching { com.music.bitchord.data.CrashReporter.consumeUnseenCrash(appContext) }
@@ -4494,8 +4512,7 @@ private fun BitChordApp(
         if (archiveTunePlayerActive && controller != null) {
             val atBottomBarHeight = with(LocalDensity.current) { floatingBarsHeight.intValue.toDp() }
             androidx.compose.runtime.key(controller) {
-                ArchiveTunePlayerHost(
-                    hostBridge =
+                val archiveTuneBridge =
                         remember(controller, viewModel) {
                             ArchiveTuneBridgeImpl(
                                 controller = controller,
@@ -4515,7 +4532,15 @@ private fun BitChordApp(
                                 },
                                 onOpenSearch = { selectedTab = TAB_SEARCH },
                             )
-                        },
+                        }
+                // Detach its controller listener and stop its collectors
+                // when the ported player goes away (style switched back, or a
+                // new controller).
+                DisposableEffect(archiveTuneBridge) {
+                    onDispose { archiveTuneBridge.release() }
+                }
+                ArchiveTunePlayerHost(
+                    hostBridge = archiveTuneBridge,
                     pureBlack = false,
                     bottomBarHeight = atBottomBarHeight,
                     modifier = Modifier.fillMaxSize(),

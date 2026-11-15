@@ -230,3 +230,35 @@ Stage Summary:
 - **Staged, not yet built: settings port** (upstream c0c97f7). The 17 settings files and their 12-file closure are copied byte-for-byte, with 4 BRIDGE shims, under `docs/archivetune-settings-port/staged/`, along with the dependency analyser and a README listing what's left (gradle deps, res, settings host, SettingsSheet mount, key bridging).
 - **Not started: drift collapse for ported styles.**
 - Skipped by design (they drive ArchiveTune's own service, Room, InnerTube or accounts): account/source/integration pages (Tidal, Qobuz, Deezer, Spotify, Apple Music, Telegram, Jio, SoundCloud, YouTube OAuth/PoToken, Discord, scrobblers, Listen Together, AI, Android Auto, Update, Backup, Storage, DNS, Content, Privacy, Audiophile, Debug, Icon, AOD).
+
+## Follow-up 2: crash on every launch with a ported style saved
+
+- **Log** (realme RMX3563, Android 16, 1.9.1 release): `IllegalStateException: MediaController method is called from a wrong thread` from `MediaController.getCurrentMediaItem`, on `DefaultDispatcher-worker-13`.
+- **Misleading frames:** the trace names `PartySync$start$1$2.emit` and `PlaylistSync$init$1`. R8 merges lambda classes, so those names are unrelated. The real one is the method suffix `invokeSuspend$com$music$bitchord$ui$player$ArchiveTuneBridgeImpl$1`, plus `Dispatchers.Default` in the suppressed coroutine context.
+- **Root cause:** `ArchiveTuneBridgeImpl`'s init collected `viewModel.lyrics` on `Dispatchers.Default` and read `controller.currentMediaItem` inside. `StateFlow.collect` delivers the current value at once, so the first emission ran off the main looper and threw. The saved style mounts the host at every start, so this happened on every launch.
+- **Fix:**
+  - Every controller read or command in the bridge runs on the controller's application looper, through `onMain` or a Handler-backed dispatcher.
+  - The synchronous answers (`song()`, which `MusicDatabase` calls from IO, plus `toggleLike` and `addToPlaylist`) read a `currentItem` snapshot that a controller listener keeps current.
+  - LRC rendering stays off main, with no controller in reach.
+  - `release()` removes the listener and cancels the scope when the host unmounts.
+  - `MusicServiceBridge.pauseFromSleepTimer` no longer calls the player directly.
+- **Crash-loop guard** (`data/CrashLoopGuard.kt`, `CrashLoopPolicy.kt`):
+  - The crash handler records `<epoch> <uptime> <style>` in `files/crash/boot_crashes`.
+  - On launch, two quick crashes (each under 30 s of uptime, within 10 min) with the same ported style switch the style back to BITCHORD, and a toast says so once (`player_style_reset`).
+  - A launch that survives 30 s clears the record.
+  - JVM test: `CrashLoopGuardTest`.
+
+## Follow-up 2b: settings bridged at app start (branch feat/archivetune-port-resume)
+
+- `ui/player/ArchiveTunePreferenceBridge` replaces the private `installPreferenceAdapters()`, which ran only while a ported player was mounted. It is now installed once in `BitChordApplication.onCreate`, after `AppSettings.init`.
+- **23 keys bridged** to Neiro's AppSettings, each with an explicit two-way enum map:
+  - player look: style, slider, buttons, thumbnail corner, mini-player and lyrics background;
+  - appearance: theme/dark mode, font (plus the custom font name and URI), back animation, reduce animation, status bar, UI scale;
+  - layout: tablet mode, minimal home, default tab;
+  - playback: skip silence, stop on task clear, volume bar, AutoMix performance, crossfade on/length.
+- `utils/DataStore.kt` (BRIDGE):
+  - the `dataStore[key]` getter now asks `BridgedPreferences` first;
+  - `mirrorBridgedPreferences` copies Neiro's values one way into the module's DataStore, so vendored `dataStore.data` readers see them too.
+- `docs/archivetune-settings-map.md` lists every key, with its bridge / local / dead status.
+- Tests: `ArchiveTunePreferenceBridgeTest` (7 cases) and `CrashLoopGuardTest` (8) pass locally with kotlinc against the real enum entry names. Android compile is CI only.
+- **Not started:** the drift collapse for the ported styles.

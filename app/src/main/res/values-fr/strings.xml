@@ -1701,4 +1701,5 @@
     <string name="crash_log_saved">Neiro a planté la dernière fois — journal enregistré dans %1$s</string>
     <string name="archivetune_settings_group">Lecteur et apparence ArchiveTune</string>
     <string name="archivetune_settings_group_footer">Les pages d’ArchiveTune. Les réglages que Neiro possède aussi restent synchronisés dans les deux sens.</string>
+    <string name="player_style_reset">Le lecteur %1$s plantait sans cesse, Neiro est donc revenu à son propre lecteur. Le journal du plantage se trouve dans Downloads/Neiro.</string>
 </resources>
