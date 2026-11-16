@@ -109,7 +109,10 @@ import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeSyllable
 import com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine
+import com.mocharealm.accompanist.lyrics.ui.composable.list.LyricsLazyListState
+import com.mocharealm.accompanist.lyrics.ui.composable.list.rememberLyricsLazyListState
 import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.KaraokeLyricsView
+import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.LyricsAnchor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -555,6 +558,16 @@ fun LyricsEnhanced(
 
     val listState = key(lyricsSessionKey, positionResetCounter, karaokeGeneration) { rememberLazyListState() }
 
+    // lyrics-ui 2.0 renders the karaoke view in its own virtualised list and
+    // scrolls it itself, so it takes a LyricsLazyListState rather than the
+    // LazyListState above. That one still drives the plain (unsynced) list and
+    // the SpicyMobile style. Keyed like the listState, so a new session, a
+    // position reset or a new karaoke generation starts from the top again.
+    val karaokeListState =
+        key(lyricsSessionKey, positionResetCounter, karaokeGeneration) {
+            rememberLyricsLazyListState()
+        }
+
     var awaitingFirstFocus by
         remember(lyricsSessionKey, positionResetCounter, karaokeGeneration) {
             mutableStateOf(isSynced)
@@ -773,7 +786,13 @@ fun LyricsEnhanced(
                     return@collectLatest
                 }
                 if (awaitingFirstFocus) {
-                    listState.awaitKaraokeFirstFocus(target)
+                    // lyrics-ui 2.0 keeps the karaoke list's scrolling to
+                    // itself, so the wait is on whichever list is on screen.
+                    if (enhancedLyricsStyle == EnhancedLyricsStyle.SPICY_MOBILE) {
+                        listState.awaitKaraokeFirstFocus(target)
+                    } else {
+                        karaokeListState.awaitKaraokeFirstFocus()
+                    }
                     awaitingFirstFocus = false
                 }
             }
@@ -1124,7 +1143,7 @@ fun LyricsEnhanced(
                                 )
                             } else {
                                 KaraokeLyricsView(
-                                    listState = listState,
+                                    listState = karaokeListState,
                                     lyrics = syncedLyrics,
                                     currentPosition = playbackSyncPosition,
                                     onLineClicked = { line ->
@@ -1153,7 +1172,7 @@ fun LyricsEnhanced(
                                     useBlurEffect = lyricsLineBlur && !animationsDisabled,
                                     showTranslation = showTranslations,
                                     showPhonetic = showPhoneticLines,
-                                    offset = lyricsViewportOffset,
+                                    anchor = LyricsAnchor.Fixed(lyricsViewportOffset),
                                     keepAliveZone = 100.dp,
                                     modifier = Modifier.fillMaxSize(),
                                 )
@@ -1556,6 +1575,21 @@ private fun LyricsSelectionLineItem(
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             )
         }
+    }
+}
+
+/**
+ * The same settle wait for lyrics-ui 2.0's own list state. That state gives out
+ * the first visible index and whether a scroll is in flight, but no layout
+ * info, so the check is the leading item's: the list has moved at all and has
+ * stopped. The frame budget — and the 900 ms timeout above it — is unchanged.
+ */
+private suspend fun LyricsLazyListState.awaitKaraokeFirstFocus() {
+    var framesAwaited = 0
+    while (framesAwaited < LYRIC_FIRST_FOCUS_SETTLE_FRAMES) {
+        withFrameNanos { }
+        framesAwaited++
+        if (firstVisibleItemIndex > 0 && !isScrollInProgress) return
     }
 }
 
