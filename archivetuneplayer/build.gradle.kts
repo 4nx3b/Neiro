@@ -172,8 +172,8 @@ dependencies {
 
     // ---- Libraries ArchiveTune's stack needs that the app doesn't use ----
     // Karaoke lyrics rendering (LyricsV2 / the flamingo and tiktok styles).
-    implementation("com.mocharealm.accompanist:lyrics-ui:1.0.19")
-    implementation("com.mocharealm.accompanist:lyrics-core:0.4.6")
+    implementation("com.mocharealm.accompanist:lyrics-ui:2.0.0-rc.2")
+    implementation("com.mocharealm.accompanist:lyrics-core:0.5.0")
     // The wavy seek bar.
     implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
     // Liquid-glass effects behind the ported components.
