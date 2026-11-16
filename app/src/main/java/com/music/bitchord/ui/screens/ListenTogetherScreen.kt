@@ -338,7 +338,6 @@ fun ListenTogetherScreen(
                     Text(stringResource(R.string.cancel))
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
         )
     }
 
