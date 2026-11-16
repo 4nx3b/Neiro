@@ -479,12 +479,15 @@ fun <T : Any> IosMenuPopover(
                 if (reduceMotion) {
                     tween(durationMillis = 120, easing = LinearEasing)
                 } else {
-                    // Critically damped: it settles without overshooting.
-                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 600f)
+                    // The reference (iOS 26, clips 15-57-35 and 02-46-29) grows in
+                    // ≈300 ms with a small settle after it: lightly under-damped.
+                    spring(dampingRatio = MORPH_DAMPING, stiffness = MORPH_STIFFNESS)
                 },
             )
         } else {
-            progress.animateTo(0f, tween(durationMillis = if (reduceMotion) 100 else 170, easing = FastOutSlowInEasing))
+            // ≈250 ms back into the button; the rows fade out first because
+            // they only show above MORPH_CONTENT_START.
+            progress.animateTo(0f, tween(durationMillis = if (reduceMotion) 100 else MORPH_CLOSE_MS, easing = FastOutSlowInEasing))
             last = null
         }
     }
@@ -552,6 +555,10 @@ fun <T : Any> IosMenuPopover(
                 // dark labels out, so it stays plain.
                 Column(
                     Modifier
+                        // The rows come in once the glass has mostly grown:
+                        // oversized, blurred and faint, settling sharp at their
+                        // own size; they leave first on the way back.
+                        .morphContent(progress::value, reduceMotion)
                         .then(
                             if (dark && !plain) {
                                 Modifier.additiveChrome(true)
@@ -586,14 +593,25 @@ fun <T : Any> IosMenuPopover(
         val hangsDown = anchorBounds != null && anchorBounds.center.y < height / 2f
         val panelY = if (hangsDown) anchorBounds.top.roundToInt().coerceIn(top, lowest) else lowest
 
+        // The pressed button swells into the panel: the glass's rect travels
+        // from the button's bounds to the panel's (morphFrame), so it is on
+        // screen, as glass, from the first frame. With no anchor it grows out
+        // of the screen's centre.
+        val panelBox = MorphBox(panelX.toFloat(), panelY.toFloat(), panel.width.toFloat(), panel.height.toFloat())
+        val fromBox = anchorBounds?.let { MorphBox(it.left, it.top, it.width, it.height) }
+            ?: centreSource(MorphBox(0f, 0f, width.toFloat(), height.toFloat()), 48.dp.toPx())
         val growth: GraphicsLayerScope.() -> Unit = {
             val p = progress.value
-            alpha = (p * 2.5f).coerceIn(0f, 1f)
-            if (!reduceMotion) {
-                transformOrigin = TransformOrigin(1f, if (hangsDown) 0f else 1f)
-                val scale = lerp(0.3f, 1f, p)
-                scaleX = scale
-                scaleY = scale
+            if (reduceMotion) {
+                alpha = p.coerceIn(0f, 1f)
+            } else {
+                val frame = morphFrame(p, fromBox, panelBox)
+                alpha = (p * 6f).coerceIn(0f, 1f)
+                transformOrigin = TransformOrigin(0f, 0f)
+                scaleX = frame.scaleX
+                scaleY = frame.scaleY
+                translationX = frame.translationX
+                translationY = frame.translationY
             }
         }
         layout(width, height) {
@@ -612,3 +630,25 @@ fun <T : Any> IosMenuPopover(
         }
     }
 }
+
+/**
+ * A popup's rows as they morph in: blurred, faint and slightly oversized
+ * while the glass grows, sharp at their own size once it has (morphFrame).
+ * Shared by every popup that grows out of its control.
+ */
+fun Modifier.morphContent(progress: () -> Float, reduceMotion: Boolean): Modifier =
+    graphicsLayer {
+        if (reduceMotion) return@graphicsLayer
+        val c = morphContentFraction(progress())
+        alpha = c
+        val scale = MORPH_CONTENT_SCALE + (1f - MORPH_CONTENT_SCALE) * c
+        scaleX = scale
+        scaleY = scale
+        val blur = MORPH_CONTENT_BLUR_DP.dp.toPx() * (1f - c)
+        renderEffect =
+            if (blur > 0.5f && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                androidx.compose.ui.graphics.BlurEffect(blur, blur)
+            } else {
+                null
+            }
+    }

@@ -233,6 +233,9 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        // AGP 9 disables custom resource values by default; the flavors below
+        // set app_name with resValue().
+        resValues = true
     }
     testOptions {
         unitTests {
