@@ -116,7 +116,7 @@ internal fun SimpMusicQueueSheet(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()),
+                        .padding(top = moe.rukamori.archivetune.LocalStableSystemBarsTopPadding.current), // BRIDGE: cutout
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),

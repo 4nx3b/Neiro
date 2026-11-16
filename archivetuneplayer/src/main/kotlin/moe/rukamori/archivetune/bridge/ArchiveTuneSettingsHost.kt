@@ -129,7 +129,7 @@ fun ArchiveTuneSettingsPage(
     val currentOnBack by rememberUpdatedState(onBack)
     val navController = remember(context) { BridgeSettingsNavController(context) { currentOnBack() } }
 
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTop = stableTopInset()
     CompositionLocalProvider(
         LocalPlayerAwareWindowInsets provides WindowInsets.systemBars,
         // No player is mounted under a settings page; the one page that

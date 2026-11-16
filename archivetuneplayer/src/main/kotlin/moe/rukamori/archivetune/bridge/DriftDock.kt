@@ -143,20 +143,41 @@ class DriftState(
         if (local.width > 0f && local != fullArt) fullArt = local
     }
 
+    /**
+     * The host's own mini cover on screen, when the host draws the only mini
+     * player (every style uses the host's). Read each frame in layout/draw.
+     */
+    var externalMini: ExternalMiniArt? = null
+
+    /** The mini cover in the open sheet's frame, from whichever side owns it. */
+    private fun miniInOpenFrame(t: Float, travel: Float): Rect? {
+        val ext = externalMini ?: return miniArt?.translate(0f, travel)
+        val screen = ext.screenRect() ?: return null
+        val sheet = sheet?.takeIf { it.isAttached } ?: return null
+        // The sheet's origin now is its open origin pushed down by the part
+        // of the travel still to go.
+        val origin = sheet.localToScreen(Offset.Zero)
+        return screen.translate(-origin.x, -origin.y + (1f - t) * travel)
+    }
+
     /** Whether the copy is flying this frame. Read only in layout / draw. */
     fun inFlight(): Boolean {
-        if (!enabled || miniArt == null || fullArt == null) return false
+        if (!enabled || (miniArt == null && externalMini == null) || fullArt == null) return false
         val t = progress()
-        return t > 0.001f && t < 0.999f
+        if (t <= 0.001f || t >= 0.999f) return false
+        // Only while the copy can actually be drawn: with the host's mini
+        // cover not laid out (a style switch, the bar folded away) the
+        // style's own artwork must stay visible rather than vanish.
+        return currentRect() != null
     }
 
     /** The copy's rect this frame, sheet-local; null when there is none. */
     fun currentRect(): Rect? {
-        val mini = miniArt ?: return null
         val full = fullArt ?: return null
         val travel = travelPx()
         val t = progress().coerceIn(0f, 1f)
-        val screen = driftRect(mini.translate(0f, travel), full, t, travel)
+        val mini = miniInOpenFrame(t, travel) ?: return null
+        val screen = driftRect(mini, full, t, travel)
         // The sheet is translated down by (1 - t) * travel; draw in its frame.
         return screen.translate(0f, -(1f - t) * travel)
     }

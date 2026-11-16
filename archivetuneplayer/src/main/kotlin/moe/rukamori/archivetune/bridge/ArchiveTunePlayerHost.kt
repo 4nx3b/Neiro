@@ -82,6 +82,14 @@ fun ArchiveTunePlayerHost(
     onOpenSearch: () -> Unit = {},
     pureBlack: Boolean = false,
     bottomBarHeight: Dp = 0.dp,
+    /**
+     * The host's own mini player drives this sheet, and its cover is where
+     * the artwork drifts to. With it, the ported stack draws no mini player
+     * of its own and the sheet rests fully down; without it (null) the old
+     * ArchiveTune mini player is used.
+     */
+    sheetHandle: ArchiveTuneSheetHandle? = null,
+    externalMiniArt: ExternalMiniArt? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -145,27 +153,37 @@ fun ArchiveTunePlayerHost(
     BoxWithConstraints(modifier = modifier) {
         val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val collapsedBound = bottomInset + bottomBarHeight + MiniPlayerBottomSpacing + MiniPlayerHeight
+        val externalMini = externalMiniArt != null
         val state: BottomSheetState =
             rememberBottomSheetState(
                 dismissedBound = 0.dp,
-                collapsedBound = collapsedBound,
+                // One mini player in the app, the host's: the sheet then has
+                // no collapsed stop of its own and rests fully down.
+                collapsedBound = if (externalMini) 0.dp else collapsedBound,
                 expandedBound = maxHeight,
-                // ArchiveTune's activity collapsed the sheet itself once media
-                // was present; nothing here did, so after a style switch the
-                // sheet stayed dismissed and no mini player showed (while the
-                // app's own player had been put away). Start collapsed when a
-                // song is loaded — composition is on the controller's looper.
                 initialAnchor =
-                    if (playerConnection.player.currentMediaItem != null) COLLAPSED_ANCHOR else DISMISSED_ANCHOR,
+                    if (!externalMini && playerConnection.player.currentMediaItem != null) COLLAPSED_ANCHOR else DISMISSED_ANCHOR,
             )
-        // A song started later brings the mini player up too. Only from the
-        // dismissed state, so a drag, an open player or the drift is never
-        // fought.
-        LaunchedEffect(state, playerConnection) {
-            playerConnection.mediaMetadata
-                .map { it != null }
-                .distinctUntilChanged()
-                .collect { hasMedia -> if (hasMedia && state.isDismissed) state.collapseSoft() }
+        if (sheetHandle != null) {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.SideEffect {
+                sheetHandle.state = state
+                sheetHandle.density = density
+            }
+            DisposableEffect(sheetHandle, state) {
+                onDispose { if (sheetHandle.state === state) sheetHandle.state = null }
+            }
+        }
+        // Without the host's mini player, the ported one comes up when a song
+        // starts. Only from the dismissed state, so a drag, an open player or
+        // the drift is never fought.
+        if (!externalMini) {
+            LaunchedEffect(state, playerConnection) {
+                playerConnection.mediaMetadata
+                    .map { it != null }
+                    .distinctUntilChanged()
+                    .collect { hasMedia -> if (hasMedia && state.isDismissed) state.collapseSoft() }
+            }
         }
 
         CompositionLocalProvider(
@@ -173,9 +191,14 @@ fun ArchiveTunePlayerHost(
             LocalDatabase provides database,
             LocalDownloadUtil provides downloadUtil,
             LocalSyncUtils provides syncUtils,
-            LocalStableSystemBarsTopPadding provides 0.dp,
+            // The stable top inset: the status bar's height even while it is
+            // hidden, never less than the display cutout. Player.kt reads it
+            // as its top padding; 0 put controls under the notch with
+            // "hide status bar" on.
+            LocalStableSystemBarsTopPadding provides stableTopInset(),
             LocalMenuState provides menuState,
             LocalBottomSheetPageState provides bottomSheetPageState,
+            moe.rukamori.archivetune.LocalExternalMiniArt provides externalMiniArt,
         ) {
             ProvideVideoFullscreenState {
                 BottomSheetPlayer(

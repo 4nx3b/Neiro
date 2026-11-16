@@ -336,7 +336,7 @@ fun Thumbnail(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .statusBarsPadding(),
+                    .padding(top = moe.rukamori.archivetune.LocalStableSystemBarsTopPadding.current), // BRIDGE: cutout — statusBarsPadding is 0 while the bar is hidden
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
