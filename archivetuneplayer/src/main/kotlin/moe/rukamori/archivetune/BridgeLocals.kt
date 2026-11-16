@@ -27,3 +27,11 @@ val LocalPlayerAwareWindowInsets =
 val LocalStableSystemBarsTopPadding = staticCompositionLocalOf<Dp> { 0.dp }
 val LocalDownloadUtil = staticCompositionLocalOf<DownloadUtil> { error("No DownloadUtil provided") }
 val LocalSyncUtils = staticCompositionLocalOf<SyncUtils> { error("No SyncUtils provided") }
+
+/**
+ * The host's mini cover, when the host draws the only mini player. Player.kt
+ * then composes no mini player of its own and never dismisses playback on a
+ * downward fling; the drift flies to this cover instead.
+ */
+val LocalExternalMiniArt =
+    androidx.compose.runtime.staticCompositionLocalOf<moe.rukamori.archivetune.bridge.ExternalMiniArt?> { null }
