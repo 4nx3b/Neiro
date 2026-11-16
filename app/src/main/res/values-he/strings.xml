@@ -1703,4 +1703,5 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro קרסה בפעם הקודמת — היומן נשמר ב־%1$s</string>
+    <string name="player_style_reset">הנגן %1$s קרס שוב ושוב, ולכן Neiro חזרה לנגן שלה. יומן הקריסה נמצא ב־Downloads/Neiro.</string>
 </resources>

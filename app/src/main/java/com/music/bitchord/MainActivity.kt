@@ -133,6 +133,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.music.bitchord.ui.screens.labelRes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
@@ -423,6 +424,23 @@ class MainActivity : AppCompatActivity() {
         // it was saved. Off the main thread — it may retry the Downloads copy.
         if (savedInstanceState == null) {
             val appContext = applicationContext
+            // A ported player style kept crashing at launch and was switched
+            // back to the app's own player (see CrashLoopGuard): say so once.
+            lifecycleScope.launch {
+                val resetFrom = withContext(Dispatchers.IO) {
+                    com.music.bitchord.data.CrashLoopGuard.consumeStyleReset(appContext)
+                }
+                if (resetFrom != null) {
+                    Toast.makeText(
+                        appContext,
+                        getString(
+                            R.string.player_style_reset,
+                            getString(resetFrom.labelRes()),
+                        ),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
             lifecycleScope.launch {
                 val crashed = withContext(Dispatchers.IO) {
                     runCatching { com.music.bitchord.data.CrashReporter.consumeUnseenCrash(appContext) }
@@ -726,6 +744,19 @@ private fun BitChordApp(
     // player's cover reports itself here, the sheet its offset, and the player
     // flies its artwork between them — see [PlayerDock].
     val playerDock = remember { PlayerDock() }
+    // The ported styles' full player, driven by this app's one mini player:
+    // a tap or a pull on it opens the ported sheet, and the dock follows that
+    // sheet so the artwork drifts to and from this mini player's cover.
+    val portedSheet = remember { moe.rukamori.archivetune.bridge.ArchiveTuneSheetHandle() }
+    val portedPull = remember(portedSheet) {
+        object : MiniPlayerPull {
+            override fun drag(delta: Float) = portedSheet.drag(delta)
+            override fun release(velocity: Float) = portedSheet.release(velocity)
+        }
+    }
+    val portedMiniArt = remember(playerDock) {
+        moe.rukamori.archivetune.bridge.ExternalMiniArt { playerDock.miniArtScreenRect() }
+    }
     // Who moves the player sheet when the app does rather than M3: a tap's
     // open, the pull up from the mini player, and every close — see
     // [PlayerSheetMotion].
@@ -4375,9 +4406,9 @@ private fun BitChordApp(
                         selectedIndex = selectedTab,
                         onTabSelected = onTabSelected,
                         scrollConnection = navBarScroll,
-                        // The ported player carries its own mini player; the
-                        // glass bar's dock stands down while it is in force.
-                        song = player.song?.takeIf { !archiveTunePlayerActive },
+                        // One mini player for every style: a ported style's full
+                        // player is opened and drifted from this one too.
+                        song = player.song,
                         isPlaying = player.isPlaying,
                         isLoading = playPauseBusy,
                         onPlayPause = {
@@ -4385,7 +4416,9 @@ private fun BitChordApp(
                         },
                         onNext = { controller?.seekToNextMediaItem() },
                         onPrevious = { controller?.seekToPrevious() },
-                        onExpand = if (reducePlayerMotion) {
+                        onExpand = if (archiveTunePlayerActive) {
+                            portedSheet::expand
+                        } else if (reducePlayerMotion) {
                             { showNowPlaying = true }
                         } else {
                             playerSheetMotion::open
@@ -4393,7 +4426,7 @@ private fun BitChordApp(
                         controlsLocked = controlsLocked,
                         onBlockedControl = showHostOnlyNotice,
                         dock = activeDock,
-                        pull = playerSheetMotion.takeIf { !reducePlayerMotion },
+                        pull = if (archiveTunePlayerActive) portedPull else playerSheetMotion.takeIf { !reducePlayerMotion },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 } else Box(
@@ -4420,7 +4453,7 @@ private fun BitChordApp(
                         // mini player gave up, sliding up out of the fold.
                         // The ported player's own mini rides instead when one
                         // of its styles is in force.
-                        player.song?.takeIf { !archiveTunePlayerActive }?.let { song ->
+                        player.song?.let { song ->
                             Box(Modifier.fillMaxWidth()) {
                                 MiniPlayer(
                                     song = song,
@@ -4433,7 +4466,9 @@ private fun BitChordApp(
                                     },
                                     onNext = { controller?.seekToNextMediaItem() },
                                     onPrevious = { controller?.seekToPrevious() },
-                                    onExpand = if (reducePlayerMotion) {
+                                    onExpand = if (archiveTunePlayerActive) {
+                            portedSheet::expand
+                        } else if (reducePlayerMotion) {
                                         { showNowPlaying = true }
                                     } else {
                                         playerSheetMotion::open
@@ -4441,7 +4476,7 @@ private fun BitChordApp(
                                     controlsLocked = controlsLocked,
                                     onBlockedControl = showHostOnlyNotice,
                                     dock = activeDock,
-                                    pull = playerSheetMotion.takeIf { !reducePlayerMotion },
+                                    pull = if (archiveTunePlayerActive) portedPull else playerSheetMotion.takeIf { !reducePlayerMotion },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 if (bottomUiCompactFraction > 0.01f) {
@@ -4494,8 +4529,7 @@ private fun BitChordApp(
         if (archiveTunePlayerActive && controller != null) {
             val atBottomBarHeight = with(LocalDensity.current) { floatingBarsHeight.intValue.toDp() }
             androidx.compose.runtime.key(controller) {
-                ArchiveTunePlayerHost(
-                    hostBridge =
+                val archiveTuneBridge =
                         remember(controller, viewModel) {
                             ArchiveTuneBridgeImpl(
                                 controller = controller,
@@ -4515,7 +4549,23 @@ private fun BitChordApp(
                                 },
                                 onOpenSearch = { selectedTab = TAB_SEARCH },
                             )
-                        },
+                        }
+                // Detach its controller listener and stop its collectors
+                // when the ported player goes away (style switched back, or a
+                // new controller).
+                DisposableEffect(archiveTuneBridge) {
+                    onDispose { archiveTuneBridge.release() }
+                }
+                // The dock follows the ported sheet while a ported style is on,
+                // so the mini cover stands aside during the drift.
+                DisposableEffect(portedSheet) {
+                    playerDock.attachExternal(offset = portedSheet::offsetPx, travelPx = portedSheet::travelPx)
+                    onDispose { playerDock.detachExternal() }
+                }
+                ArchiveTunePlayerHost(
+                    hostBridge = archiveTuneBridge,
+                    sheetHandle = portedSheet,
+                    externalMiniArt = portedMiniArt,
                     pureBlack = false,
                     bottomBarHeight = atBottomBarHeight,
                     modifier = Modifier.fillMaxSize(),

@@ -64,6 +64,9 @@ object CrashReporter {
         val app = context.applicationContext
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            // First and cheapest: the crash-loop record, so a style that
+            // crashes every launch can be switched away from next time.
+            CrashLoopGuard.record(app)
             try {
                 writeJavaCrashReport(app, thread, throwable)
             } catch (_: Throwable) {

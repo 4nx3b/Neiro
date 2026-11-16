@@ -1,0 +1,20 @@
+   268 app/src/main/kotlin/moe/rukamori/archivetune/ui/component/ArtistSeparatorsDialog.kt  :: ArtistSeparatorsDialog <- PlayerSettings.kt
+  1355 app/src/main/kotlin/moe/rukamori/archivetune/ui/component/Preference.kt  :: CrossfadeSliderPreference <- PlayerSettings.kt; EnumListPreference <- AppearanceSettings.kt; EnumListPreference <- CanvasSettingsScreen.kt; EnumListPreference <- LiquidGlassSettings.kt; EnumListPreference <- PlayerSettings.kt; ListPreference <- AppearanceSettings.kt; NumberPickerPreference <- Lyrics
+    79 app/src/main/kotlin/moe/rukamori/archivetune/ui/component/SettingsPageTopBar.kt  :: SettingsPageTopBar <- AppearanceExtrasSettings.kt; SettingsPageTopBar <- AppearanceSettings.kt; SettingsPageTopBar <- CanvasSettingsScreen.kt; SettingsPageTopBar <- CustomizeBackground.kt; SettingsPageTopBar <- LiquidGlassSettings.kt; SettingsPageTopBar <- LyricsRomanisationSettings.kt; SettingsPage
+   186 app/src/main/kotlin/moe/rukamori/archivetune/ui/component/SpringySwitch.kt  :: SpringySwitch <- Preference.kt (pkg)
+   448 app/src/main/kotlin/moe/rukamori/archivetune/ui/component/ThumbnailCornerRadiusSelector.kt  :: ThumbnailCornerRadiusSelectorButton <- AppearanceSettings.kt
+    59 app/src/main/kotlin/moe/rukamori/archivetune/ui/svg/DynamicSVGImage.kt  :: DynamicSVGImage <- PalettePickerScreen.kt
+    69 app/src/main/kotlin/moe/rukamori/archivetune/ui/svg/SVGString.kt  :: SVGString <- PalettePickerScreen.kt; SVGString <- palette.kt (pkg); parseDynamicColor <- DynamicSVGImage.kt (pkg)
+    70 app/src/main/kotlin/moe/rukamori/archivetune/ui/svg/palette.kt  :: PALETTE <- PalettePickerScreen.kt
+   185 app/src/main/kotlin/moe/rukamori/archivetune/ui/theme/SfProFontCatalog.kt  :: SfProFontCatalog <- SfProFontPickerDialog.kt; SfProFontPreview <- SfProFontPickerDialog.kt
+    55 app/src/main/kotlin/moe/rukamori/archivetune/ui/theme/palette/TonalPalettes.kt  :: TonalPalettes <- DynamicSVGImage.kt; TonalPalettes <- PalettePickerScreen.kt; TonalPalettes <- SVGString.kt
+    21 app/src/main/kotlin/moe/rukamori/archivetune/ui/utils/NavControllerUtils.kt  :: backToMain <- AppearanceExtrasSettings.kt; backToMain <- AppearanceSettings.kt; backToMain <- CanvasSettingsScreen.kt; backToMain <- LiquidGlassSettings.kt; backToMain <- LyricsRomanisationSettings.kt; backToMain <- LyricsSettings.kt; backToMain <- PalettePickerScreen.kt; backToMain <- PlayerSetting
+    26 app/src/main/kotlin/moe/rukamori/archivetune/utils/CanvasResolverEndpoints.kt  :: CanvasResolverEndpoints <- CanvasCheckDialog.kt; CanvasResolverEndpoints <- CanvasSettingsScreen.kt
+TOTAL new lines 2821 files 19
+UNRESOLVED moe.rukamori.archivetune.R ['AppearanceExtrasSettings.kt', 'AppearanceSettings.kt', 'ArtistSeparatorsDialog.kt']
+SHIM moe.rukamori.archivetune.LocalPlayerAwareWindowInsets ['AppearanceExtrasSettings.kt', 'AppearanceSettings.kt', 'CanvasSettingsScreen.kt', 'CustomizeBackground.kt']
+SHIM moe.rukamori.archivetune.tidal.TidalCanvasCheck ['CanvasCheckDialog.kt']
+SHIM moe.rukamori.archivetune.ui.component.TagsManagementDialog ['PlayerSettings.kt']
+SHIM moe.rukamori.archivetune.ui.screens.ScreenHeaderHaze ['AppearanceExtrasSettings.kt', 'AppearanceSettings.kt', 'CanvasSettingsScreen.kt', 'LiquidGlassSettings.kt']
+SHIM moe.rukamori.archivetune.ui.screens.rememberScreenHeaderHaze ['AppearanceExtrasSettings.kt', 'AppearanceSettings.kt', 'CanvasSettingsScreen.kt', 'LiquidGlassSettings.kt']
+SHIM moe.rukamori.archivetune.viewmodels.ContentSettingsViewModel ['LyricsSettings.kt']

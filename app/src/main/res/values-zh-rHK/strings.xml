@@ -1435,4 +1435,5 @@
     <string name="download_addon_needs_lossless_output">%1$s 僅在連接有線、USB 或 LDAC 等級耳機時提供音樂。在連接此類耳機前，下載會略過它，因此你的歌曲將從其他來源儲存。</string>
     <string name="source_downloads_on">允許下載</string>
     <string name="crash_log_saved">Neiro 上次當機了 — 記錄已儲存至 %1$s</string>
+    <string name="player_style_reset">%1$s 播放器反覆當機，Neiro 已切換回內建播放器。當機記錄位於 Downloads/Neiro。</string>
 </resources>

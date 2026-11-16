@@ -76,7 +76,6 @@ import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SurroundSound
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.WebAssetOff
@@ -459,7 +458,11 @@ fun SettingsScreen(
     // A category page shows all of its rows, so it searches for nothing. The
     // main page searches every category at once: typed into, it lays out the
     // rows that answer from all of them, as the single page Settings once was.
-    val search = SettingsSearch(if (section == null) searchQuery else "", inPage = section != null)
+    val search = SettingsSearch(
+        if (section == null) searchQuery else "",
+        inPage = section != null,
+        pageTitle = section?.let { stringResource(it.title) },
+    )
     val searching = section == null && searchQuery.isNotBlank()
     fun shows(category: SettingsCategory) = section == category || searching
     val watchAvailable = remember { WatchInstaller.available(context) }
@@ -2432,7 +2435,11 @@ private fun PlayerDesignStyle.customizesLyricsBackground(): Boolean =
         this == PlayerDesignStyle.SPATIALFLOW || this == PlayerDesignStyle.SIMPMUSIC)
 
 @Composable
-private fun PlayerDesignStyle.localizedLabel(): String = stringResource(
+private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes())
+
+/** The style's name string, for places outside composition (a toast). */
+@StringRes
+internal fun PlayerDesignStyle.labelRes(): Int =
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord
         PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic
@@ -2445,8 +2452,7 @@ private fun PlayerDesignStyle.localizedLabel(): String = stringResource(
         PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic
         PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow
         PlayerDesignStyle.LOOPER -> R.string.player_design_looper
-    },
-)
+    }
 
 @Composable
 private fun PlayerDesignStyle.localizedDetail(): String = stringResource(
@@ -2847,7 +2853,12 @@ private class SettingsSearch(
     query: String,
     /** Drawing one category's page rather than the main one: its top bar names it. */
     val inPage: Boolean = false,
+    /** That page's title, so a card header that only repeats it can be dropped. */
+    val pageTitle: String? = null,
 ) {
+    /** Cards drawn so far this composition; the first may sit flush under the title. */
+    var groupsDrawn = 0
+
     // Trimmed, because a trailing space is a typo rather than a search for
     // something ending in one — and on a phone keyboard it is one keystroke
     // away from every word typed.
@@ -2920,11 +2931,19 @@ private inline fun SearchableSettingsGroup(
     // A category's page is titled by its large heading; the header over its
     // first card would only say the same word again. The card takes the
     // header's place, straight under the heading, as on Account's page.
-    val inPageHeader = header != null && search.inPage
+    // Only the first card, and only when its header would just repeat the
+    // page's title: every later card keeps its header and its gap, as on
+    // the main page (see settingsGroupChrome).
+    val chrome = settingsGroupChrome(
+        inPage = search.inPage,
+        first = search.groupsDrawn++ == 0,
+        header = header,
+        pageTitle = search.pageTitle,
+    )
     SettingsGroup(
-        header = header.takeUnless { inPageHeader },
+        header = header.takeIf { chrome.showHeader },
         footer = footer,
-        topSpacing = if (inPageHeader) 0.dp else topSpacing,
+        topSpacing = if (chrome.flush) 0.dp else topSpacing,
     ) {
         scope.entries.forEachIndexed { index, entry ->
             when {

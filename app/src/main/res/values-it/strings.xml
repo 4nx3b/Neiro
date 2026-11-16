@@ -1637,4 +1637,5 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro si è arrestata in modo anomalo l’ultima volta — log salvato in %1$s</string>
+    <string name="player_style_reset">Il lettore %1$s continuava ad arrestarsi, quindi Neiro è tornata al proprio lettore. Il log del crash è in Downloads/Neiro.</string>
 </resources>

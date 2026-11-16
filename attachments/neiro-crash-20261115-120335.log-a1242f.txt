@@ -1,0 +1,249 @@
+=== Neiro crash report ===
+Time: 2026-11-15 12:03:35.599
+Thread: main
+App: 1.9.1 (39) prod/release
+Package: com.music.bitchord
+Device: realme RMX3563 (zephyr)
+Android: 16 (API 36)
+ABI: arm64-v8a
+Process: 665
+
+=== Uncaught exception ===
+java.lang.IllegalArgumentException: backgroundColor not specified. Please provide a color.
+	at dev.chrisbanes.haze.HazeEffectNode.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:343)
+	at androidx.compose.ui.node.LayoutNodeDrawScope.drawDirect-eZhPAX0$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:52)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:50)
+	at androidx.compose.ui.node.NodeCoordinator$invalidateParentLayer$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:15)
+	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:242)
+	at androidx.navigation.compose.NavHostKt$NavHost$32$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:348)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:247)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.drawWithChildTracking(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:47)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:846)
+	at androidx.compose.ui.graphics.layer.GraphicsLayerV29.record(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:35)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.record-mL-hObY(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:55)
+	at androidx.compose.ui.platform.GraphicsLayerOwnerLayer.updateDisplayList(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:102)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:9)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator$invalidateParentLayer$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:15)
+	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:242)
+	at androidx.navigation.compose.NavHostKt$NavHost$32$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:348)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:247)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.drawWithChildTracking(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:47)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:846)
+	at androidx.compose.ui.graphics.layer.GraphicsLayerV29.record(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:35)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.record-mL-hObY(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:55)
+	at androidx.compose.ui.platform.GraphicsLayerOwnerLayer.updateDisplayList(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:102)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:9)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.LayoutNodeDrawScope.drawContent(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:181)
+	at androidx.compose.foundation.BackgroundNode.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:154)
+	at androidx.compose.ui.node.LayoutNodeDrawScope.drawDirect-eZhPAX0$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:52)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:50)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator$invalidateParentLayer$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:15)
+	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:242)
+	at androidx.navigation.compose.NavHostKt$NavHost$32$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:348)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:247)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.drawWithChildTracking(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:47)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:846)
+	at androidx.compose.ui.graphics.layer.GraphicsLayerV29.record(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:35)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.record-mL-hObY(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:55)
+	at androidx.compose.ui.platform.GraphicsLayerOwnerLayer.updateDisplayList(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:102)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:9)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator$invalidateParentLayer$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:15)
+	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:242)
+	at androidx.navigation.compose.NavHostKt$NavHost$32$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:348)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:247)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.drawWithChildTracking(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:47)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:846)
+	at androidx.compose.ui.graphics.layer.GraphicsLayerV29.record(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:35)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.record-mL-hObY(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:55)
+	at androidx.compose.ui.platform.GraphicsLayerOwnerLayer.updateDisplayList(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:102)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:9)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator$invalidateParentLayer$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:15)
+	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:242)
+	at androidx.navigation.compose.NavHostKt$NavHost$32$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:348)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:247)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.drawWithChildTracking(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:47)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:846)
+	at androidx.compose.ui.graphics.layer.GraphicsLayerV29.record(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:35)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.record-mL-hObY(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:55)
+	at androidx.compose.ui.platform.GraphicsLayerOwnerLayer.updateDisplayList(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:102)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:9)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.LayoutNodeDrawScope.drawContent(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:181)
+	at androidx.compose.foundation.BackgroundNode.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:154)
+	at androidx.compose.ui.node.LayoutNodeDrawScope.drawDirect-eZhPAX0$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:52)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:50)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator$invalidateParentLayer$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:15)
+	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:311)
+	at androidx.navigation.compose.NavHostKt$NavHost$32$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:348)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:247)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.drawWithChildTracking(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:47)
+	at androidx.navigation.Navigator$navigate$1.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:846)
+	at androidx.compose.ui.graphics.layer.GraphicsLayerV29.record(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:35)
+	at androidx.compose.ui.graphics.layer.GraphicsLayer.record-mL-hObY(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:55)
+	at androidx.compose.ui.platform.GraphicsLayerOwnerLayer.updateDisplayList(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:102)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:9)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.node.InnerNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:28)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.performDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:6)
+	at androidx.compose.ui.node.NodeCoordinator.drawContainedDrawModifiers(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:8)
+	at androidx.compose.ui.node.NodeCoordinator.draw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:62)
+	at androidx.compose.ui.node.LayoutNode.draw$ui(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.platform.AndroidComposeView.dispatchDraw(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:47)
+	at android.view.View.draw(View.java:25291)
+	at android.view.View.updateDisplayListIfDirty(View.java:24129)
+	at android.view.View.draw(View.java:25019)
+	at android.view.ViewGroup.drawChild(ViewGroup.java:4575)
+	at android.view.ViewGroup.dispatchDraw(ViewGroup.java:4331)
+	at android.view.View.updateDisplayListIfDirty(View.java:24120)
+	at android.view.View.draw(View.java:25019)
+	at android.view.ViewGroup.drawChild(ViewGroup.java:4575)
+	at android.view.ViewGroup.dispatchDraw(ViewGroup.java:4331)
+	at android.view.View.updateDisplayListIfDirty(View.java:24120)
+	at android.view.View.draw(View.java:25019)
+	at android.view.ViewGroup.drawChild(ViewGroup.java:4575)
+	at android.view.ViewGroup.dispatchDraw(ViewGroup.java:4331)
+	at android.view.View.updateDisplayListIfDirty(View.java:24120)
+	at android.view.View.draw(View.java:25019)
+	at android.view.ViewGroup.drawChild(ViewGroup.java:4575)
+	at android.view.ViewGroup.dispatchDraw(ViewGroup.java:4331)
+	at android.view.View.updateDisplayListIfDirty(View.java:24120)
+	at android.view.View.draw(View.java:25019)
+	at android.view.ViewGroup.drawChild(ViewGroup.java:4575)
+	at android.view.ViewGroup.dispatchDraw(ViewGroup.java:4331)
+	at android.view.View.updateDisplayListIfDirty(View.java:24120)
+	at android.view.View.draw(View.java:25019)
+	at android.view.ViewGroup.drawChild(ViewGroup.java:4575)
+	at android.view.ViewGroup.dispatchDraw(ViewGroup.java:4331)
+	at android.view.View.draw(View.java:25291)
+	at com.android.internal.policy.DecorView.draw(DecorView.java:819)
+	at android.view.View.updateDisplayListIfDirty(View.java:24129)
+	at android.view.ThreadedRenderer.updateViewTreeDisplayList(ThreadedRenderer.java:739)
+	at android.view.ThreadedRenderer.updateRootDisplayList(ThreadedRenderer.java:745)
+	at android.view.ThreadedRenderer.draw(ThreadedRenderer.java:846)
+	at android.view.ViewRootImpl.draw(ViewRootImpl.java:6010)
+	at android.view.ViewRootImpl.performDraw(ViewRootImpl.java:5659)
+	at android.view.ViewRootImpl.performTraversals(ViewRootImpl.java:4638)
+	at android.view.ViewRootImpl.doTraversal(ViewRootImpl.java:3163)
+	at android.view.ViewRootImpl$TraversalRunnable.run(ViewRootImpl.java:10896)
+	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1650)
+	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1659)
+	at android.view.Choreographer.doCallbacks(Choreographer.java:1255)
+	at android.view.Choreographer.doFrame(Choreographer.java:1178)
+	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1633)
+	at android.os.Handler.handleCallback(Handler.java:1070)
+	at android.os.Handler.dispatchMessage(Handler.java:125)
+	at android.os.Looper.dispatchMessage(Looper.java:333)
+	at android.os.Looper.loopOnce(Looper.java:263)
+	at android.os.Looper.loop(Looper.java:367)
+	at android.app.ActivityThread.main(ActivityThread.java:9340)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:569)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:966)
+
+=== Recent app log (last 48 lines, oldest first) ===
+2026-11-15 12:02:53.886 D BitChord: acting as channel pageId=none authUser=as-is (override=true)
+2026-11-15 12:02:54.658 D ArchiveTuneBridge: route home has no bridge — dropped
+2026-11-15 12:02:55.760 D BitChord: session scope: authUser=0 pageId=none dataSyncId=present cver=1.20261110.04.00
+2026-11-15 12:02:56.007 D BitChord: channels ok
+2026-11-15 12:02:56.039 D BitChord: account ok
+2026-11-15 12:02:56.339 D BitChord: home:FEmusic_new_releases ok
+2026-11-15 12:02:56.527 D BitChord: playlists ok
+2026-11-15 12:02:56.570 D BitChord: home ok
+2026-11-15 12:02:56.771 D BitChord: home:FEmusic_explore ok
+2026-11-15 12:02:57.033 D BitChord: browse:VLLM ok
+2026-11-15 12:02:57.270 D BitChord: mixedForYou ok
+2026-11-15 12:02:58.751 D BitChord: home:recent ok
+2026-11-15 12:02:58.751 D BitChord: history:recent ok
+2026-11-15 12:02:59.031 D AppleMusicCanvas: web player token good until Thu Jan 14 23:15:08 GMT+05:30 2027
+2026-11-15 12:02:59.458 D BitChord: artistLanding:UCREhun2tPd7aQnJczZM_Mww ok
+2026-11-15 12:02:59.509 D BitChord: artistLanding:UC2jcOvBaosOObsMlD5-ShUQ ok
+2026-11-15 12:02:59.511 D BitChord: artistLanding:UCCF_6PwrZf1u70yghKms3Mw ok
+2026-11-15 12:03:00.263 D BitChord: artistLanding:UC3fRn-AlwUv-jgT0p5F5G7Q ok
+2026-11-15 12:03:00.318 D BitChord: artistLanding:UCDiwafAY8YnWgHVInmrFsQQ ok
+2026-11-15 12:03:00.559 D BitChord: library ok
+2026-11-15 12:03:01.489 D BitChord: browse:more ok
+2026-11-15 12:03:02.332 D BitChord: browse:more ok
+2026-11-15 12:03:02.867 D BitChord: artistLanding:UCiMwrqouFvv7WlxjeiWWGpw ok
+2026-11-15 12:03:03.015 D BitChord: browse:more ok
+2026-11-15 12:03:03.020 D BitChord: artistLanding:UCx9EhZ6z8i45JbPWxLEA_4A ok
+2026-11-15 12:03:03.032 D BitChord: artistLanding:UCsXKPFouKx7giAFRheB-G7A ok
+2026-11-15 12:03:03.674 D CommunityCanvas: manifest holds 187 entries
+2026-11-15 12:03:03.936 D BitChord: browse:more ok
+2026-11-15 12:03:04.122 D AppleArtistPhotos: KSI: Apple KSI (1605940589) shares no titles, skipped
+2026-11-15 12:03:04.158 D BitChord: artistLanding:UCVacQ2t5GUZ2t_J3Ia9BynA ok
+2026-11-15 12:03:04.188 D AppleArtistPhotos: KSI: Apple K SI (400426891) shares no titles, skipped
+2026-11-15 12:03:04.227 D AppleArtistPhotos: KSI: Apple Ksi (1479027316) shares no titles, skipped
+2026-11-15 12:03:04.307 D AppleArtistPhotos: KSI: Apple KSi (1665736521) shares no titles, skipped
+2026-11-15 12:03:04.650 D BitChord: artistLanding:UC7UyV-X-W_dfG8WvBL-IwKg ok
+2026-11-15 12:03:04.657 D BitChord: artistLanding:UCxm9sS8Dd2aRthr_O3rVLJQ ok
+2026-11-15 12:03:04.812 D BitChord: artistLanding:UCEcGHupZkoAPFXXQrC2W8rA ok
+2026-11-15 12:03:05.269 D BitChord: browse:more ok
+2026-11-15 12:03:05.644 D BitChord: topPicks: history=200 artists=[vaultboy, Lil Nas X, One Direction] mixes=[SUPERMIX, DISCOVER, NEW_RELEASE]
+2026-11-15 12:03:06.567 D BitChord: browse:more ok
+2026-11-15 12:03:07.372 D BitChord: browse:more ok
+2026-11-15 12:03:12.788 D BitChord: browse:more ok
+2026-11-15 12:03:13.701 D BitChord: browse:more ok
+2026-11-15 12:03:14.678 D BitChord: browse:more ok
+2026-11-15 12:03:15.599 D BitChord: browse:more ok
+2026-11-15 12:03:16.409 D BitChord: browse:more ok
+2026-11-15 12:03:17.515 D BitChord: browse:more ok
+2026-11-15 12:03:18.576 D BitChord: browse:more ok
+2026-11-15 12:03:19.369 D BitChord: browse:more ok
+
+=== logcat (this process, last 3000 lines) ===
+

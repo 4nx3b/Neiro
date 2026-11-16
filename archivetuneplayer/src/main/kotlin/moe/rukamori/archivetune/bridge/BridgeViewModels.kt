@@ -22,6 +22,7 @@ import moe.rukamori.archivetune.playlist.GetCreatePlaylistOptionsUseCase
 import moe.rukamori.archivetune.repository.PlaylistCreationRepository
 import moe.rukamori.archivetune.utils.NetworkConnectivityObserver
 import moe.rukamori.archivetune.ui.utils.TrackInfoViewModel
+import moe.rukamori.archivetune.viewmodels.ContentSettingsViewModel
 import moe.rukamori.archivetune.viewmodels.CreatePlaylistViewModel
 import moe.rukamori.archivetune.viewmodels.EqualizerViewModel
 import moe.rukamori.archivetune.viewmodels.LyricsMenuViewModel
@@ -103,6 +104,11 @@ object BridgeViewModels {
                     manageProfiles = ManageEqualizerProfilesUseCase(repository),
                 )
             }
+        }
+
+        // The ported lyrics settings page takes one as a default parameter.
+        if (!creators.containsKey(ContentSettingsViewModel::class.java.name)) {
+            register(ContentSettingsViewModel::class.java) { ContentSettingsViewModel() }
         }
 
         if (!creators.containsKey(TrackInfoViewModel::class.java.name)) {

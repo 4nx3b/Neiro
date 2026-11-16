@@ -7,6 +7,7 @@
 
 package moe.rukamori.archivetune.ui.player
 
+import moe.rukamori.archivetune.bridge.driftArtworkSlot // BRIDGE: drift
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
@@ -335,7 +336,7 @@ fun Thumbnail(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .statusBarsPadding(),
+                    .padding(top = moe.rukamori.archivetune.LocalStableSystemBarsTopPadding.current), // BRIDGE: cutout — statusBarsPadding is 0 while the bar is hidden
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
@@ -546,6 +547,7 @@ fun Thumbnail(
                                 modifier =
                                     Modifier
                                         .size(containerMaxWidth - (PlayerHorizontalPadding * 2))
+                                        .driftArtworkSlot(active = item.mediaId == currentMediaItem?.mediaId, cornerDp = thumbnailCornerRadius) // BRIDGE: drift
                                         .clip(RoundedCornerShape(thumbnailCornerRadius.dp)),
                             ) {
                                 if (hidePlayerThumbnail) {

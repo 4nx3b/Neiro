@@ -9,6 +9,7 @@
 
 package moe.rukamori.archivetune.ui.player
 
+import moe.rukamori.archivetune.bridge.driftArtworkSlot // BRIDGE: drift
 import moe.rukamori.archivetune.ui.utils.ShowMediaInfo
 import android.content.Context
 import android.content.Intent
@@ -2067,6 +2068,7 @@ private fun V9PortraitContent(
                         isPlaying = isPlaying,
                         placeholderColor = textBackgroundColor.copy(alpha = 0.08f),
                         modifier = Modifier.aspectRatio(1f)
+                            .driftArtworkSlot() // BRIDGE: drift
                     )
                 }
 
@@ -2747,6 +2749,7 @@ fun PlayerBackground(
                                             state = backgroundHazeState,
                                             style =
                                                 HazeStyle(
+                                                    backgroundColor = Color.Black, // BRIDGE: haze 1.3.1 throws without it
                                                     blurRadius = 80.dp,
                                                     tint = HazeTint(Color.Black.copy(alpha = 0.30f)),
                                                     noiseFactor = 0.15f,

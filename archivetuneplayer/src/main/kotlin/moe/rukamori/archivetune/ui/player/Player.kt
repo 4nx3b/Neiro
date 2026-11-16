@@ -562,6 +562,14 @@ fun BottomSheetPlayer(
     var position by positionState
     val positionProvider = remember(positionState) { { positionState.longValue } }
 
+    val driftDensity = LocalDensity.current // BRIDGE: drift
+    val driftReduceMotion by rememberPreference(moe.rukamori.archivetune.constants.DisableAnimationsKey, defaultValue = false) // BRIDGE: drift
+    val driftAnimationsOff = LocalAnimationsDisabled.current // BRIDGE: drift
+    val drift = remember(state, driftDensity, playerDesignStyle) { moe.rukamori.archivetune.bridge.DriftState(progress = { state.progress }, travelPx = { with(driftDensity) { (state.expandedBound - state.collapsedBound).toPx() } }, isExpanded = { state.isExpanded }, isCollapsed = { state.isCollapsed }).also { moe.rukamori.archivetune.bridge.DriftBridge.current = it } } // BRIDGE: drift
+    SideEffect { drift.enabled = playerDesignStyle != PlayerDesignStyle.SPATIALFLOW && !driftReduceMotion && !driftAnimationsOff; drift.miniCornerPx = with(driftDensity) { 10.dp.toPx() } } // BRIDGE: drift
+    val externalMiniArt = moe.rukamori.archivetune.LocalExternalMiniArt.current // BRIDGE: mini
+    SideEffect { drift.externalMini = externalMiniArt } // BRIDGE: mini
+    DisposableEffect(drift) { onDispose { if (moe.rukamori.archivetune.bridge.DriftBridge.current === drift) moe.rukamori.archivetune.bridge.DriftBridge.current = null } } // BRIDGE: drift
     val spatialFlowMiniArtworkRect =
         rememberSaveable(stateSaver = SpatialFlowArtworkRectSaver) { mutableStateOf<Rect?>(null) }
 
@@ -1377,9 +1385,9 @@ fun BottomSheetPlayer(
                     }
             }
         },
-        onDismiss = {
+        onDismiss = if (externalMiniArt != null) null else ({ // BRIDGE: mini
             playerConnection.service.stopAndClearPlayback(clearPersistentState = true)
-        },
+        }), // BRIDGE: mini
         backHandlerEnabled = !aodModeEnabled && !isInlineLyricsOpen && !anyStylePageOverlayOpen,
         keepContentAlive = true,
         morphMode = playerDesignStyle == PlayerDesignStyle.SPATIALFLOW,
@@ -1410,9 +1418,10 @@ fun BottomSheetPlayer(
                     }
                 }
             } else {
-                null
+                { moe.rukamori.archivetune.bridge.DriftArtworkLayer(drift, enrichedMetadata?.thumbnailUrl?.highRes()) } // BRIDGE: drift
             },
         collapsedContent = {
+            if (externalMiniArt == null) // BRIDGE: mini
             MiniPlayer(
                 positionProvider = positionProvider,
                 durationProvider = durationProvider,
@@ -1425,6 +1434,7 @@ fun BottomSheetPlayer(
                     if (playerDesignStyle == PlayerDesignStyle.SPATIALFLOW) {
                         spatialFlowMiniArtworkRect.value = rect
                     }
+                    drift.reportMini(rect) // BRIDGE: drift
                 },
             )
         },

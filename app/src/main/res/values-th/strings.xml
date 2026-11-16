@@ -1681,4 +1681,5 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro ขัดข้องเมื่อครั้งที่แล้ว — บันทึกล็อกไว้ที่ %1$s</string>
+    <string name="player_style_reset">เครื่องเล่น %1$s ขัดข้องซ้ำ ๆ Neiro จึงกลับไปใช้เครื่องเล่นของตัวเอง บันทึกการขัดข้องอยู่ที่ Downloads/Neiro</string>
 </resources>

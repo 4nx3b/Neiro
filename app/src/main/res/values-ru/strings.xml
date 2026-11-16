@@ -1730,4 +1730,5 @@
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">В прошлый раз Neiro аварийно завершилось — журнал сохранён в %1$s</string>
+    <string name="player_style_reset">Плеер %1$s постоянно аварийно завершался, поэтому Neiro вернулось к собственному плееру. Журнал сбоя находится в Downloads/Neiro.</string>
 </resources>

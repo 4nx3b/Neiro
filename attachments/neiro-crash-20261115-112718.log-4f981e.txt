@@ -1,0 +1,90 @@
+=== Neiro crash report ===
+Time: 2026-11-15 11:27:18.550
+Thread: main
+App: 1.9.1 (39) prod/release
+Package: com.music.bitchord
+Device: realme RMX3563 (zephyr)
+Android: 16 (API 36)
+ABI: arm64-v8a
+Process: 26698
+
+=== Uncaught exception ===
+java.lang.IllegalStateException: Another SimpleCache instance uses the folder: /data/user/0/com.music.bitchord/cache/at_download_bridge
+	at androidx.media3.datasource.cache.SimpleCache.<init>(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:95)
+	at moe.rukamori.archivetune.playback.DownloadUtil.<init>(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:39)
+	at moe.rukamori.archivetune.bridge.ArchiveTuneBridge.ArchiveTunePlayerHost-PfoAEA0(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:333)
+	at com.music.bitchord.MainActivityKt.BitChordApp-o3XDK20(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:1572)
+	at com.music.bitchord.MainActivityKt$$ExternalSyntheticLambda117.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:71)
+	at androidx.compose.runtime.GapComposer.recomposeToGroupEnd(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:549)
+	at androidx.compose.runtime.GapComposer.skipCurrentGroup(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:168)
+	at androidx.compose.runtime.GapComposer.doCompose-aFTiNEg(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:124)
+	at androidx.compose.runtime.CompositionImpl.recompose(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:109)
+	at androidx.compose.runtime.Recomposer.performRecompose(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:105)
+	at com.music.bitchord.MainActivityKt$$ExternalSyntheticLambda384.invoke(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:1109)
+	at androidx.compose.ui.platform.AndroidUiFrameClock$withFrameNanos$2$callback$1.doFrame(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:7)
+	at androidx.compose.ui.platform.AndroidUiDispatcher$dispatchCallback$1.doFrame(r8-map-id-d29850393bae9979129509041fe834db03e59527a8448964284e51ff929a34c3:48)
+	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1648)
+	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1659)
+	at android.view.Choreographer.doCallbacks(Choreographer.java:1255)
+	at android.view.Choreographer.doFrame(Choreographer.java:1174)
+	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1633)
+	at android.os.Handler.handleCallback(Handler.java:1070)
+	at android.os.Handler.dispatchMessage(Handler.java:125)
+	at android.os.Looper.dispatchMessage(Looper.java:333)
+	at android.os.Looper.loopOnce(Looper.java:263)
+	at android.os.Looper.loop(Looper.java:367)
+	at android.app.ActivityThread.main(ActivityThread.java:9340)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:569)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:966)
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [androidx.compose.runtime.BroadcastFrameClock@9402bb0, androidx.compose.ui.platform.MotionDurationScaleImpl@7c26a29, StandaloneCoroutine{Cancelling}@ed5e1ae, AndroidUiDispatcher@6684b4f]
+
+=== Recent app log (last 45 lines, oldest first) ===
+2026-11-15 11:26:40.874 D BitChord: acting as channel pageId=none authUser=as-is (override=true)
+2026-11-15 11:26:41.875 D ArchiveTuneBridge: route home has no bridge — dropped
+2026-11-15 11:26:42.950 D BitChord: session scope: authUser=0 pageId=none dataSyncId=present cver=1.20261110.04.00
+2026-11-15 11:26:43.131 D BitChord: account ok
+2026-11-15 11:26:43.430 D BitChord: home:FEmusic_new_releases ok
+2026-11-15 11:26:43.521 D BitChord: playlists ok
+2026-11-15 11:26:43.694 D BitChord: home ok
+2026-11-15 11:26:43.936 D BitChord: home:FEmusic_explore ok
+2026-11-15 11:26:44.043 D BitChord: browse:VLLM ok
+2026-11-15 11:26:44.327 D BitChord: mixedForYou ok
+2026-11-15 11:26:46.611 D AppleMusicCanvas: web player token good until Thu Jan 14 23:15:08 GMT+05:30 2027
+2026-11-15 11:26:47.485 D BitChord: home:recent ok
+2026-11-15 11:26:47.489 D BitChord: history:recent ok
+2026-11-15 11:26:47.967 D BitChord: library ok
+2026-11-15 11:26:48.162 D BitChord: artistLanding:UCoIOOL7QKuBhQHVKL8y7BEQ ok
+2026-11-15 11:26:48.199 D BitChord: artistLanding:UCT9r1X4RrirbHasiJcW_3Gg ok
+2026-11-15 11:26:48.465 D BitChord: artistLanding:UCy3Lx1fNl4XnxleZBJK_PXw ok
+2026-11-15 11:26:49.058 D BitChord: artistLanding:UCrPTM502k2It_0uhsSxPL2w ok
+2026-11-15 11:26:49.155 D BitChord: artistLanding:UCGXVim2h7jujn2bwWvcxB3g ok
+2026-11-15 11:26:49.272 D BitChord: artistLanding:UCfmHShprfhvkbtD-ytZRiJA ok
+2026-11-15 11:26:49.279 D BitChord: artistLanding:UCx1RJPwnIFqpHQkM8fzw8Cw ok
+2026-11-15 11:26:49.627 D BitChord: browse:more ok
+2026-11-15 11:26:50.818 D BitChord: browse:more ok
+2026-11-15 11:26:52.002 D BitChord: browse:more ok
+2026-11-15 11:26:52.949 D BitChord: browse:more ok
+2026-11-15 11:26:53.770 D BitChord: browse:more ok
+2026-11-15 11:26:54.157 D BitChord: artistLanding:UCfitGSoO3lz5jmePrka339w ok
+2026-11-15 11:26:54.167 D BitChord: artistLanding:UCP4K4YvR-DSfcRED_FMkC_w ok
+2026-11-15 11:26:54.526 D BitChord: browse:more ok
+2026-11-15 11:26:54.771 D BitChord: home:more ok
+2026-11-15 11:26:55.340 D BitChord: browse:more ok
+2026-11-15 11:26:55.452 D CommunityCanvas: manifest holds 187 entries
+2026-11-15 11:26:56.321 D BitChord: browse:more ok
+2026-11-15 11:26:57.102 D BitChord: browse:more ok
+2026-11-15 11:26:57.647 D BitChord: radio:l6YI0sKy8cs:false ok
+2026-11-15 11:26:58.004 D BitChord: browse:more ok
+2026-11-15 11:26:58.912 D BitChord: browse:more ok
+2026-11-15 11:27:00.123 D BitChord: browse:more ok
+2026-11-15 11:27:00.932 D BitChord: browse:more ok
+2026-11-15 11:27:01.762 D BitChord: browse:more ok
+2026-11-15 11:27:01.819 D BitChord: channels ok
+2026-11-15 11:27:02.486 D BitChord: browse:more ok
+2026-11-15 11:27:05.407 D BitChord: topPicks: history=200 artists=[John Michael Howell, Hiroyuki SAWANO, Michael Jackson] mixes=[SUPERMIX, DISCOVER, NEW_RELEASE]
+2026-11-15 11:27:07.496 D BitChord: search:ARTISTS ok
+2026-11-15 11:27:07.658 D BitChord: links:l6YI0sKy8cs ok
+
+=== logcat (this process, last 3000 lines) ===
+
