@@ -167,6 +167,12 @@ object Http {
         .retryOnConnectionFailure(true)
         .dispatcher(Dispatcher().apply { maxRequestsPerHost = 16 })
         .connectionPool(ConnectionPool(16, 5, TimeUnit.MINUTES))
+        // The Internet page's proxy and DNS-over-HTTPS choices, consulted per
+        // connection and per lookup, so they switch live through NetPolicy
+        // without rebuilding the client this whole app shares.
+        .proxySelector(NetPolicy.selector)
+        .dns(NetPolicy.routingDns)
+        .proxyAuthenticator(NetPolicy.proxyAuthenticator)
         .addInterceptor(webDavInterceptor)
         .addInterceptor(soundCloudMediaInterceptor)
         .apply { if (USAGE_LOGGING_ENABLED) addNetworkInterceptor(usageInterceptor) }

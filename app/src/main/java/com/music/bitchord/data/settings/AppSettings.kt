@@ -10,6 +10,7 @@ import android.net.NetworkCapabilities
 import androidx.media3.common.Player
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.auth.AuthStore
+import com.music.bitchord.data.NetPolicy
 import com.music.bitchord.data.canvas.SpotifyToken
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.scrobbling.LastFM
@@ -1118,6 +1119,115 @@ object AppSettings {
     /** The notice about what connecting an account actually does has been read. */
     val discordInfoDismissed = MutableStateFlow(false)
 
+    // ── Internet, ported from ArchiveTune's Internet page ──────────────
+
+    /**
+     * The country code the YouTube Music requests pin themselves to, or
+     * [NetPolicy.SYSTEM_DEFAULT] to let the app locale place them — the same
+     * preference shape ArchiveTune's region picker stores. Changes restart
+     * the app, because the visitor data and every cached response belong to
+     * the region they were minted in.
+     */
+    val ytMusicRegion = MutableStateFlow(NetPolicy.SYSTEM_DEFAULT)
+
+    /** True when the region follows the locale rather than a pinned country. */
+    val ytMusicRegionIsSystemDefault: Boolean
+        get() = ytMusicRegion.value == NetPolicy.SYSTEM_DEFAULT
+
+    val dnsOverHttpsEnabled = MutableStateFlow(false)
+    val dnsOverHttpsProvider = MutableStateFlow("Cloudflare")
+    val dnsOverHttpsCustomUrl = MutableStateFlow("https://")
+
+    /** The proxy type as the Internet page stores it: "HTTP" or "SOCKS". */
+    val proxyType = MutableStateFlow("HTTP")
+    val proxyEnabled = MutableStateFlow(false)
+    val proxyHost = MutableStateFlow("")
+    val proxyPort = MutableStateFlow(8080)
+    val proxyUsername = MutableStateFlow("")
+    val proxyPassword = MutableStateFlow("")
+
+    /**
+     * Pushes the Internet page's choices into [NetPolicy] — the same publish
+     * pattern the WebDAV and SMB credentials ride. Every setter calls it, and
+     * [readAll] calls it once at start so a restart comes up on the saved
+     * policy.
+     */
+    private fun publishNetPolicy() {
+        if (!this::prefs.isInitialized) return
+        NetPolicy.updateDns(
+            dnsOverHttpsEnabled.value,
+            dnsOverHttpsProvider.value,
+            dnsOverHttpsCustomUrl.value,
+        )
+        NetPolicy.updateProxy(
+            proxyEnabled.value,
+            if (proxyType.value == "SOCKS") java.net.Proxy.Type.SOCKS else java.net.Proxy.Type.HTTP,
+            proxyHost.value,
+            proxyPort.value,
+            proxyUsername.value,
+            proxyPassword.value,
+        )
+    }
+
+    fun setYtMusicRegion(value: String) {
+        ytMusicRegion.value = value
+        prefs.edit().putString(KEY_YT_MUSIC_REGION, value).apply()
+    }
+
+    fun setDnsOverHttpsEnabled(value: Boolean) {
+        dnsOverHttpsEnabled.value = value
+        prefs.edit().putBoolean(KEY_DNS_OVER_HTTPS_ENABLED, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setDnsOverHttpsProvider(value: String) {
+        dnsOverHttpsProvider.value = value
+        prefs.edit().putString(KEY_DNS_OVER_HTTPS_PROVIDER, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setDnsOverHttpsCustomUrl(value: String) {
+        dnsOverHttpsCustomUrl.value = value
+        prefs.edit().putString(KEY_DNS_OVER_HTTPS_CUSTOM_URL, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyEnabled(value: Boolean) {
+        proxyEnabled.value = value
+        prefs.edit().putBoolean(KEY_PROXY_ENABLED, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyType(value: String) {
+        proxyType.value = value
+        prefs.edit().putString(KEY_PROXY_TYPE, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyHost(value: String) {
+        proxyHost.value = value
+        prefs.edit().putString(KEY_PROXY_HOST, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyPort(value: Int) {
+        proxyPort.value = value
+        prefs.edit().putInt(KEY_PROXY_PORT, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyUsername(value: String) {
+        proxyUsername.value = value
+        prefs.edit().putString(KEY_PROXY_USERNAME, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyPassword(value: String) {
+        proxyPassword.value = value
+        prefs.edit().putString(KEY_PROXY_PASSWORD, value).apply()
+        publishNetPolicy()
+    }
+
     /** Published by PlaybackService so the UI can open the system equalizer. */
     val audioSessionId = MutableStateFlow(0)
 
@@ -1493,6 +1603,17 @@ object AppSettings {
         listenBrainzToken.value = prefs.getString(KEY_LISTENBRAINZ_TOKEN, "").orEmpty()
         listenBrainzPrimaryArtistOnly.value = prefs.getBoolean(KEY_LISTENBRAINZ_PRIMARY_ARTIST_ONLY, false)
         spotifySpdcToken.value = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, "").orEmpty()
+        ytMusicRegion.value = prefs.getString(KEY_YT_MUSIC_REGION, NetPolicy.SYSTEM_DEFAULT) ?: NetPolicy.SYSTEM_DEFAULT
+        dnsOverHttpsEnabled.value = prefs.getBoolean(KEY_DNS_OVER_HTTPS_ENABLED, false)
+        dnsOverHttpsProvider.value = prefs.getString(KEY_DNS_OVER_HTTPS_PROVIDER, "Cloudflare").orEmpty().ifBlank { "Cloudflare" }
+        dnsOverHttpsCustomUrl.value = prefs.getString(KEY_DNS_OVER_HTTPS_CUSTOM_URL, "https://").orEmpty()
+        proxyType.value = prefs.getString(KEY_PROXY_TYPE, "HTTP").orEmpty().ifBlank { "HTTP" }
+        proxyEnabled.value = prefs.getBoolean(KEY_PROXY_ENABLED, false)
+        proxyHost.value = prefs.getString(KEY_PROXY_HOST, "").orEmpty()
+        proxyPort.value = prefs.getInt(KEY_PROXY_PORT, 8080)
+        proxyUsername.value = prefs.getString(KEY_PROXY_USERNAME, "").orEmpty()
+        proxyPassword.value = prefs.getString(KEY_PROXY_PASSWORD, "").orEmpty()
+        publishNetPolicy()
         replayGenres.value = prefs.getBoolean(KEY_REPLAY_GENRES, true)
         filterNonMusicAudio.value = prefs.getBoolean(KEY_FILTER_NON_MUSIC_AUDIO, true)
         localMusicSort.value = readLocalMusicSort(KEY_LOCAL_MUSIC_SORT)
@@ -3201,6 +3322,17 @@ object AppSettings {
     private const val KEY_LISTENBRAINZ_ENABLED = "listenbrainz_enabled"
     private const val KEY_LISTENBRAINZ_TOKEN = "listenbrainz_token"
     private const val KEY_LISTENBRAINZ_PRIMARY_ARTIST_ONLY = "listenbrainz_primary_artist_only"
+
+    private const val KEY_YT_MUSIC_REGION = "yt_music_region"
+    private const val KEY_DNS_OVER_HTTPS_ENABLED = "dns_over_https_enabled"
+    private const val KEY_DNS_OVER_HTTPS_PROVIDER = "dns_over_https_provider"
+    private const val KEY_DNS_OVER_HTTPS_CUSTOM_URL = "dns_over_https_custom_url"
+    private const val KEY_PROXY_ENABLED = "proxy_enabled"
+    private const val KEY_PROXY_TYPE = "proxy_type"
+    private const val KEY_PROXY_HOST = "proxy_host"
+    private const val KEY_PROXY_PORT = "proxy_port"
+    private const val KEY_PROXY_USERNAME = "proxy_username"
+    private const val KEY_PROXY_PASSWORD = "proxy_password"
     private const val KEY_SPOTIFY_SPDC_TOKEN = "spotify_spdc_token"
 
     private const val KEY_DISCORD_USERNAME = "discord_username"

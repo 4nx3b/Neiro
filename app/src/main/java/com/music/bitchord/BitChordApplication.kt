@@ -145,6 +145,14 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // The per-app language picker, which YouTube Music's `hl` follows.
         // Full tag (zh-Hant / zh-Hans preserved); Innertube maps to hl/gl.
         Innertube.appLanguage = { AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag() }
+        // The Internet page's region pin, read per request so a change taken
+        // with the app restart that follows it is honoured from the first
+        // request after it. SYSTEM_DEFAULT, the sentinel, derives the region
+        // from the locale instead.
+        Innertube.regionOverride = {
+            AppSettings.ytMusicRegion.value
+                .takeUnless { it == com.music.bitchord.data.NetPolicy.SYSTEM_DEFAULT || it.isBlank() }
+        }
         migrateScriptOnlyAppLocale()
         LyricsTranslation.cacheDir = cacheDir
         // PlaybackService shares this process, so seeding the cookie here means
