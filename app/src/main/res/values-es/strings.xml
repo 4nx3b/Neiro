@@ -1659,4 +1659,6 @@
     <string name="player_style_reset">El reproductor %1$s se cerraba una y otra vez, así que Neiro volvió a su propio reproductor. El registro del fallo está en Downloads/Neiro.</string>
     <string name="permanent_shuffle">Modo aleatorio permanente</string>
     <string name="permanent_shuffle_subtitle">Mantén la reproducción aleatoria activada al empezar una canción nueva</string>
+    <string name="auto_skip_on_error">Saltar automáticamente a la siguiente canción cuando ocurra un error</string>
+    <string name="auto_skip_on_error_subtitle">Una pista que no se puede reproducir se omite cuando se agotan sus reintentos, para que la reproducción continúe</string>
 </resources>

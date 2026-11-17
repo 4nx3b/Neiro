@@ -1626,4 +1626,6 @@
     <string name="player_style_reset">Il lettore %1$s continuava ad arrestarsi, quindi Neiro è tornata al proprio lettore. Il log del crash è in Downloads/Neiro.</string>
     <string name="permanent_shuffle">Modalità casuale permanente</string>
     <string name="permanent_shuffle_subtitle">Mantieni attiva la riproduzione casuale quando inizi una nuova canzone</string>
+    <string name="auto_skip_on_error">Salta automaticamente alla canzone successiva in caso di errore</string>
+    <string name="auto_skip_on_error_subtitle">Un brano impossibile da riprodurre viene saltato quando i suoi tentativi sono esauriti, così la riproduzione continua</string>
 </resources>

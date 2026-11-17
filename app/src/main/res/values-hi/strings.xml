@@ -1687,4 +1687,6 @@
     <string name="player_style_reset">%1$s प्लेयर बार-बार क्रैश हो रहा था, इसलिए Neiro अपने प्लेयर पर लौट आया। क्रैश लॉग Downloads/Neiro में है।</string>
     <string name="permanent_shuffle">स्थायी शफ़ल मोड</string>
     <string name="permanent_shuffle_subtitle">नया गाना शुरू करते समय शफ़ल चालू रखें</string>
+    <string name="auto_skip_on_error">त्रुटि होने पर अगले गाने पर स्वतः छलांग</string>
+    <string name="auto_skip_on_error_subtitle">जिस गाने को चलाया न जा सके उसे उसके पुनः प्रयासों के बाद छोड़ दिया जाता है, ताकि चलाना जारी रहे</string>
 </resources>

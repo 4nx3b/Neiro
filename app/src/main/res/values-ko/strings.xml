@@ -1537,4 +1537,6 @@
     <string name="player_style_reset">%1$s 플레이어가 계속 비정상 종료되어 Neiro가 기본 플레이어로 되돌렸습니다. 오류 로그는 Downloads/Neiro에 있습니다.</string>
     <string name="permanent_shuffle">영구 셔플 모드</string>
     <string name="permanent_shuffle_subtitle">새 곡을 시작할 때도 셔플을 켜 둡니다</string>
+    <string name="auto_skip_on_error">오류 발생 시 다음 곡으로 자동 건너뛰기</string>
+    <string name="auto_skip_on_error_subtitle">재생할 수 없는 곡은 재시도가 끝나면 건너뛰어 재생이 계속 이어집니다</string>
 </resources>

@@ -1560,4 +1560,6 @@
     <string name="player_style_reset">The %1$s player kept crashing, so Neiro switched back to its own player. The crash log is in Downloads/Neiro.</string>
     <string name="permanent_shuffle">Permanent shuffle mode</string>
     <string name="permanent_shuffle_subtitle">Keep shuffle enabled when you start a new song</string>
+    <string name="auto_skip_on_error">Auto skip to next song when error occurs</string>
+    <string name="auto_skip_on_error_subtitle">A track nobody can play is skipped past once its retries are spent, so playback carries on</string>
 </resources>

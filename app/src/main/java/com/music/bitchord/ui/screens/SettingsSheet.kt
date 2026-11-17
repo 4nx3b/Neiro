@@ -250,6 +250,7 @@ fun SettingsScreen(
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
     val permanentShuffle by AppSettings.permanentShuffle.collectAsStateWithLifecycle()
+    val autoSkipOnError by AppSettings.autoSkipOnError.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -877,6 +878,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setPermanentShuffle(!permanentShuffle) },
+                )
+            }
+            val autoSkipTitle = stringResource(R.string.auto_skip_on_error)
+            row(autoSkipTitle, "error", "skip") {
+                SettingsRow(
+                    icon = SfIcons.PlayNext,
+                    title = autoSkipTitle,
+                    subtitle = stringResource(R.string.auto_skip_on_error_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoSkipOnError,
+                            onCheckedChange = AppSettings::setAutoSkipOnError,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoSkipOnError(!autoSkipOnError) },
                 )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)

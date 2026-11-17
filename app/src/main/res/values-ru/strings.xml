@@ -1719,4 +1719,6 @@
     <string name="player_style_reset">Плеер %1$s постоянно аварийно завершался, поэтому Neiro вернулось к собственному плееру. Журнал сбоя находится в Downloads/Neiro.</string>
     <string name="permanent_shuffle">Постоянный режим перемешивания</string>
     <string name="permanent_shuffle_subtitle">Не выключать перемешивание при запуске новой песни</string>
+    <string name="auto_skip_on_error">Автоматически переходить к следующей песне при ошибке</string>
+    <string name="auto_skip_on_error_subtitle">Неудобопроигрываемая дорожка пропускается после исчерпания попыток, чтобы воспроизведение продолжалось</string>
 </resources>

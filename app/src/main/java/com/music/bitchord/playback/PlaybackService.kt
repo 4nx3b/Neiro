@@ -4490,6 +4490,12 @@ class PlaybackService : MediaLibraryService() {
         neverStarted: Boolean,
         attempts: Int,
     ): String? {
+        // The listener stopped on errors rather than skipped past them —
+        // ArchiveTune's other branch of the same setting. The recovery ladder
+        // has still run its retries; this only decides what happens once they
+        // are spent. The error stays on the player, which is what puts it in
+        // front of the listener rather than quietly moving the queue on.
+        if (!AppSettings.autoSkipOnError.value) return null
         if (verdict != null) return verdict
         if (!neverStarted) return null
         if (consecutiveErrorSkips >= MAX_CONSECUTIVE_SKIPS) {

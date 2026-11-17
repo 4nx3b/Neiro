@@ -310,6 +310,15 @@ object AppSettings {
      */
     val permanentShuffle = MutableStateFlow(false)
 
+    /**
+     * Whether a track the recovery ladder has given up on is skipped past or
+     * left stopped on. Ported from ArchiveTune's auto skip on error: on (the
+     * fork's default, and this one's) the queue moves past a track nobody can
+     * play, kept honest by the consecutive-skip cap; off, playback stops on
+     * it and the error stays in front of the listener.
+     */
+    val autoSkipOnError = MutableStateFlow(true)
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1211,6 +1220,7 @@ object AppSettings {
         }.getOrDefault(AutomixPerformanceMode.BALANCED)
         skipSilence.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)
         permanentShuffle.value = prefs.getBoolean(KEY_PERMANENT_SHUFFLE, false)
+        autoSkipOnError.value = prefs.getBoolean(KEY_AUTO_SKIP_ON_ERROR, true)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1617,6 +1627,11 @@ object AppSettings {
     fun setPermanentShuffle(value: Boolean) {
         permanentShuffle.value = value
         prefs.edit().putBoolean(KEY_PERMANENT_SHUFFLE, value).apply()
+    }
+
+    fun setAutoSkipOnError(value: Boolean) {
+        autoSkipOnError.value = value
+        prefs.edit().putBoolean(KEY_AUTO_SKIP_ON_ERROR, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2883,6 +2898,7 @@ object AppSettings {
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
     private const val KEY_SKIP_SILENCE = "skip_silence"
     private const val KEY_PERMANENT_SHUFFLE = "permanent_shuffle"
+    private const val KEY_AUTO_SKIP_ON_ERROR = "auto_skip_on_error"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

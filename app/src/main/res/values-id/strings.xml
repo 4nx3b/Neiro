@@ -1664,4 +1664,6 @@
     <string name="player_style_reset">Pemutar %1$s terus mengalami crash, jadi Neiro kembali ke pemutarnya sendiri. Log crash ada di Downloads/Neiro.</string>
     <string name="permanent_shuffle">Mode acak permanen</string>
     <string name="permanent_shuffle_subtitle">Biarkan pengacakan tetap aktif saat memutar lagu baru</string>
+    <string name="auto_skip_on_error">Lompat otomatis ke lagu berikutnya saat terjadi kesalahan</string>
+    <string name="auto_skip_on_error_subtitle">Lagu yang tak bisa diputar dilewati setelah percobaannya habis, agar pemutaran tetap berlanjut</string>
 </resources>

@@ -1692,4 +1692,6 @@
     <string name="player_style_reset">הנגן %1$s קרס שוב ושוב, ולכן Neiro חזרה לנגן שלה. יומן הקריסה נמצא ב־Downloads/Neiro.</string>
     <string name="permanent_shuffle">מצב ערבוב קבוע</string>
     <string name="permanent_shuffle_subtitle">השאר את הערבוב פעיל בהתחלת שיר חדש</string>
+    <string name="auto_skip_on_error">דילוג אוטומטי לשיר הבא כשמתרחשת שגיאה</string>
+    <string name="auto_skip_on_error_subtitle">רצועה שאי אפשר לנגן תדולג לאחר שניסיונות החזרה מתמו, כדי שההשמעה תימשך</string>
 </resources>

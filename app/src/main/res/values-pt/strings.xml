@@ -1692,4 +1692,6 @@
     <string name="player_style_reset">O player %1$s continuava falhando, então o Neiro voltou ao próprio player. O registro da falha está em Downloads/Neiro.</string>
     <string name="permanent_shuffle">Modo aleatório permanente</string>
     <string name="permanent_shuffle_subtitle">Manter a reprodução aleatória ativada ao iniciar uma nova música</string>
+    <string name="auto_skip_on_error">Avançar automaticamente para a próxima música quando ocorrer um erro</string>
+    <string name="auto_skip_on_error_subtitle">Uma faixa que ninguém consegue tocar é pulada quando as tentativas se esgotam, para a reprodução continuar</string>
 </resources>

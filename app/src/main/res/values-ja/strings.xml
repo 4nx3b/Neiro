@@ -1665,4 +1665,6 @@
     <string name="player_style_reset">%1$s プレーヤーがクラッシュを繰り返したため、Neiro は標準のプレーヤーに戻しました。クラッシュログは Downloads/Neiro にあります。</string>
     <string name="permanent_shuffle">常時シャッフルモード</string>
     <string name="permanent_shuffle_subtitle">新しい曲を再生し始めてもシャッフルをオンのままにする</string>
+    <string name="auto_skip_on_error">エラー発生時に次の曲へ自動的にスキップ</string>
+    <string name="auto_skip_on_error_subtitle">再生できない曲は再試行を終えた時点でスキップされ、再生は続行されます</string>
 </resources>

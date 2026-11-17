@@ -1604,4 +1604,6 @@
     <string name="player_style_reset">Trình phát %1$s liên tục gặp sự cố nên Neiro đã chuyển về trình phát của mình. Nhật ký sự cố nằm trong Downloads/Neiro.</string>
     <string name="permanent_shuffle">Chế độ ngẫu nhiên vĩnh viễn</string>
     <string name="permanent_shuffle_subtitle">Giữ phát ngẫu nhiên được bật khi bắt đầu bài hát mới</string>
+    <string name="auto_skip_on_error">Tự động chuyển sang bài hát tiếp theo khi có lỗi</string>
+    <string name="auto_skip_on_error_subtitle">Bài hát không thể phát sẽ bị bỏ qua sau khi hết số lần thử lại, để việc phát nhạc tiếp tục</string>
 </resources>

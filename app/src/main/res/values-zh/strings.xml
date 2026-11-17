@@ -1664,4 +1664,6 @@
     <string name="player_style_reset">%1$s 播放器反复崩溃，Neiro 已切换回自带播放器。崩溃日志位于 Downloads/Neiro。</string>
     <string name="permanent_shuffle">永久随机播放模式</string>
     <string name="permanent_shuffle_subtitle">开始新歌曲时保持随机播放开启</string>
+    <string name="auto_skip_on_error">发生错误时自动跳到下一首歌</string>
+    <string name="auto_skip_on_error_subtitle">无法播放的曲目在重试耗尽后会被跳过，让播放继续下去</string>
 </resources>

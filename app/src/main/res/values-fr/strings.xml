@@ -1688,4 +1688,6 @@
     <string name="player_style_reset">Le lecteur %1$s plantait sans cesse, Neiro est donc revenu à son propre lecteur. Le journal du plantage se trouve dans Downloads/Neiro.</string>
     <string name="permanent_shuffle">Mode aléatoire permanent</string>
     <string name="permanent_shuffle_subtitle">Garder la lecture aléatoire activée au démarrage d\'une nouvelle chanson</string>
+    <string name="auto_skip_on_error">Passer automatiquement à la chanson suivante en cas d\'erreur</string>
+    <string name="auto_skip_on_error_subtitle">Une piste injouable est passée une fois ses tentatives épuisées, pour que la lecture continue</string>
 </resources>

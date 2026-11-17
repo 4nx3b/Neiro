@@ -1687,4 +1687,6 @@
     <string name="player_style_reset">Der Player %1$s ist wiederholt abgestürzt, daher hat Neiro auf den eigenen Player zurückgeschaltet. Das Absturzprotokoll liegt unter Downloads/Neiro.</string>
     <string name="permanent_shuffle">Dauerhafter Zufallsmodus</string>
     <string name="permanent_shuffle_subtitle">Zufallswiedergabe aktiviert lassen, wenn ein neues Lied beginnt</string>
+    <string name="auto_skip_on_error">Bei Fehlern automatisch zum nächsten Lied springen</string>
+    <string name="auto_skip_on_error_subtitle">Ein unspielbarer Titel wird übersprungen, sobald seine Versuche aufgebraucht sind, damit die Wiedergabe weiterläuft</string>
 </resources>

@@ -1727,4 +1727,6 @@
     <string name="player_style_reset">Odtwarzacz %1$s wielokrotnie się zawieszał, więc Neiro wróciło do własnego odtwarzacza. Dziennik awarii jest w Downloads/Neiro.</string>
     <string name="permanent_shuffle">Stały tryb losowy</string>
     <string name="permanent_shuffle_subtitle">Zachowaj losowe odtwarzanie po rozpoczęciu nowego utworu</string>
+    <string name="auto_skip_on_error">Automatycznie przechodź do następnego utworu przy błędzie</string>
+    <string name="auto_skip_on_error_subtitle">Utwór, którego nie da się odtworzyć, jest pomijany po wyczerpaniu prób, żeby odtwarzanie szło dalej</string>
 </resources>

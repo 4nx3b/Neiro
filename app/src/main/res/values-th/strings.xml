@@ -1670,4 +1670,6 @@
     <string name="player_style_reset">เครื่องเล่น %1$s ขัดข้องซ้ำ ๆ Neiro จึงกลับไปใช้เครื่องเล่นของตัวเอง บันทึกการขัดข้องอยู่ที่ Downloads/Neiro</string>
     <string name="permanent_shuffle">โหมดสุ่มถาวร</string>
     <string name="permanent_shuffle_subtitle">เปิดการสุ่มเพลงค้างไว้เมื่อเริ่มเพลงใหม่</string>
+    <string name="auto_skip_on_error">ข้ามไปเพลงถัดไปอัตโนมัติเมื่อเกิดข้อผิดพลาด</string>
+    <string name="auto_skip_on_error_subtitle">เพลงที่เล่นไม่ได้จะถูกข้ามเมื่อหมดความพยายามแล้ว เพื่อให้เล่นต่อได้</string>
 </resources>
