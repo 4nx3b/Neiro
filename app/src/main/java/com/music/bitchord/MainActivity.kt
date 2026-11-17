@@ -198,6 +198,7 @@ import com.music.bitchord.ui.screens.IntegrationScreen
 import com.music.bitchord.ui.screens.InternetDialog
 import com.music.bitchord.ui.screens.InternetDialogHost
 import com.music.bitchord.ui.screens.InternetScreen
+import com.music.bitchord.ui.screens.LyricsSettingsScreen
 import com.music.bitchord.ui.screens.SettingsChoiceKind
 import com.music.bitchord.ui.screens.DiscordDialog
 import com.music.bitchord.ui.screens.DiscordDialogHost
@@ -3336,6 +3337,17 @@ private fun BitChordApp(
                                 onOpenDialog = { internetDialog = it },
                                 contentPadding = listPadding,
                             )
+                        } else if (pageRoute == AppRoute.Lyrics) {
+                            // The Lyrics sub-setting page under Playback: where
+                            // lyrics come from and what is done with them. Its
+                            // two dialogs stay raised at the activity — the
+                            // frosted pickers cannot be drawn from inside this
+                            // haze-sampling subtree.
+                            LyricsSettingsScreen(
+                                onLyricsSources = { showLyricsSources = true },
+                                onTranslationLanguage = { showTranslationLanguage = true },
+                                contentPadding = listPadding,
+                            )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
                                 onCleared = { navigator.pop() },
@@ -3399,8 +3411,7 @@ private fun BitChordApp(
                                     replayLandingPage = ReplayStoryPage.INTRO
                                     navigator.push(AppRoute.Replay)
                                 },
-                                onLyricsSources = { showLyricsSources = true },
-                                onTranslationLanguage = { showTranslationLanguage = true },
+                                onLyricsSettings = { navigator.push(AppRoute.Lyrics) },
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
@@ -4082,6 +4093,7 @@ private fun BitChordApp(
                         AppRoute.Integration -> stringResource(R.string.integration)
                         AppRoute.Internet -> stringResource(R.string.internet)
                         AppRoute.Sources -> stringResource(R.string.sources)
+                        AppRoute.Lyrics -> stringResource(R.string.lyrics)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)

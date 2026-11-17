@@ -27,6 +27,12 @@ sealed interface AppRoute {
     /** The Internet page — region, DNS over HTTPS and proxy, ported from ArchiveTune. */
     data object Internet : AppRoute
     data object Sources : AppRoute
+    /**
+     * The Lyrics sub-setting page under Playback — where lyrics come from and
+     * what is done with them, ported from ArchiveTune's player settings
+     * categorization.
+     */
+    data object Lyrics : AppRoute
     data object ListenTogether : AppRoute
     data object WearOs : AppRoute
     data object Equalizer : AppRoute

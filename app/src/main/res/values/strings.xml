@@ -488,9 +488,11 @@
     <string name="player_design_style">Player design style</string>
     <string name="player_design_style_footer">Each one is a whole layout of the now-playing screen — its artwork, typography, seek bar and transport. The app\'s own is the default; the rest are ArchiveTune\'s, ported whole.</string>
     <string name="player_design_bitchord">BitChord</string>
+    <string name="lyrics">Lyrics</string>
+    <string name="lyrics_settings_footer">Where lyrics come from and what is done with them once they arrive.</string>
+    <string name="settings_lyrics_subtitle">Lyrics providers, preloading, and translation</string>
+    <string name="settings_section_content">Content</string>
     <string name="player_design_bitchord_detail">This app\'s own player — the sleeve, the deck, the mesh</string>
-    <string name="player_design_material_extended">Material Extended</string>
-    <string name="player_design_material_extended_detail">ArchiveTune V9 · dynamic colour field, wavy slider, morphing pills</string>
     <string name="player_design_apple_music">Apple Music</string>
     <string name="player_design_apple_music_detail">The shrink-on-pause album over a floating light</string>
     <string name="player_design_tiktok">TikTok</string>

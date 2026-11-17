@@ -85,7 +85,6 @@ import androidx.compose.material.icons.rounded.Wifi
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
-import com.music.bitchord.data.lyrics.translationLanguageName
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -214,8 +213,7 @@ fun SettingsScreen(
     onInternet: () -> Unit,
     onEqualizer: () -> Unit,
     onOpenReplay: () -> Unit,
-    onLyricsSources: () -> Unit,
-    onTranslationLanguage: () -> Unit,
+    onLyricsSettings: () -> Unit,
     onSources: () -> Unit,
     onListenTogether: () -> Unit,
     onWearOs: () -> Unit,
@@ -263,7 +261,6 @@ fun SettingsScreen(
     val historyDurationSeconds by AppSettings.historyDurationSeconds.collectAsStateWithLifecycle()
     val preloadSongsCount by AppSettings.preloadSongsCount.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
-    val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
     // against a key that can never change — see [DeviceCodecs.playsDolbyAtmos],
     // which caches the codec-list walk for the life of the process.
@@ -277,7 +274,6 @@ fun SettingsScreen(
     val hideStatusBar by AppSettings.hideStatusBar.collectAsStateWithLifecycle()
     val uiScale by AppSettings.uiScale.collectAsStateWithLifecycle()
     val blurIntensity by AppSettings.blurIntensity.collectAsStateWithLifecycle()
-    val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
@@ -287,9 +283,6 @@ fun SettingsScreen(
     val playerTheme by AppSettings.playerTheme.collectAsStateWithLifecycle()
     val playerDesignStyle by AppSettings.playerDesignStyle.collectAsStateWithLifecycle()
     val tikTokMainLyrics by AppSettings.tikTokMainLyrics.collectAsStateWithLifecycle()
-    val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
-    val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
-    val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
     val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
     val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
     // The Appearance page's ported rows, collected once here for every section
@@ -575,36 +568,12 @@ fun SettingsScreen(
             // The row that used to sit at the top of this group was called
             // "Lossless / HQ Audio" and toggled `SourceRegistry.setModuleEnabled` —
             // it switched the *module source* on and off, not lossless. Sources
-            // above lists that as the module's own row now. Lossless itself is no
-            // longer a setting at all — see
+            // used to list that as the module's own row here; the row and the
+            // Direct Source Stream line under it moved to the Sources
+            // sub-setting page under Playback, where ArchiveTune gathers
+            // them. Lossless itself is no longer a setting at all — see
             // [SourceResolver.requestForNow][com.music.bitchord.data.sources.SourceResolver.requestForNow].
             SearchableSettingsGroup(search, header = stringResource(R.string.audio_quality)) {
-                val sourceTitle = stringResource(R.string.source)
-                val sourceSubtitle = stringResource(R.string.sources_subtitle)
-                row(sourceTitle, sourceSubtitle, "addon", "lossless") {
-                    SettingsRow(
-                        icon = SfIcons.Extension,
-                        title = sourceTitle,
-                        subtitle = sourceSubtitle,
-                        onClick = onSources,
-                    )
-                }
-                // One line on purpose: it qualifies the row above rather than
-                // being a setting of its own, so it reads as part of Sources.
-                val directSourceTitle = stringResource(R.string.direct_source_stream)
-                // Drawn like the animated-cover cellular line: no icon, no divider.
-                row(directSourceTitle, "addon", "direct", "prefetch", "read-ahead", divided = false) {
-                    // Off for the length of a party: holding every fetch until a
-                    // track is about to play would leave this phone behind the
-                    // others at each sync — see [DirectSourceGate.isActive].
-                    SettingsSubRow(
-                        title = directSourceTitle,
-                        checked = directSourceStream && !party.inParty,
-                        onCheckedChange = AppSettings::setDirectSourceStream,
-                        subtitle = stringResource(R.string.direct_source_stream_in_party).takeIf { party.inParty },
-                        enabled = !party.inParty,
-                    )
-                }
                 val onWifiTitle = stringResource(R.string.on_wifi)
                 row(onWifiTitle, "wi-fi", "streaming quality") {
                     SettingsRow(
@@ -718,6 +687,42 @@ fun SettingsScreen(
                     checked = syncDownloadedPlaylists,
                     onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
                     subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
+                )
+            }
+        }
+
+        // ---- The ported Content group, as ArchiveTune's player settings page has it ----
+        // Ported from ArchiveTune's Player-and-audio page: its “Player & Content”
+        // group leads with Sources and Lyrics, each a page of its own. The
+        // sources decide what arrives before the playback settings below ever
+        // touch it, and the lyrics ride with them because they are the other
+        // thing the player fetches on the listener's connection.
+        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.settings_section_content),
+        ) {
+            val sourceTitle = stringResource(R.string.source)
+            val sourceSubtitle = stringResource(R.string.sources_subtitle)
+            row(sourceTitle, sourceSubtitle, "addon", "lossless", "proxy", "region") {
+                SettingsRow(
+                    icon = SfIcons.Extension,
+                    title = sourceTitle,
+                    subtitle = sourceSubtitle,
+                    trailing = { Chevron() },
+                    onClick = onSources,
+                )
+            }
+            val lyricsTitle = stringResource(R.string.lyrics)
+            row(
+                lyricsTitle,
+                "lyrics", "translation", "lrclib", "musixmatch", "romanization", "sync",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Notes,
+                    title = lyricsTitle,
+                    subtitle = stringResource(R.string.settings_lyrics_subtitle),
+                    trailing = { Chevron() },
+                    onClick = onLyricsSettings,
                 )
             }
         }
@@ -1456,12 +1461,12 @@ fun SettingsScreen(
                 )
             }
             // The player's own design, ported from ArchiveTune's PlayerDesignStyle
-            // picker: a whole layout of the now-playing screen, four of them,
+            // picker: a whole layout of the now-playing screen, three of them,
             // this app's own the default and first.
             val playerDesignTitle = stringResource(R.string.player_design_style)
             row(
                 playerDesignTitle,
-                "player", "design", "style", "layout", "apple", "tiktok", "material",
+                "player", "design", "style", "layout", "apple", "tiktok",
             ) {
                 SettingsRow(
                     icon = SfIcons.Appearance,
@@ -1578,73 +1583,6 @@ fun SettingsScreen(
                         )
                         Chevron()
                     }
-                }
-            }
-            val syncedLyricsTitle = stringResource(R.string.synced_lyrics)
-            // Same reasoning as Animated cover art above: the lyrics source and
-            // translation rows are only here while this is on.
-            row(syncedLyricsTitle, "lyrics", "translation", "lrclib", "musixmatch") {
-                SettingsRow(
-                    icon = SfIcons.Notes,
-                    title = syncedLyricsTitle,
-                    subtitle = stringResource(R.string.synced_lyrics_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = syncedLyrics,
-                            onCheckedChange = AppSettings::setSyncedLyrics,
-                        )
-                    },
-                    onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
-                )
-            }
-            // Nothing to choose between while the feature is off, and the
-            // sources are third-party services being reached on the user's
-            // connection — which is the part worth being able to narrow.
-            if (syncedLyrics) {
-                val lyricsBlurTitle = stringResource(R.string.blur_unfocused_lyrics)
-                row(lyricsBlurTitle, "lyrics", "blur") {
-                    SettingsRow(
-                        icon = SfIcons.BlurOn,
-                        title = lyricsBlurTitle,
-                        subtitle = stringResource(R.string.blur_unfocused_lyrics_subtitle),
-                        trailing = {
-                            IosSwitch(
-                                checked = lyricsBlur,
-                                onCheckedChange = AppSettings::setLyricsBlur,
-                            )
-                        },
-                        onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
-                    )
-                }
-                val lyricsSourcesTitle = stringResource(R.string.lyrics_sources)
-                row(lyricsSourcesTitle, "lyrics", "lrclib", "musixmatch") {
-                    SettingsRow(
-                        icon = SfIcons.Language,
-                        title = lyricsSourcesTitle,
-                        subtitle = lyricsSources
-                            .sortedBy { it.ordinal }
-                            .joinToString(", ") { it.label }
-                            .ifEmpty { stringResource(R.string.no_lyrics_sources_enabled) },
-                        trailing = { Chevron() },
-                        onClick = onLyricsSources,
-                    )
-                }
-                val translationLanguageTitle = stringResource(R.string.translation_language)
-                row(translationLanguageTitle, "lyrics", "translate") {
-                    SettingsRow(
-                        icon = SfIcons.Translate,
-                        title = translationLanguageTitle,
-                        subtitle = if (translationLanguage.isBlank()) {
-                            stringResource(R.string.translation_language_subtitle)
-                        } else {
-                            translationLanguageName(
-                                translationLanguage,
-                                AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault(),
-                            )
-                        },
-                        trailing = { Chevron() },
-                        onClick = onTranslationLanguage,
-                    )
                 }
             }
         }
@@ -2510,7 +2448,6 @@ private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes
 internal fun PlayerDesignStyle.labelRes(): Int =
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord
-        PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok
     }
@@ -2519,7 +2456,6 @@ internal fun PlayerDesignStyle.labelRes(): Int =
 private fun PlayerDesignStyle.localizedDetail(): String = stringResource(
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord_detail
-        PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended_detail
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music_detail
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok_detail
     },
