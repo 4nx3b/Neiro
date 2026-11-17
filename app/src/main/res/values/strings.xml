@@ -1791,4 +1791,75 @@
 
     <string name="skip_gapless_albums">Skip gapless albums</string>
     <string name="skip_gapless_albums_subtitle">Do not crossfade consecutive songs from the same album</string>
+
+    <string name="canvas" translatable="false">Canvas</string>
+    <string name="canvas_subtitle" translatable="false">The looping artwork behind the sleeve and the page headers</string>
+    <string name="neiro_canvas" translatable="false">Neiro canvas</string>
+    <string name="neiro_canvas_subtitle" translatable="false">Play the looping cover art some releases publish, in place of the still sleeve</string>
+    <string name="spotify_canvas" translatable="false">Spotify Canvas</string>
+    <string name="spotify_canvas_subtitle" translatable="false">Also look up clips through a connected Spotify session</string>
+    <string name="animated_cover_cellular_subtitle" translatable="false">Loop the animated cover over mobile data — a clip is fetched again on every loop, so this is not a one-time video cost</string>
+    <string name="integrate_spotify_canvas_subtitle" translatable="false">Connect a sp_dc cookie to look up Spotify\'s own canvas clips</string>
+    <string name="canvas_in_headers" translatable="false">Canvas in headers</string>
+    <string name="canvas_in_headers_subtitle" translatable="false">Play the looping artwork behind album, playlist and artist page headers</string>
+    <string name="canvas_check" translatable="false">Canvas check</string>
+    <string name="canvas_check_subtitle" translatable="false">Ask every canvas provider whether it is reachable right now</string>
+    <string name="canvas_check_dialog_title" translatable="false">Canvas providers</string>
+    <string name="canvas_health_ok" translatable="false">Ok</string>
+    <string name="canvas_health_fail" translatable="false">Unreachable</string>
+    <string name="canvas_health_not_connected" translatable="false">Not connected</string>
+    <string name="canvas_source_apple_music" translatable="false">Apple Music</string>
+    <string name="canvas_source_tidal" translatable="false">Tidal</string>
+    <string name="canvas_source_community" translatable="false">Community</string>
+    <string name="canvas_artwork_section" translatable="false">Canvas artwork</string>
+    <string name="canvas_page_footer" translatable="false">Canvas is the short looping video some releases publish in place of a still cover. Neiro layers the providers that have one and caches the clips it plays.</string>
+    <string name="use_tidal_artwork" translatable="false">Use Tidal artwork</string>
+    <string name="use_tidal_artwork_subtitle" translatable="false">Fall back to a Tidal cover when a track resolves no artwork at all</string>
+    <string name="artwork_priority" translatable="false">Artwork priority</string>
+    <string name="artwork_priority_order_spotify_first" translatable="false">Spotify first</string>
+    <string name="artwork_priority_order_spotify_last" translatable="false">The other providers first</string>
+    <string name="artwork_priority_spotify_first" translatable="false">Spotify</string>
+    <string name="artwork_priority_spotify_first_detail" translatable="false">Try Spotify\'s canvas before the other providers</string>
+    <string name="artwork_priority_spotify_last" translatable="false">Others</string>
+    <string name="artwork_priority_spotify_last_detail" translatable="false">Try every other provider before Spotify\'s canvas</string>
+    <string name="animate_static_album_art" translatable="false">Animate static album art</string>
+    <string name="animate_static_album_art_subtitle" translatable="false">Breathe a slow zoom into the still sleeve while a track has no canvas to play</string>
+    <string name="ok" translatable="false">OK</string>
+
+    <string name="downloaded_songs_section" translatable="false">Downloaded songs</string>
+    <string name="clear_all_downloads" translatable="false">Clear all downloads</string>
+    <string name="downloaded_songs_size" translatable="false">Holding %1$s on disk</string>
+    <string name="clear_downloads_confirm" translatable="false">Delete every finished download on this device? Their files and their library records go together. Anything still queued or running is left to finish.</string>
+    <string name="downloads_cleared" translatable="false">Downloads cleared</string>
+    <string name="export_downloads" translatable="false">Export</string>
+    <string name="export_downloads_subtitle" translatable="false">Save a copy of every downloaded song to a folder you choose, in its original audio format</string>
+    <string name="download_export_running" translatable="false">Copying %1$d of %2$d…</string>
+    <string name="download_export_done" translatable="false">Copied %1$d songs to the chosen folder</string>
+    <string name="download_export_with_failures" translatable="false">Copied %1$d songs; %2$d could not be copied</string>
+    <string name="download_export_failed" translatable="false">Export failed: %1$s</string>
+    <string name="auto_download_on_like" translatable="false">Auto download on like</string>
+    <string name="auto_download_on_like_subtitle" translatable="false">Queue a download for a song the moment it is liked; the Wi-Fi-only rule still applies</string>
+    <string name="download_source_priority" translatable="false">Download source priority</string>
+    <string name="external_downloader" translatable="false">External downloader</string>
+    <string name="external_downloader_subtitle" translatable="false">Hand the download of a YouTube track to another app instead of downloading it here; a track another source serves still downloads through this app</string>
+    <string name="external_downloader_package" translatable="false">Downloader app package</string>
+    <string name="external_downloader_package_subtitle" translatable="false">The app that takes over YouTube downloads, by package name — e.g. com.deniscerri.ytdl</string>
+    <string name="external_downloader_missing" translatable="false">%1$s is not installed, so the download was not started</string>
+    <string name="canvas_cache_section" translatable="false">Canvas cache</string>
+    <string name="max_canvas_cache_size" translatable="false">Max cache size</string>
+    <string name="canvas_cache_usage" translatable="false">Usage</string>
+    <string name="canvas_cache_unlimited" translatable="false">Unlimited</string>
+    <string name="canvas_cache_off" translatable="false">Off</string>
+    <string name="canvas_cache_usage_limited" translatable="false">%1$s of %2$s · %3$d%% used</string>
+    <string name="canvas_cache_usage_unlimited" translatable="false">%1$s on disk · no limit</string>
+    <string name="canvas_cache_usage_off" translatable="false">%1$s · nothing is kept</string>
+    <string name="clear_canvas_cache" translatable="false">Clear canvas cache</string>
+    <string name="clear_canvas_cache_confirm" translatable="false">Drop every cached canvas clip? The next play of each track fetches its clip again.</string>
+    <string name="canvas_cache_cleared" translatable="false">Canvas cache cleared</string>
+    <string name="lyrics_cache_section" translatable="false">Lyrics</string>
+    <string name="clear_lyrics_cache" translatable="false">Clear lyrics cache</string>
+    <string name="clear_lyrics_cache_confirm" translatable="false">Delete the saved translated and romanized lyrics? Each song fetches them again the next time it plays.</string>
+    <string name="lyrics_cache_cleared" translatable="false">Lyrics cache cleared</string>
+    <string name="smart_trimmer" translatable="false">Smart trimmer</string>
+    <string name="smart_trimmer_subtitle" translatable="false">Prune old image and song cache entries to save disk space</string>
 </resources>

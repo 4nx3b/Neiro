@@ -1218,3 +1218,203 @@ Stage Summary:
   the token, and the relay endpoint file the engine fetches exists at the
   exact URL it reads. Compile verification is CI's (never local); the
   orchestrator commits.
+
+## Task 4: the Canvas settings page and the Downloads/Storage settings port
+
+Task ID: 4
+Agent: Super Z (sub agent, session task-4-continue)
+
+Task: Finish the interrupted Canvas/Downloads/Storage settings port from
+ArchiveTune — the data layer was already in the working tree from the
+previous agent; what was left was every string, the Canvas page's dispatch,
+the rows on the Settings pages, and the two settings' actual wiring
+(auto download on like, external downloader).
+
+Work Log:
+- The data layer (in-flight from the previous agent, read file by file and
+  kept as-is): `data/canvas/CanvasHealth.kt` (per-provider probes with
+  timeouts — Spotify gated on the sp_dc token, the others probed over IO,
+  20s/45s budgets), `download/DownloadsExport.kt` (SAF tree export of the
+  finished downloads in their original audio format, per-song progress
+  callback, sanitised "title - artist.ext" names), `download/ExternalDownloader.kt`
+  (watch-URL hand-off to a package-named app, three-intent ladder:
+  ACTION_VIEW / ACTION_SEND / launch intent), `Downloads.autoDownloadOnLike`
+  + `clearAll` + `bytesInUse`, `CanvasCache`'s MutableLruCacheEvictor with a
+  live ceiling + `sizeBytes` + `clear`, the canvas providers' probeHealthy
+  probes, `AppSettings`' nine new keys with their setters
+  (normalizeCanvasCacheSizeMb: -1 unlimited, 0 off, else 0..2048), the Smart
+  Trimmer pass in BitChordApplication (image disk cache + AudioCache.trimNow),
+  LyricsTranslation.clearCache, and `AppRoute.Canvas`.
+- `CanvasSettingsScreen.kt` (previous agent's file, fixed to compile): the
+  missing `foundation.layout.Row` import for its healthLine/priorityOption
+  rows, the nonexistent `SfIcons.Spotify` replaced with `SfIcons.PlayCircle`
+  (no brand glyph exists in SfIcons), and the health dialog's
+  `android.R.string.ok` switched to the repo's own `R.string.ok`.
+- `strings.xml`: 69 keys added `translatable="false"` (English-first until
+  the locale pass, LocaleStringsTest-exempt) — the 32 keys the Canvas page
+  references (canvas, neiro_canvas, spotify_canvas, the cellular/headers/
+  check rows, the four provider names and their health words, the artwork
+  priority dialog's labels and details, animate_static_album_art, ok), the
+  canvas row's own subtitle, and the Storage port's full set (downloaded
+  songs, clear/confirm/size, export + its four status lines, auto download
+  on like, download source priority, external downloader + package + missing
+  toast, canvas cache section/max size/usage/off/unlimited/clear/confirm/
+  cleared, lyrics cache section/clear/confirm/cleared, smart trimmer).
+  No duplicate names; `animated_cover_cellular`, `integrate_spotify_canvas`,
+  `spotify`, `cancel` were already present and are not duplicated.
+- `MainActivity.kt`: the `AppRoute.Canvas` dispatch branch (CanvasSettingsScreen
+  with onSpotifyCanvasAuth raised at the activity, like Lyrics' pickers), the
+  FrostedTopBar title branch (`AppRoute.Canvas -> R.string.canvas` — the
+  when is exhaustive over the sealed interface), and
+  `onOpenCanvas = { navigator.push(AppRoute.Canvas) }` on the SettingsScreen
+  call site.
+- `SettingsSheet.kt`:
+  - Playback's Content group gains the Canvas row (Sources → Lyrics →
+    Canvas), opening the new page.
+  - Appearance loses the "Animated cover art" switch and its "On cellular"
+    and "Spotify Canvas" subrows — the Canvas page carries all three
+    settings now; everything else on the page is untouched.
+  - Storage, after the existing Downloads group: "Auto download on like"
+    and "Download source priority" (subtitle = the live
+    SourceRegistry.activeForDownload order joined with arrows, tap opens
+    Sources) inside the Downloads group; then the "Downloaded songs" card
+    ("Clear all downloads" with the bytes-in-use subtitle and a confirm,
+    "Export" through OpenDocumentTree → DownloadsExport with progress and
+    outcome reported on the row); the "External downloader" card (the
+    switch, plus the package row enabled only under it, edited through the
+    frosted text dialog); the "Canvas cache" card (max size choice dialog
+    over 0/64/128/256/512/1024/2048 MB + Unlimited — 0 off, -1 unlimited,
+    matching normalizeCanvasCacheSizeMb — with the current pick as the row's
+    value, a usage row reading CanvasCache.sizeBytes with the "x of y · N%
+    used" text and a LinearProgressIndicator, and clear with confirm); the
+    "Lyrics" card (clear → LyricsTranslation.clearCache, with confirm); and
+    the Smart trimmer switch in the storage card beside the song-cache rows
+    (the "first card near the song-cache rows" the task named — the
+    song-cache rows live in the Storage card, not the Downloads card that
+    leads the page).
+  - No video cache card: archivetuneplayer's CanvasArtworkPlaybackCache is
+    a distinct persistent cache, but nothing in app/tv/wearos references it —
+    Neiro's canvas system is its own CanvasRepository + CanvasCache — so there
+    is no second video cache to mirror the rows against. Not fabricated.
+- Wiring, verified in the code and completed where it was missing:
+  - autoDownloadOnLike was stored-only. `MainViewModel.setLike` now answers
+    whether the rating landed (the refused-tap paths: not signed in, or the
+    same rating twice) and `toggleLike` passes on the status it left behind —
+    the shape `toggleDislike` already had. The three UI like funnels now
+    consult `Downloads.autoDownloadOnLike` with the song in hand:
+    MainActivity's `toggleLikeOf` (the native player's heart, the song menu,
+    the list rows), `ArchiveTuneBridgeImpl`'s toggleLike/likeSong (the
+    ported player styles' hearts — it needed a context, added to its
+    constructor and passed by MainActivity's single construction site), and
+    PlaybackService's `toggleFavoriteFromNotification` (the media
+    notification's heart, off the current item's toSong).
+  - ExternalDownloader was stored-only. `MainActivity.downloadSong` — the
+    one-song download action the song menu drives — now hands a YouTube
+    track to the configured app when the switch is on; NOT_CONFIGURED (no
+    package, or a source-backed track with no watch page) falls through to
+    the app's own download exactly as the setting's doc promises, and
+    NOT_INSTALLED is a toast with the package name and no download.
+  - spotifyCanvasEnabled is genuinely gated (CanvasRepository.spotifyAsked,
+    part of the cache key so a toggle never serves the other order's answer).
+    canvasInHeaders, animateStaticArtwork and tidalArtworkFallback are
+    stored-only: no UI or provider reads them yet — the header pages, the
+    static-artwork animation and the player's Tidal sleeve fallback are the
+    follow-up ports they wait for. TidalCanvas.fallbackCoverUrl (the lookup
+    tidalArtworkFallback describes) exists in the data layer but has no
+    caller.
+- Verification, all read-the-code (compile verification is CI's — never
+  local): every R.string key referenced by CanvasSettingsScreen, the new
+  rows, and the new data-layer files cross-checked against values/
+  strings.xml by script (no misses, no android.R confusion — R.string.ok is
+  the repo's own); every SfIcons glyph used exists in SfIcons.kt; the
+  SettingsRow/SettingsSubRow/GlassAlertDialog/IosSwitch/LaunchedEffect/
+  rememberLauncherForActivityResult signatures matched against their
+  declarations; strings.xml parsed with Python ElementTree (no duplicate
+  names, format args well-formed); brace/paren balance checked on
+  SettingsSheet.kt, MainActivity.kt, MainViewModel.kt,
+  ArchiveTuneBridgeImpl.kt, PlaybackService.kt and CanvasSettingsScreen.kt;
+  every setLike/toggleLike call site re-grepped after the signature change
+  (all four compile-compatible); the exhaustive AppRoute when got its
+  Canvas branch.
+
+Stage Summary:
+- The Canvas page is reachable (Playback → Content → Canvas → the page and
+  its health check, priority dialog and sp_dc auth), Appearance no longer
+  duplicates its rows, the Storage page carries the full downloads/caches
+  port (clear-all + SAF export, auto download on like, source priority,
+  external downloader, canvas cache ceiling + usage + clear, lyrics clear,
+  smart trimmer), and both ported settings act: a like queues a download on
+  all three like surfaces, and the external downloader takes over single
+  YouTube downloads when configured. 69 strings, translatable="false" until
+  the locale pass. The three stored-only canvas keys (canvasInHeaders,
+  animateStaticArtwork, tidalArtworkFallback) are the port's known remainder,
+  reported rather than hidden.
+
+## Task 4b: the three stored-only canvas keys wired to real behavior
+
+Task ID: 4b
+Agent: Super Z (sub agent, session task-4b)
+
+Task: Give canvasInHeaders, animateStaticArtwork and tidalArtworkFallback —
+the three keys Task 4 left stored-only — their behaviour, smallest change per
+key, zero regressions out of the box (defaults: on / off / off).
+
+Work Log:
+- tidalArtworkFallback. The seam is the player's own sleeve resolution,
+  NowPlayingScreen's `rememberRemoteArtworkUrl(song)` result: when it answers
+  null (no thumbnail, no embedded store art), the new `tidalSleeve` state asks
+  the host for Tidal's cover and every `remoteArt` consumer below picks it up —
+  sleeve, banner, mesh/glow/blur backdrops, top-band scrim, lyric share card.
+  PlayerHost gained `tidalSleeveFallback(song): String?` (default null),
+  AndroidPlayerHost answers it through `CanvasRepository.tidalSleeveFallback`,
+  which reuses the repository's own resolve() — noise-cleaned title/artist,
+  miss-cached entries, album-late re-ask, IO off-main — and only reaches
+  TidalCanvas.fallbackCoverUrl (its first caller) after the
+  AppSettings.tidalArtworkFallback gate; off answers null with no request.
+  WebDAV/SMB tracks wait REMOTE_ART_SETTLE_MS (700ms) for the embedded
+  extraction to land before a search is spent on a sleeve the store may be
+  about to answer. Deliberately NOT wired under the rows (SongRow/MiniPlayer
+  resolve the same nothing; a fallback there is a third-party search per row).
+- animateStaticArtwork. `Modifier.staticArtworkBreathing(breathe)` in
+  NowPlayingScreen.kt: an infinite scale 1.0→1.03→1.0 (4.5s per leg, ~9s the
+  whole breath, FastOutSlowIn reversed), read in the graphicsLayer so a frame
+  is a redraw, never a relayout. Applied at the portrait sleeve's AsyncImage
+  and passed into LandscapeArtwork (new `breathe` param) for the landscape
+  sleeve. The gate is `animateStaticArtwork && canvas == null && !videoMode`
+  — a track with no clip and no music-video picture — collected from the new
+  PlayerSettingsSource.animateStaticArtwork (AndroidPlayerHost fronts
+  AppSettings), and skipped entirely under Reduce animation or while the
+  switch is off (the modifier is then the caller's own).
+- canvasInHeaders. DetailScreen's two header canvas effects (the album
+  sleeve's `canvasForAlbum` lookup and the artist page's appleArt videoUrl)
+  now also key on and gate on AppSettings.canvasInHeaders: off, `canvas` stays
+  null and both headers render exactly the no-canvas look they always had
+  (ReleaseHeader sleeve still, PageBackground photo with its softened foot);
+  on (the default), unchanged. The player's own clip is untouched, and toggling
+  the key live re-runs the effects.
+- No new strings (all three rows' strings shipped with Task 4), no new
+  dependencies, no comment blocks beyond KDoc matching each file's own voice.
+
+Verification, all read-the-code (compile verification is CI's — never local):
+PlayerSettingsSource/PlayerHost have exactly one implementation
+(AndroidPlayerHost; no fakes in any test source set) so the two new members
+break nothing; `animateFloat` is an extension needing the import now added
+(PlayerControls.kt's own import confirmed the name); `Modifier.graphicsLayer`,
+`rememberInfiniteTransition`, `infiniteRepeatable`, `RepeatMode.Reverse` all
+match existing usages in sharedUi; TidalCanvas.fallbackCoverUrl's signature
+re-checked (title/artist/album, its own isMatch validation) and
+CanvasRepository's private resolve()/cleaned() reached from the same object;
+CanvasArtwork(url = …) follows the two existing single-arg call sites;
+`remoteArt`'s eight downstream reads sit after the new merged declaration and
+kept their names; brace/paren balance scripted over all six touched files;
+tv/wearos grep-clean (tv compiles the app's sources unchanged; wearos does not
+depend on sharedUi); `kotlin.math.abs` duplicate import in NowPlayingScreen.kt
+is pre-existing and left alone.
+
+Stage Summary:
+- All three Canvas page switches now do something: "Use Tidal artwork" fills
+  an artless player sleeve from Tidal (opt-in, cached, miss-cached),
+  "Animate static album art" breathes a canvasless sleeve (opt-in,
+  reduce-animation aware, redraw-only), and "Canvas in headers" takes the
+  looping artwork out of the album and artist page headers when off (default
+  on keeps today's look exactly). Task 4's "known remainder" is closed.

@@ -28,7 +28,11 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -213,6 +217,13 @@ internal const val ART_RETRY_DELAY_MS = 1_500L
  * enough not to be noticed on a track that has no album to find.
  */
 internal const val ALBUM_SETTLE_MS = 700L
+
+/**
+ * How long the Tidal sleeve fallback waits for a remote-library track's own
+ * extraction to answer before it asks Tidal — the same beat the canvas lookup
+ * gives the album name, for the same reason: the art is on its way.
+ */
+private const val REMOTE_ART_SETTLE_MS = 700L
 
 /** Long enough for the post-upgrade rollback cue to be noticed without lingering. */
 private const val REVERT_CUE_MS = 2_600L
@@ -456,6 +467,41 @@ private const val ARTWORK_DRAG_SHRINK_SCALE = 0.94f
  */
 private val ArtworkScaleEasing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
 private const val ARTWORK_SCALE_DURATION_MS = 500
+
+/**
+ * The still sleeve's breath while "Animate static album art" is on and a
+ * track has no canvas: the top of the scale and one leg of its cycle, the two
+ * legs — out and back — spelling out a whole ~9s. Small enough to read as the
+ * picture settling deeper rather than the frame growing.
+ */
+private const val STATIC_ARTWORK_BREATH_SCALE = 1.03f
+private const val STATIC_ARTWORK_BREATH_LEG_MS = 4_500
+
+/**
+ * The breathing itself: an infinite scale in and out, read in the layer so a
+ * frame of it is a redraw of the sleeve and never a relayout. The caller's
+ * own modifier — nothing at all — while the sleeve has a canvas over it,
+ * while the switch is off, or under "Reduce animation", where the still
+ * sleeve has always been still.
+ */
+@Composable
+internal fun Modifier.staticArtworkBreathing(breathe: Boolean): Modifier {
+    val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    if (!breathe || reduceAnimation) return this
+    val breath = rememberInfiniteTransition(label = "staticArtworkBreath").animateFloat(
+        initialValue = 1f,
+        targetValue = STATIC_ARTWORK_BREATH_SCALE,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = STATIC_ARTWORK_BREATH_LEG_MS, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "staticArtworkBreathScale",
+    )
+    return graphicsLayer {
+        scaleX = breath.value
+        scaleY = breath.value
+    }
+}
 
 /**
  * How far a tall screen is allowed to push the transport from the blocks either
@@ -882,7 +928,29 @@ fun NowPlayingScreen(
     // Remote tracks whose art lives inside the file resolve it here, once —
     // every surface below reads the same value rather than each triggering
     // its own extraction.
-    val remoteArt = rememberRemoteArtworkUrl(song)
+    val resolvedArt = rememberRemoteArtworkUrl(song)
+    // The Canvas page's "Use Tidal artwork" fallback: a track that resolved
+    // no artwork at all asks Tidal for its album's cover, for a sleeve the
+    // player would otherwise tile over. Asked here and not under the rows,
+    // which resolve the same nothing — a fallback there would be a
+    // third-party search per row, and the switch is the sleeve's. Arrives the
+    // way any cover does, late and fading in; the host answers null without
+    // a request while the switch is off.
+    var tidalSleeve by remember(song.videoId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(song.videoId, song.albumName, resolvedArt) {
+        if (resolvedArt != null) {
+            tidalSleeve = null
+            return@LaunchedEffect
+        }
+        // A WebDAV/SMB track's picture may still be on its way out of the
+        // file — see [rememberRemoteArtworkUrl] — so give the store a beat
+        // to answer before spending a search on a sleeve it is about to.
+        if (song.videoId.startsWith("webdav:") || song.videoId.startsWith("smb:")) {
+            delay(REMOTE_ART_SETTLE_MS)
+        }
+        tidalSleeve = PlayerPlatform.host.tidalSleeveFallback(song)
+    }
+    val remoteArt = resolvedArt ?: tidalSleeve
     // This is produced by the palette's existing 128 px decode and cache. It
     // samples the upper band rather than the whole sleeve because that is what
     // lies beneath the status bar when the player expands to full bleed.
@@ -956,6 +1024,11 @@ fun NowPlayingScreen(
             it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
         } else it
     }
+    // The still sleeve's own motion, for a track with no canvas and no video
+    // picture: "Animate static album art". Worked out once here — the portrait
+    // sleeve below and the landscape one both read it.
+    val animateStaticArtwork by PlayerSettings.animateStaticArtwork.collectAsStateWithLifecycle()
+    val breatheStaticSleeve = animateStaticArtwork && canvas == null && !videoMode
     // Whether the picture has a frame on screen; the still frame shows until then.
     var videoRendered by remember(song.videoId) { mutableStateOf(false) }
     // The picture's shape, read only at layout (see the sleeve's card rect), so
@@ -2130,6 +2203,7 @@ fun NowPlayingScreen(
                             canvasRendered = canvasRendered,
                             isPlaying = isPlaying,
                             onCanvasRenderedChange = { canvasRendered = it },
+                            breathe = breatheStaticSleeve,
                             // A clip decoding behind a player on its way to the
                             // bar is work nobody sees — see [dockMoving].
                             pausedForTransition = dockMoving || overlayOpen.value,
@@ -3470,6 +3544,7 @@ fun NowPlayingScreen(
                                 // [PlayerArtwork.loaded] still flips the moment it does.
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .staticArtworkBreathing(breatheStaticSleeve)
                                     .drawWithContent {
                                         val frame = still()
                                         if (frame == null) {

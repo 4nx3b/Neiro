@@ -263,6 +263,26 @@ object SpotifyCanvas {
     }
 
     /**
+     * Whether the listener's session mints a token the search endpoint
+     * honours — the Canvas Check row's probe. A one-row search rather than a
+     * canvas fetch, so the answer is about the session rather than about
+     * whether any one track has a clip. Mints the token if none is held:
+     * that is the WebView harvest, which is why the check is an explicit
+     * action rather than something looked up in passing.
+     */
+    internal suspend fun probeHealthy(): Boolean {
+        val token = SpotifyToken.accessToken() ?: return false
+        val url = SEARCH_URL.toHttpUrl().newBuilder()
+            .addQueryParameter("q", "music")
+            .addQueryParameter("type", "track")
+            .addQueryParameter("limit", "1")
+            .build()
+            .toString()
+        val (code, body) = canvasGetWithStatus(url, authHeaders(token))
+        return code in 200..299 && body != null
+    }
+
+    /**
      * [SpotifyToken.clientToken] on top of the bearer — api.spotify.com and
      * spclient both turn away a request carrying only the bearer with a 429,
      * which reads exactly like rate limiting on the very first request of a

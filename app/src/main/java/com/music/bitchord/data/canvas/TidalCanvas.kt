@@ -158,4 +158,61 @@ object TidalCanvas {
         if (parts.size != 5) return null
         return "https://resources.tidal.com/videos/${parts.joinToString("/")}/1280x1280.mp4"
     }
+
+    /** The still cover of a cover id, at the same CDN it serves video from. */
+    internal fun coverImageUrl(id: String): String? {
+        val parts = id.split("-")
+        if (parts.size != 5) return null
+        return "https://resources.tidal.com/images/${parts.joinToString("/")}/orig.jpg"
+    }
+
+    /**
+     * The still cover of the matched track's album, for a sleeve the player
+     * would otherwise tile over — see [tidalArtworkFallback]. The same track
+     * search as [search], answering the album's `cover` instead of its
+     * `videoCover`.
+     */
+    fun fallbackCoverUrl(title: String, artist: String, album: String?): String? {
+        val query = if (album.isNullOrBlank()) "$artist $title" else "$album $artist $title"
+        val url = SEARCH.toHttpUrl().newBuilder()
+            .addQueryParameter("query", query)
+            .addQueryParameter("limit", "10")
+            .addQueryParameter("types", "TRACKS")
+            .addQueryParameter("countryCode", countryCode)
+            .build()
+            .toString()
+
+        val body = canvasGet(url, mapOf("X-Tidal-Token" to EMBED_TOKEN, "User-Agent" to CANVAS_UA))
+            ?: return null
+        val root = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull() ?: return null
+        val items = root["tracks"]?.jsonObject?.get("items")?.jsonArray ?: return null
+
+        for (item in items) {
+            val track = item as? JsonObject ?: continue
+            val trackTitle = track["title"]?.jsonPrimitive?.contentOrNull ?: continue
+            val artists = track["artists"]?.jsonArray
+                ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.contentOrNull }
+                .orEmpty()
+            if (!isMatch(trackTitle, artists, title, artist)) continue
+            val cover = track["album"]?.jsonObject?.get("cover")?.jsonPrimitive?.contentOrNull
+            if (cover.isNullOrBlank()) continue
+            return coverImageUrl(cover)
+        }
+        return null
+    }
+
+    /** Whether the search endpoint answers at all — the Canvas Check row's probe. */
+    internal fun probeHealthy(): Boolean {
+        val url = SEARCH.toHttpUrl().newBuilder()
+            .addQueryParameter("query", "music")
+            .addQueryParameter("limit", "1")
+            .addQueryParameter("types", "TRACKS")
+            .addQueryParameter("countryCode", countryCode)
+            .build()
+            .toString()
+        val body = canvasGet(url, mapOf("X-Tidal-Token" to EMBED_TOKEN, "User-Agent" to CANVAS_UA))
+            ?: return false
+        val root = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull() ?: return false
+        return root["tracks"]?.jsonObject?.get("items")?.jsonArray?.isNotEmpty() == true
+    }
 }

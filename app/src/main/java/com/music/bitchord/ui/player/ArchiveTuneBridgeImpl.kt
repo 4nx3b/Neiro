@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.player
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.MediaItem
@@ -10,6 +11,7 @@ import androidx.media3.session.MediaController
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.download.Downloads
 import com.music.bitchord.playback.beginRadioQueue
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.toMediaItem
@@ -39,6 +41,7 @@ class ArchiveTuneBridgeImpl(
     private val controller: MediaController,
     private val viewModel: MainViewModel,
     @Suppress("unused") scope: CoroutineScope,
+    private val context: Context,
     private val onOpenArtist: (String) -> Unit,
     private val onOpenAlbum: (String) -> Unit,
     private val onOpenSearch: () -> Unit,
@@ -190,11 +193,23 @@ class ArchiveTuneBridgeImpl(
     }
 
     override fun toggleLike() {
-        currentItem?.mediaId?.let(viewModel::toggleLike)
+        val item = currentItem ?: return
+        // The auto download on like setting answers here too — this heart is
+        // the ported player's, and a like through it is as much a like as one
+        // through the native player's (whose funnel is MainActivity's
+        // toggleLikeOf). Only a like that landed queues anything.
+        if (viewModel.toggleLike(item.mediaId) == LikeStatus.LIKE) {
+            Downloads.autoDownloadOnLike(context, item.toNeiroSong(), true)
+        }
     }
 
     override fun likeSong(mediaId: String, liked: Boolean) {
-        viewModel.toggleLike(mediaId)
+        if (viewModel.toggleLike(mediaId) == LikeStatus.LIKE) {
+            currentItem
+                ?.takeIf { it.mediaId == mediaId }
+                ?.toNeiroSong()
+                ?.let { Downloads.autoDownloadOnLike(context, it, true) }
+        }
     }
 
     override fun stopAndClearPlayback() {

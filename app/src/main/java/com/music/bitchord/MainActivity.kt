@@ -196,6 +196,7 @@ import com.music.bitchord.ui.screens.IntegrationScreen
 import com.music.bitchord.ui.screens.InternetDialog
 import com.music.bitchord.ui.screens.InternetDialogHost
 import com.music.bitchord.ui.screens.InternetScreen
+import com.music.bitchord.ui.screens.CanvasSettingsScreen
 import com.music.bitchord.ui.screens.LyricsSettingsScreen
 import com.music.bitchord.ui.screens.SettingsChoiceKind
 import com.music.bitchord.ui.screens.DiscordDialog
@@ -254,6 +255,7 @@ import com.music.bitchord.download.DownloadStore
 import com.music.bitchord.download.MediaTagger
 import com.music.bitchord.download.DownloadTarget
 import com.music.bitchord.download.Downloads
+import com.music.bitchord.download.ExternalDownloader
 import com.music.bitchord.ui.components.BrowseActionsMenu
 import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
@@ -1196,7 +1198,18 @@ private fun BitChordApp(
         }
     }
     val toggleLikeOf: (Song) -> Unit = { song ->
-        if (song.localUri != null) OfflinePlaylists.toggleLike(song) else viewModel.toggleLike(song.videoId)
+        if (song.localUri != null) {
+            OfflinePlaylists.toggleLike(song)
+        } else {
+            // The auto download on like setting's one caller here: only a like
+            // that actually landed queues anything — [toggleLike] answers the
+            // status it left behind, null when the tap never reached YouTube.
+            // A like that got rolled back later keeps its download; the moment
+            // was real when it happened, and unlike is not a refund.
+            if (viewModel.toggleLike(song.videoId) == LikeStatus.LIKE) {
+                Downloads.autoDownloadOnLike(context, song, true)
+            }
+        }
     }
     // Which tracks are being held on YouTube's own upload, so the player's menu
     // offers the way back out of a revert rather than the revert again.
@@ -2620,7 +2633,29 @@ private fun BitChordApp(
         } else {
             song
         }
-        startDownload(listOf(withDuration), null)
+        // The external downloader setting's one caller: a YouTube track hands
+        // its watch page to the app the package row names, and only a track
+        // with no watch page to hand — a source-backed one, or the setting
+        // never configured — still downloads through this app. An app that is
+        // named but not installed is said so, and nothing downloads: the
+        // listener picked where that download belongs.
+        val handedOff = AppSettings.externalDownloaderEnabled.value &&
+            when (ExternalDownloader.openFor(context, withDuration)) {
+                ExternalDownloader.LaunchResult.STARTED -> true
+                ExternalDownloader.LaunchResult.NOT_INSTALLED -> {
+                    Toast.makeText(
+                        context,
+                        context.getString(
+                            R.string.external_downloader_missing,
+                            AppSettings.externalDownloaderPackage.value,
+                        ),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    true
+                }
+                ExternalDownloader.LaunchResult.NOT_CONFIGURED -> false
+            }
+        if (!handedOff) startDownload(listOf(withDuration), null)
     }
 
     // Content padding leaves room for the frosted bar above and the tab bar
@@ -3325,6 +3360,16 @@ private fun BitChordApp(
                                 onTranslationLanguage = { showTranslationLanguage = true },
                                 contentPadding = listPadding,
                             )
+                        } else if (pageRoute == AppRoute.Canvas) {
+                            // The Canvas sub-setting page under Playback: the
+                            // looping artwork's own settings, ported from
+                            // ArchiveTune. Its sp_dc sign-in stays raised here —
+                            // the WebView the auth needs lives at the activity,
+                            // where the Lyrics page's pickers live too.
+                            CanvasSettingsScreen(
+                                onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
+                                contentPadding = listPadding,
+                            )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
                                 onCleared = { navigator.pop() },
@@ -3376,6 +3421,7 @@ private fun BitChordApp(
                                 },
                                 onLyricsSettings = { navigator.push(AppRoute.Lyrics) },
                                 onSources = { navigator.push(AppRoute.Sources) },
+                                onOpenCanvas = { navigator.push(AppRoute.Canvas) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
                                 onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
@@ -4057,6 +4103,7 @@ private fun BitChordApp(
                         AppRoute.Internet -> stringResource(R.string.internet)
                         AppRoute.Sources -> stringResource(R.string.sources)
                         AppRoute.Lyrics -> stringResource(R.string.lyrics)
+                        AppRoute.Canvas -> stringResource(R.string.canvas)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)
@@ -4514,6 +4561,7 @@ private fun BitChordApp(
                                 controller = controller,
                                 viewModel = viewModel,
                                 scope = scope,
+                                context = context,
                                 onOpenArtist = { id ->
                                     viewModel.openDetail(
                                         id,

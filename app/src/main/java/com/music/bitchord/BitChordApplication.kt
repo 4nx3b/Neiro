@@ -51,6 +51,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.concurrent.thread
 import timber.log.Timber
+import java.io.File
 
 class BitChordApplication : Application(), SingletonImageLoader.Factory, Configuration.Provider {
 
@@ -246,6 +247,16 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // One cache directory can only be opened once per process, and
         // PlaybackService shares this one — so it's opened here, not there.
         AudioCache.init(this)
+        // The Smart Trimmer's once-per-launch pass, ported from ArchiveTune:
+        // both caches evict on their own while running, so the only thing this
+        // adds is a pass over what they are holding right now, before anything
+        // else has written to either of them.
+        if (AppSettings.smartTrimmer.value) {
+            CoroutineScope(Dispatchers.IO).launch {
+                trimImageDiskCache()
+                AudioCache.trimNow()
+            }
+        }
         // The offscreen WebView that mints a Spotify access token from the
         // listener's own session cookie needs a Context, and nothing in the
         // suspend call chain that reaches it (a track's canvas lookup) has
@@ -331,7 +342,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(100L * 1024 * 1024)
+                    .maxSizeBytes(IMAGE_CACHE_LIMIT_BYTES)
                     .build()
             }
             // Covers arriving with a hard cut read as the list flickering as
@@ -361,6 +372,29 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             .any { java.io.File("$it/egl/libEGL_emulation.so").exists() }
     }
 
+    /**
+     * Deletes the oldest image-cache files until the directory is back under
+     * [IMAGE_CACHE_LIMIT_BYTES] — the Smart Trimmer's image half. Coil trims
+     * the same directory as it writes; this is the pass that also catches a
+     * launch that never asked it to write anything.
+     */
+    private fun trimImageDiskCache() {
+        runCatching {
+            val dir = File(cacheDir, "image_cache")
+            if (!dir.isDirectory) return
+            val files = dir.walkTopDown().filter { it.isFile }
+                .sortedBy { it.lastModified() }
+                .toList()
+            var size = files.sumOf { it.length() }
+            if (size <= IMAGE_CACHE_LIMIT_BYTES) return
+            for (file in files) {
+                if (size <= IMAGE_CACHE_LIMIT_BYTES) break
+                val length = file.length()
+                if (file.delete()) size -= length
+            }
+        }
+    }
+
     private fun initLastfm() {
         val sessionKey = AppSettings.lastfmSessionKey.value
         if (sessionKey.isBlank()) return
@@ -384,6 +418,9 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
     companion object {
         lateinit var authStore: AuthStore
             private set
+
+        /** The Coil disk cache's ceiling, shared with the Smart Trimmer's trim pass. */
+        private const val IMAGE_CACHE_LIMIT_BYTES = 100L * 1024 * 1024
 
         /**
          * One-time move from region-less script tags to regional ones.

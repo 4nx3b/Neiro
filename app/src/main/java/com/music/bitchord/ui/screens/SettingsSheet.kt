@@ -90,6 +90,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -164,11 +165,13 @@ import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import com.music.bitchord.ui.performance.supportedPerformanceRefreshRates
 import com.music.bitchord.data.model.Account
+import com.music.bitchord.data.canvas.CanvasCache
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.NetPolicy
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.listentogether.ListenTogether
+import com.music.bitchord.data.lyrics.LyricsTranslation
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
@@ -182,6 +185,9 @@ import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
 import com.music.bitchord.data.sources.DeviceCodecs
+import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.download.Downloads
+import com.music.bitchord.download.DownloadsExport
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
@@ -231,6 +237,8 @@ fun SettingsScreen(
     onOpenReplay: () -> Unit,
     onLyricsSettings: () -> Unit,
     onSources: () -> Unit,
+    /** Opens the Canvas page under Playback — the looping artwork's own settings. */
+    onOpenCanvas: () -> Unit,
     onListenTogether: () -> Unit,
     onWearOs: () -> Unit,
     onSpotifyCanvasAuth: () -> Unit,
@@ -323,6 +331,11 @@ fun SettingsScreen(
     val playingDolbyAtmos = playingFormat?.isDolbyAtmos == true
     val cacheLimitBytes by AppSettings.audioCacheLimitBytes.collectAsStateWithLifecycle()
     val showCacheFolder by AppSettings.showCacheFolder.collectAsStateWithLifecycle()
+    val autoDownloadOnLike by AppSettings.autoDownloadOnLike.collectAsStateWithLifecycle()
+    val externalDownloaderEnabled by AppSettings.externalDownloaderEnabled.collectAsStateWithLifecycle()
+    val externalDownloaderPackage by AppSettings.externalDownloaderPackage.collectAsStateWithLifecycle()
+    val maxCanvasCacheSizeMb by AppSettings.maxCanvasCacheSizeMb.collectAsStateWithLifecycle()
+    val smartTrimmer by AppSettings.smartTrimmer.collectAsStateWithLifecycle()
     val downloadQuality by AppSettings.downloadQuality.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by AppSettings.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val exportDownloads by AppSettings.exportDownloads.collectAsStateWithLifecycle()
@@ -409,8 +422,40 @@ fun SettingsScreen(
     var pendingRestoreInfo by remember { mutableStateOf(BackupArchive.Validity()) }
     var pendingExportPlaylist by remember { mutableStateOf<LocalPlaylist?>(null) }
     var confirmClearSongCache by remember { mutableStateOf(false) }
+    // The Storage page's ported rows: their confirmations, the package editor
+    // the external downloader's row opens, and the size choice the canvas
+    // cache's chip stands for — the same frosted pickers the backup page uses.
+    var confirmClearDownloads by remember { mutableStateOf(false) }
+    var confirmClearCanvasCache by remember { mutableStateOf(false) }
+    var confirmClearLyricsCache by remember { mutableStateOf(false) }
+    var showCanvasCacheDialog by remember { mutableStateOf(false) }
+    var showExternalDownloaderPackageDialog by remember { mutableStateOf(false) }
+    // The export's outcome, on the row that started it — a copy of a library
+    // is the other action here whose result nobody can check by looking.
+    var downloadsExportStatus by remember { mutableStateOf<String?>(null) }
     var showPerformanceWarning by remember { mutableStateOf(false) }
     var showPerformanceConfirmation by remember { mutableStateOf(false) }
+    // What the finished downloads are holding, re-read whenever the record of
+    // them changes — a save or a delete while the page is open moves the number.
+    val savedDownloads by Downloads.saved.collectAsStateWithLifecycle()
+    var downloadsBytes by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(savedDownloads) {
+        downloadsBytes = Downloads.bytesInUse(context)
+    }
+    // The clips' hold on the disk: read once, then again whenever the ceiling
+    // moves (the evictor reclaims at once — see CanvasCache) or the cache is
+    // cleared from the row below. Not live while a clip streams in: a number
+    // that ticks up while the page is open is noise, not information.
+    var canvasCacheBytes by remember { mutableStateOf(CanvasCache.sizeBytes()) }
+    LaunchedEffect(maxCanvasCacheSizeMb) {
+        canvasCacheBytes = CanvasCache.sizeBytes()
+    }
+    // The order the next download walks the sources in, from the same walk
+    // that answers it — see [SourceRegistry.activeForDownload].
+    val sourceConfigs by SourceRegistry.configs.collectAsStateWithLifecycle()
+    val downloadSourceOrder = remember(sourceConfigs) {
+        SourceRegistry.activeForDownload().joinToString(" → ") { it.displayName }
+    }
     val backupScope = rememberCoroutineScope()
 
     val batterySettingsLauncher = rememberLauncherForActivityResult(
@@ -522,6 +567,38 @@ fun SettingsScreen(
                 onSuccess = { context.getString(R.string.backup_export_done) },
                 onFailure = {
                     context.getString(R.string.backup_export_failed, it.message ?: context.getString(R.string.unknown_error))
+                },
+            )
+        }
+    }
+    // The Downloaded songs page's export: the system's tree picker names a
+    // folder, and every finished download lands in it as the copy it already
+    // is — no re-encode, the file's own audio format, its own name. Progress
+    // and outcome report themselves on the row that started it.
+    val downloadsExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { folder ->
+        if (folder == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            DownloadsExport.exportTo(context, folder) { copied, failed, total ->
+                downloadsExportStatus = context.getString(
+                    R.string.download_export_running,
+                    copied + failed,
+                    total,
+                )
+            }.fold(
+                onSuccess = { outcome ->
+                    downloadsExportStatus = if (outcome.failed > 0) {
+                        context.getString(R.string.download_export_with_failures, outcome.copied, outcome.failed)
+                    } else {
+                        context.getString(R.string.download_export_done, outcome.copied)
+                    }
+                },
+                onFailure = {
+                    downloadsExportStatus = context.getString(
+                        R.string.download_export_failed,
+                        it.message ?: context.getString(R.string.unknown_error),
+                    )
                 },
             )
         }
@@ -708,6 +785,23 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.settings_lyrics_subtitle),
                     trailing = { Chevron() },
                     onClick = onLyricsSettings,
+                )
+            }
+            // The third thing the player fetches on the listener's connection:
+            // the looping artwork, ported from ArchiveTune's Canvas settings
+            // page — everything that used to sit under Appearance's Animated
+            // cover art now lives behind this row.
+            val canvasTitle = stringResource(R.string.canvas)
+            row(
+                canvasTitle,
+                "canvas", "artwork", "spotify", "video", "animated", "loop",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Video,
+                    title = canvasTitle,
+                    subtitle = stringResource(R.string.canvas_subtitle),
+                    trailing = { Chevron() },
+                    onClick = onOpenCanvas,
                 )
             }
         }
@@ -1553,59 +1647,6 @@ fun SettingsScreen(
                     onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_BACKGROUND) },
                 )
             }
-            val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
-            // Carries the keywords of the rows that only appear once it is on,
-            // so searching "spotify" with animated covers switched off turns up
-            // the switch that brings the Spotify row back rather than nothing.
-            row(animatedCoverArtTitle, "canvas", "video", "spotify") {
-                SettingsRow(
-                    icon = SfIcons.Animation,
-                    title = animatedCoverArtTitle,
-                    subtitle = stringResource(R.string.animated_cover_art_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = animatedCanvas,
-                            onCheckedChange = AppSettings::setAnimatedCanvas,
-                        )
-                    },
-                    onClick = { AppSettings.setAnimatedCanvas(!animatedCanvas) },
-                )
-            }
-            // Reads as part of the Animated cover art option above it, not
-            // as a separate setting. Nothing to narrow while the clip itself
-            // is off. Defaults to off: a clip loops for as long as its track
-            // plays, so on cellular this is not a one-time video cost but
-            // that cost repeated on every loop — see AppSettings.canvasOverCellular.
-            if (animatedCanvas) {
-                val coverCellularTitle = stringResource(R.string.animated_cover_cellular)
-                row(coverCellularTitle, "canvas", "cellular", divided = false) {
-                    SettingsSubRow(
-                        title = coverCellularTitle,
-                        checked = canvasOverCellular,
-                        onCheckedChange = AppSettings::setCanvasOverCellular,
-                    )
-                }
-                val spotifyCanvasTitle = stringResource(R.string.integrate_spotify_canvas)
-                row(spotifyCanvasTitle, "spotify", "canvas", divided = false) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onSpotifyCanvasAuth)
-                            .padding(start = ROW_INSET, end = ROW_INSET, top = 4.dp, bottom = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = spotifyCanvasTitle,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Chevron()
-                    }
-                }
-            }
             val artistSignaturesTitle = stringResource(R.string.artist_signatures)
             row(artistSignaturesTitle, "signature", "artist", "logo") {
                 SettingsRow(
@@ -1799,6 +1840,37 @@ fun SettingsScreen(
                     badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
                 )
             }
+            // Ported from ArchiveTune's auto download on like: the moment a
+            // like lands is the moment the download is queued. The Wi-Fi gate
+            // above still applies — it is [Downloads.enqueue]'s, not this row's.
+            val autoDownloadOnLikeTitle = stringResource(R.string.auto_download_on_like)
+            row(autoDownloadOnLikeTitle, "like", "heart", "favorite", "automatic") {
+                SettingsRow(
+                    icon = SfIcons.Heart,
+                    title = autoDownloadOnLikeTitle,
+                    subtitle = stringResource(R.string.auto_download_on_like_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoDownloadOnLike,
+                            onCheckedChange = AppSettings::setAutoDownloadOnLike,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoDownloadOnLike(!autoDownloadOnLike) },
+                )
+            }
+            // The order a download walks the sources in, live from the same
+            // walk that answers it — the Sources page it opens is the one that
+            // reorders the ranks this subtitle spells out.
+            val downloadSourcePriorityTitle = stringResource(R.string.download_source_priority)
+            row(downloadSourcePriorityTitle, "sources", "priority", "order", "rank") {
+                SettingsRow(
+                    icon = SfIcons.Tune,
+                    title = downloadSourcePriorityTitle,
+                    subtitle = downloadSourceOrder,
+                    trailing = { Chevron() },
+                    onClick = onSources,
+                )
+            }
             val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)
             row(exportDownloadsTitle, "music folder") {
                 SettingsSubRow(
@@ -1815,6 +1887,163 @@ fun SettingsScreen(
                     checked = syncDownloadedPlaylists,
                     onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
                     subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
+                )
+            }
+        }
+
+        // The finished downloads themselves, rather than the rules above about
+        // when one may be fetched: what they are holding, and the way out with
+        // a copy. Ported from ArchiveTune's Storage page, whose clear and export
+        // rows sit under the downloads rules the same way.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.downloaded_songs_section),
+        ) {
+            val clearDownloadsTitle = stringResource(R.string.clear_all_downloads)
+            row(clearDownloadsTitle, "delete", "storage", "free space") {
+                SettingsRow(
+                    icon = SfIcons.DeleteSweep,
+                    title = clearDownloadsTitle,
+                    subtitle = downloadsBytes?.let {
+                        stringResource(R.string.downloaded_songs_size, formatMb(it))
+                    },
+                    onClick = { confirmClearDownloads = true },
+                )
+            }
+            val exportDownloadsCopyTitle = stringResource(R.string.export_downloads)
+            row(exportDownloadsCopyTitle, "export", "copy", "folder", "saf") {
+                SettingsRow(
+                    icon = SfIcons.Share,
+                    title = exportDownloadsCopyTitle,
+                    subtitle = downloadsExportStatus ?: stringResource(R.string.export_downloads_subtitle),
+                    onClick = { downloadsExportLauncher.launch(null) },
+                )
+            }
+        }
+
+        // Ported from ArchiveTune's external downloader: a YouTube track's
+        // download can be handed to another app, named by package. Nothing here
+        // fetches anything — the launch happens where a download is asked for.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.external_downloader),
+        ) {
+            val externalDownloaderTitle = stringResource(R.string.external_downloader)
+            row(externalDownloaderTitle, "youtube", "ytdl", "package") {
+                SettingsRow(
+                    icon = SfIcons.Apps,
+                    title = externalDownloaderTitle,
+                    subtitle = stringResource(R.string.external_downloader_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = externalDownloaderEnabled,
+                            onCheckedChange = AppSettings::setExternalDownloaderEnabled,
+                        )
+                    },
+                    onClick = { AppSettings.setExternalDownloaderEnabled(!externalDownloaderEnabled) },
+                )
+            }
+            val packageTitle = stringResource(R.string.external_downloader_package)
+            row(packageTitle, "package", "app", "ytdl", divided = false) {
+                SettingsRow(
+                    icon = SfIcons.Pencil,
+                    title = packageTitle,
+                    subtitle = stringResource(R.string.external_downloader_package_subtitle),
+                    value = externalDownloaderPackage.ifBlank { null },
+                    enabled = externalDownloaderEnabled,
+                    onClick = { showExternalDownloaderPackageDialog = true },
+                )
+            }
+        }
+
+        // The clips the canvas player loops, with a ceiling of their own —
+        // see [CanvasCache], whose evictor takes a change here at once.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.canvas_cache_section),
+        ) {
+            val canvasCacheOff = maxCanvasCacheSizeMb == 0
+            val canvasCacheUnlimited = maxCanvasCacheSizeMb == AppSettings.UNLIMITED_CANVAS_CACHE_MB
+            val canvasCacheLimitLabel = when {
+                canvasCacheOff -> stringResource(R.string.canvas_cache_off)
+                canvasCacheUnlimited -> stringResource(R.string.canvas_cache_unlimited)
+                else -> formatCacheSize(maxCanvasCacheSizeMb)
+            }
+            val maxCanvasCacheSizeTitle = stringResource(R.string.max_canvas_cache_size)
+            row(maxCanvasCacheSizeTitle, "cache", "limit", "space", "unlimited") {
+                SettingsRow(
+                    icon = SfIcons.Storage,
+                    title = maxCanvasCacheSizeTitle,
+                    value = canvasCacheLimitLabel,
+                    onClick = { showCanvasCacheDialog = true },
+                )
+            }
+            val canvasCacheUsageTitle = stringResource(R.string.canvas_cache_usage)
+            row(canvasCacheUsageTitle, "cache", "usage", "disk", divided = false) {
+                SettingsRow(
+                    icon = SfIcons.Cached,
+                    title = canvasCacheUsageTitle,
+                    subtitleContent = {
+                        Column {
+                            Text(
+                                text = when {
+                                    canvasCacheUnlimited -> stringResource(
+                                        R.string.canvas_cache_usage_unlimited,
+                                        formatMb(canvasCacheBytes),
+                                    )
+                                    canvasCacheOff -> stringResource(
+                                        R.string.canvas_cache_usage_off,
+                                        formatMb(canvasCacheBytes),
+                                    )
+                                    else -> stringResource(
+                                        R.string.canvas_cache_usage_limited,
+                                        formatMb(canvasCacheBytes),
+                                        canvasCacheLimitLabel,
+                                        ((canvasCacheBytes * 100) / (maxCanvasCacheSizeMb.toLong() * 1024 * 1024))
+                                            .toInt().coerceIn(0, 100),
+                                    )
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (!canvasCacheOff && !canvasCacheUnlimited) {
+                                LinearProgressIndicator(
+                                    progress = {
+                                        (canvasCacheBytes.toFloat() /
+                                            (maxCanvasCacheSizeMb * 1024f * 1024f)).coerceIn(0f, 1f)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 6.dp),
+                                )
+                            }
+                        }
+                    },
+                )
+            }
+            val clearCanvasCacheTitle = stringResource(R.string.clear_canvas_cache)
+            row(clearCanvasCacheTitle, "cache", "clips", "free space") {
+                SettingsRow(
+                    icon = SfIcons.DeleteSweep,
+                    title = clearCanvasCacheTitle,
+                    onClick = { confirmClearCanvasCache = true },
+                )
+            }
+        }
+
+        // The translations and romanizations the lyrics screen keeps, ready
+        // for the next play of the same song — the only lyrics this app ever
+        // writes to disk. See [LyricsTranslation].
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.lyrics_cache_section),
+        ) {
+            val clearLyricsTitle = stringResource(R.string.clear_lyrics_cache)
+            row(clearLyricsTitle, "lyrics", "translation", "free space") {
+                SettingsRow(
+                    icon = SfIcons.DeleteSweep,
+                    title = clearLyricsTitle,
+                    onClick = { confirmClearLyricsCache = true },
                 )
             }
         }
@@ -1839,6 +2068,24 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setShowCacheFolder(!showCacheFolder) },
+                )
+            }
+            // Ported from ArchiveTune's smart trimmer: the once-per-launch pass
+            // that prunes both caches to their limits — see BitChordApplication,
+            // which runs it, and whose trimmer this row turns on.
+            val smartTrimmerTitle = stringResource(R.string.smart_trimmer)
+            row(smartTrimmerTitle, "cache", "trim", "prune", "disk", "space") {
+                SettingsRow(
+                    icon = SfIcons.AutoAwesome,
+                    title = smartTrimmerTitle,
+                    subtitle = stringResource(R.string.smart_trimmer_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = smartTrimmer,
+                            onCheckedChange = AppSettings::setSmartTrimmer,
+                        )
+                    },
+                    onClick = { AppSettings.setSmartTrimmer(!smartTrimmer) },
                 )
             }
             val songCacheLimitTitle = stringResource(R.string.song_cache_limit)
@@ -2480,6 +2727,160 @@ fun SettingsScreen(
         )
     }
 
+    // Downloads.clearAll is the destructive one that leaves the queue alone —
+    // the row above says what it is holding so the number, not the warning,
+    // is what gets tapped.
+    if (confirmClearDownloads) {
+        GlassAlertDialog(
+            onDismissRequest = { confirmClearDownloads = false },
+            title = { Text(stringResource(R.string.clear_all_downloads)) },
+            text = { Text(stringResource(R.string.clear_downloads_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClearDownloads = false
+                    backupScope.launch {
+                        Downloads.clearAll(context)
+                        downloadsExportStatus = null
+                        Toast.makeText(context, context.getString(R.string.downloads_cleared), Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text(stringResource(R.string.clear))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearDownloads = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showCanvasCacheDialog) {
+        GlassAlertDialog(
+            onDismissRequest = { showCanvasCacheDialog = false },
+            title = { Text(stringResource(R.string.max_canvas_cache_size)) },
+            text = {
+                Column {
+                    CANVAS_CACHE_CHOICES.forEach { mb ->
+                        val sizeLabel = when (mb) {
+                            0 -> context.getString(R.string.canvas_cache_off)
+                            AppSettings.UNLIMITED_CANVAS_CACHE_MB -> context.getString(R.string.canvas_cache_unlimited)
+                            else -> formatCacheSize(mb)
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    AppSettings.setMaxCanvasCacheSizeMb(mb)
+                                    showCanvasCacheDialog = false
+                                }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = sizeLabel,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (mb == maxCanvasCacheSizeMb) {
+                                Icon(
+                                    imageVector = SfIcons.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCanvasCacheDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmClearCanvasCache) {
+        GlassAlertDialog(
+            onDismissRequest = { confirmClearCanvasCache = false },
+            title = { Text(stringResource(R.string.clear_canvas_cache)) },
+            text = { Text(stringResource(R.string.clear_canvas_cache_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClearCanvasCache = false
+                    CanvasCache.clear { canvasCacheBytes = CanvasCache.sizeBytes() }
+                    Toast.makeText(context, context.getString(R.string.canvas_cache_cleared), Toast.LENGTH_SHORT).show()
+                }) {
+                    Text(stringResource(R.string.clear))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearCanvasCache = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmClearLyricsCache) {
+        GlassAlertDialog(
+            onDismissRequest = { confirmClearLyricsCache = false },
+            title = { Text(stringResource(R.string.clear_lyrics_cache)) },
+            text = { Text(stringResource(R.string.clear_lyrics_cache_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClearLyricsCache = false
+                    backupScope.launch {
+                        LyricsTranslation.clearCache()
+                        Toast.makeText(context, context.getString(R.string.lyrics_cache_cleared), Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text(stringResource(R.string.clear))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearLyricsCache = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showExternalDownloaderPackageDialog) {
+        var packageInput by remember { mutableStateOf(externalDownloaderPackage) }
+        GlassAlertDialog(
+            onDismissRequest = { showExternalDownloaderPackageDialog = false },
+            title = { Text(stringResource(R.string.external_downloader_package)) },
+            text = {
+                OutlinedTextField(
+                    value = packageInput,
+                    onValueChange = { packageInput = it },
+                    label = { Text(stringResource(R.string.external_downloader_package)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    AppSettings.setExternalDownloaderPackage(packageInput)
+                    showExternalDownloaderPackageDialog = false
+                }) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExternalDownloaderPackageDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
     if (showFrequencyDialog) {
         GlassAlertDialog(
             onDismissRequest = { showFrequencyDialog = false },
@@ -3080,6 +3481,19 @@ private fun formatCacheSize(mb: Int): String {
     val gb = mb / 1024f
     return if (gb == gb.toInt().toFloat()) "${gb.toInt()} GB" else "%.1f GB".format(Locale.ROOT, gb)
 }
+
+/** The canvas cache's size row, measured off bytes rather than whole megabytes. */
+private fun formatMb(bytes: Long): String {
+    val mb = bytes / (1024f * 1024f)
+    return if (mb >= 10f) "%.0f MB".format(Locale.ROOT, mb) else "%.1f MB".format(Locale.ROOT, mb)
+}
+
+/**
+ * The canvas cache's ceiling choices, in the order the dialog lists them: off,
+ * the fixed sizes, then no ceiling at all. Everything here survives
+ * [AppSettings.setMaxCanvasCacheSizeMb]'s clamp unchanged.
+ */
+private val CANVAS_CACHE_CHOICES = listOf(0, 64, 128, 256, 512, 1024, 2048, AppSettings.UNLIMITED_CANVAS_CACHE_MB)
 
 /** Who you're signed in as, straight from YouTube Music's account menu. */
 @Composable

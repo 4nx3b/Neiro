@@ -275,6 +275,28 @@ object AppSettings {
      */
     val syncDownloadedPlaylists = MutableStateFlow(false)
 
+    /**
+     * Queue a download for a song the moment it is liked, ported from
+     * ArchiveTune's auto download on like. Off by default: it spends data and
+     * storage without being asked each time. [wifiOnlyDownloads] still gates
+     * it — [Downloads.enqueue][com.music.bitchord.download.Downloads.enqueue]
+     * is the one door into the queue, and it refuses a metered connection.
+     */
+    val autoDownloadOnLike = MutableStateFlow(false)
+
+    /**
+     * Hand the download of a YouTube track to an external app instead of
+     * downloading it here, ported from ArchiveTune's external downloader: the
+     * song menu's Download row launches the app named by
+     * [externalDownloaderPackage] with the track's watch URL. A track another
+     * source serves still downloads through this app — an external downloader
+     * cannot reach the accounts those streams ride.
+     */
+    val externalDownloaderEnabled = MutableStateFlow(false)
+
+    /** The external downloader app, as a package name. Blank means unconfigured. */
+    val externalDownloaderPackage = MutableStateFlow("")
+
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
 
@@ -870,6 +892,37 @@ object AppSettings {
     val prioritizeSpotifyCanvas = MutableStateFlow(false)
 
     /**
+     * Whether the Spotify provider takes part in the canvas lookup at all —
+     * [CanvasRepository][com.music.bitchord.data.canvas.CanvasRepository] skips
+     * it while this is off, whatever [prioritizeSpotifyCanvas] says. On by
+     * default: with no `sp_dc` cookie it is a free no-op anyway, so the switch
+     * only bites for a listener who has connected one.
+     */
+    val spotifyCanvasEnabled = MutableStateFlow(true)
+
+    /**
+     * Whether the album, playlist and artist page headers play the looping
+     * motion artwork behind them. On by default — that is what they have always
+     * done while [animatedCanvas] was on; off, every header keeps to the static
+     * cover while the player still gets its clip.
+     */
+    val canvasInHeaders = MutableStateFlow(true)
+
+    /**
+     * Fall back to a Tidal cover when a track resolves no artwork at all — a
+     * network lookup for a sleeve the player would otherwise tile over. Off by
+     * default: it is one more third party reached on the listener's connection.
+     */
+    val tidalArtworkFallback = MutableStateFlow(false)
+
+    /**
+     * Breathe a slow on-device scale into the sleeve while a track has no
+     * animated canvas to play. Off by default — motion the listener did not ask
+     * for costs battery, and the still sleeve has always been still.
+     */
+    val animateStaticArtwork = MutableStateFlow(false)
+
+    /**
      * Secondary artist art: a user-hosted artist-signature API used only when
      * Apple Music has no title logo. Blank URL means unconfigured and the
      * lookup is skipped entirely — there is no hosted default.
@@ -971,6 +1024,22 @@ object AppSettings {
      * [UNLIMITED_CACHE_LIMIT_BYTES] means no ceiling of the app's own.
      */
     val audioCacheLimitBytes = MutableStateFlow(DEFAULT_CACHE_LIMIT_BYTES)
+
+    /**
+     * Disk budget for cached canvas clips, in MB. [UNLIMITED_CANVAS_CACHE_MB]
+     * means no ceiling; 0 keeps nothing on disk at all, so every loop of a
+     * clip is fetched over the network again. See
+     * [CanvasCache][com.music.bitchord.data.canvas.CanvasCache].
+     */
+    val maxCanvasCacheSizeMb = MutableStateFlow(DEFAULT_CANVAS_CACHE_SIZE_MB)
+
+    /**
+     * Prune the image and song caches to their limits once per launch, ported
+     * from ArchiveTune's smart trimmer. Off by default: both caches already
+     * evict on their own while running, so this is the one pass that also
+     * reclaims what a session that never wrote anything left behind.
+     */
+    val smartTrimmer = MutableStateFlow(false)
 
     /**
      * Whether Library's "On device" shelf carries the Cached songs folder —
@@ -1613,6 +1682,10 @@ object AppSettings {
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
+        spotifyCanvasEnabled.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_ENABLED, true)
+        canvasInHeaders.value = prefs.getBoolean(KEY_CANVAS_IN_HEADERS, true)
+        tidalArtworkFallback.value = prefs.getBoolean(KEY_TIDAL_ARTWORK_FALLBACK, false)
+        animateStaticArtwork.value = prefs.getBoolean(KEY_ANIMATE_STATIC_ARTWORK, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, false)
         signatureApiUrl.value = normalizeSignatureApiUrl(prefs.getString(KEY_SIGNATURE_API_URL, "").orEmpty())
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
@@ -1639,6 +1712,11 @@ object AppSettings {
         paxSenixApiKey.value = prefs.getString(KEY_PAXSENIX_API_KEY, "").orEmpty()
         com.music.bitchord.data.lyrics.PaxSenix.setApiKey(paxSenixApiKey.value)
         audioCacheLimitBytes.value = clampCacheLimit(prefs.getLong(KEY_CACHE_LIMIT, DEFAULT_CACHE_LIMIT_BYTES))
+        maxCanvasCacheSizeMb.value = prefs.getInt(KEY_MAX_CANVAS_CACHE_SIZE_MB, DEFAULT_CANVAS_CACHE_SIZE_MB)
+        smartTrimmer.value = prefs.getBoolean(KEY_SMART_TRIMMER, false)
+        autoDownloadOnLike.value = prefs.getBoolean(KEY_AUTO_DOWNLOAD_ON_LIKE, false)
+        externalDownloaderEnabled.value = prefs.getBoolean(KEY_EXTERNAL_DOWNLOADER_ENABLED, false)
+        externalDownloaderPackage.value = prefs.getString(KEY_EXTERNAL_DOWNLOADER_PACKAGE, "").orEmpty()
         showCacheFolder.value = prefs.getBoolean(KEY_SHOW_CACHE_FOLDER, false)
         lastfmEnabled.value = prefs.getBoolean(KEY_LASTFM_ENABLED, false)
         lastfmUsername.value = prefs.getString(KEY_LASTFM_USERNAME, "").orEmpty()
@@ -2683,6 +2761,26 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, value).apply()
     }
 
+    fun setSpotifyCanvasEnabled(value: Boolean) {
+        spotifyCanvasEnabled.value = value
+        prefs.edit().putBoolean(KEY_SPOTIFY_CANVAS_ENABLED, value).apply()
+    }
+
+    fun setCanvasInHeaders(value: Boolean) {
+        canvasInHeaders.value = value
+        prefs.edit().putBoolean(KEY_CANVAS_IN_HEADERS, value).apply()
+    }
+
+    fun setTidalArtworkFallback(value: Boolean) {
+        tidalArtworkFallback.value = value
+        prefs.edit().putBoolean(KEY_TIDAL_ARTWORK_FALLBACK, value).apply()
+    }
+
+    fun setAnimateStaticArtwork(value: Boolean) {
+        animateStaticArtwork.value = value
+        prefs.edit().putBoolean(KEY_ANIMATE_STATIC_ARTWORK, value).apply()
+    }
+
     fun setSignatureApiEnabled(value: Boolean) {
         signatureApiEnabled.value = value
         prefs.edit().putBoolean(KEY_SIGNATURE_API_ENABLED, value).apply()
@@ -2743,6 +2841,41 @@ object AppSettings {
     fun setShowCacheFolder(value: Boolean) {
         showCacheFolder.value = value
         prefs.edit().putBoolean(KEY_SHOW_CACHE_FOLDER, value).apply()
+    }
+
+    /**
+     * Clamped to the choice list's values — off, the fixed sizes, or
+     * [UNLIMITED_CANVAS_CACHE_MB]. CanvasCache picks the change up itself.
+     */
+    fun setMaxCanvasCacheSizeMb(value: Int) {
+        val clamped = normalizeCanvasCacheSizeMb(value)
+        maxCanvasCacheSizeMb.value = clamped
+        prefs.edit().putInt(KEY_MAX_CANVAS_CACHE_SIZE_MB, clamped).apply()
+    }
+
+    private fun normalizeCanvasCacheSizeMb(value: Int): Int =
+        if (value == UNLIMITED_CANVAS_CACHE_MB) UNLIMITED_CANVAS_CACHE_MB else value.coerceIn(0, 2048)
+
+    fun setSmartTrimmer(value: Boolean) {
+        smartTrimmer.value = value
+        prefs.edit().putBoolean(KEY_SMART_TRIMMER, value).apply()
+    }
+
+    fun setAutoDownloadOnLike(value: Boolean) {
+        autoDownloadOnLike.value = value
+        prefs.edit().putBoolean(KEY_AUTO_DOWNLOAD_ON_LIKE, value).apply()
+    }
+
+    fun setExternalDownloaderEnabled(value: Boolean) {
+        externalDownloaderEnabled.value = value
+        prefs.edit().putBoolean(KEY_EXTERNAL_DOWNLOADER_ENABLED, value).apply()
+    }
+
+    /** Trimmed; blank forgets the app. */
+    fun setExternalDownloaderPackage(value: String) {
+        val normalized = value.trim()
+        externalDownloaderPackage.value = normalized
+        prefs.edit().putString(KEY_EXTERNAL_DOWNLOADER_PACKAGE, normalized).apply()
     }
 
     fun setLastfmEnabled(value: Boolean) {
@@ -3299,6 +3432,12 @@ object AppSettings {
     /** The cache limit with no ceiling: only free storage bounds it. */
     const val UNLIMITED_CACHE_LIMIT_BYTES = Long.MAX_VALUE
 
+    /** The canvas cache's own budget, in MB — see [maxCanvasCacheSizeMb]. */
+    const val DEFAULT_CANVAS_CACHE_SIZE_MB = 256
+
+    /** The [maxCanvasCacheSizeMb] value for no ceiling at all. */
+    const val UNLIMITED_CANVAS_CACHE_MB = -1
+
     const val MIN_LYRICS_OFFSET_MS = -5_000
     const val MAX_LYRICS_OFFSET_MS = 5_000
 
@@ -3476,6 +3615,15 @@ object AppSettings {
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"
+    private const val KEY_SPOTIFY_CANVAS_ENABLED = "spotify_canvas_enabled"
+    private const val KEY_CANVAS_IN_HEADERS = "canvas_in_headers"
+    private const val KEY_TIDAL_ARTWORK_FALLBACK = "tidal_artwork_fallback"
+    private const val KEY_ANIMATE_STATIC_ARTWORK = "animate_static_artwork"
+    private const val KEY_MAX_CANVAS_CACHE_SIZE_MB = "max_canvas_cache_size_mb"
+    private const val KEY_SMART_TRIMMER = "smart_trimmer"
+    private const val KEY_AUTO_DOWNLOAD_ON_LIKE = "auto_download_on_like"
+    private const val KEY_EXTERNAL_DOWNLOADER_ENABLED = "external_downloader_enabled"
+    private const val KEY_EXTERNAL_DOWNLOADER_PACKAGE = "external_downloader_package"
     private const val KEY_SIGNATURE_API_ENABLED = "signature_api_enabled"
     private const val KEY_SIGNATURE_API_URL = "signature_api_url"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
