@@ -1577,4 +1577,8 @@
     <string name="preload_songs">Preload songs</string>
     <string name="preload_songs_subtitle">Resolves upcoming songs' streams ahead of time; ten is the fork's default</string>
     <string name="preload_songs_value">%1$d songs</string>
+
+    <string name="history_duration">History duration</string>
+    <string name="history_duration_subtitle">How long a track plays before the listening history counts it</string>
+    <string name="history_duration_value">%1$d s</string>
 </resources>

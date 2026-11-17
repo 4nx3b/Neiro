@@ -1554,4 +1554,8 @@
     <string name="preload_songs">노래 미리 불러오기</string>
     <string name="preload_songs_subtitle">다가오는 노래를 이만큼 미리 확인합니다. 기본값은 10</string>
     <string name="preload_songs_value">%1$d곡</string>
+
+    <string name="history_duration">재생 기록 기간</string>
+    <string name="history_duration_subtitle">노래가 몇 초 재생되면 들은 것으로 기록되는지</string>
+    <string name="history_duration_value">%1$d초</string>
 </resources>

@@ -1661,4 +1661,8 @@
     <string name="preload_songs">Şarkıları önceden yükle</string>
     <string name="preload_songs_subtitle">Gelecek şarkıları önceden çözer; varsayılan 10</string>
     <string name="preload_songs_value">%1$d şarkı</string>
+
+    <string name="history_duration">Geçmiş süresi</string>
+    <string name="history_duration_subtitle">Bir şarkı dinlenmiş sayılmadan önce ne kadar çalar</string>
+    <string name="history_duration_value">%1$d sn</string>
 </resources>

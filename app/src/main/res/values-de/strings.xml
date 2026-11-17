@@ -1704,4 +1704,8 @@
     <string name="preload_songs">Songs vorab laden</string>
     <string name="preload_songs_subtitle">Löst im Voraus so viele kommende Songs auf; 10 ist der Standard</string>
     <string name="preload_songs_value">%1$d Songs</string>
+
+    <string name="history_duration">Verlaufszeit</string>
+    <string name="history_duration_subtitle">So lange muss ein Titel laufen, um als angehört zu gelten</string>
+    <string name="history_duration_value">%1$d s</string>
 </resources>

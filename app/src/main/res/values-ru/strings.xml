@@ -1736,4 +1736,8 @@
     <string name="preload_songs">Предзагрузка песен</string>
     <string name="preload_songs_subtitle">Заранее подготавливает столько предстоящих песен; по умолчанию 10</string>
     <string name="preload_songs_value">%1$d песен</string>
+
+    <string name="history_duration">Длительность истории</string>
+    <string name="history_duration_subtitle">Сколько должен звучать трек, чтобы считаться прослушанным</string>
+    <string name="history_duration_value">%1$d с</string>
 </resources>

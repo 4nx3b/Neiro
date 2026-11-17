@@ -1709,4 +1709,8 @@
     <string name="preload_songs">טעינת שירים מראש</string>
     <string name="preload_songs_subtitle">מכין מראש כמה שירים קרובים; 10 בברירת מחדל</string>
     <string name="preload_songs_value">%1$d שירים</string>
+
+    <string name="history_duration">משך היסטוריה</string>
+    <string name="history_duration_subtitle">כמה זמן צריך שיר להתנגן לפני שהוא נחשב כמושמע</string>
+    <string name="history_duration_value">%1$d שנ׳</string>
 </resources>

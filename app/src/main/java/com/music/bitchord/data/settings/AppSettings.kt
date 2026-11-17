@@ -368,6 +368,19 @@ object AppSettings {
     /** The dial's bounds, inclusive; read-ahead never warms more than ten or fewer than none. */
     val preloadSongsCountRange = 0..10
 
+    /**
+     * How long a track has to play before the listening history counts it,
+     * ported from ArchiveTune's history duration: under the floor a skip is a
+     * skip, whatever it ended up being; over it, listened to. The half-a-track
+     * rule with its four-minute ceiling stands above it exactly as before —
+     * this is the floor. Thirty seconds, the fork's default, is what the
+     * recorder's own floor has always been.
+     */
+    val historyDurationSeconds = MutableStateFlow(30)
+
+    /** The dial's bounds, inclusive — the fork's own. */
+    val historyDurationRange = 5..60
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1275,6 +1288,7 @@ object AppSettings {
         pauseAtZeroVolume.value = prefs.getBoolean(KEY_PAUSE_AT_ZERO_VOLUME, false)
         autoStartOnBluetooth.value = prefs.getBoolean(KEY_AUTO_START_ON_BLUETOOTH, false)
         preloadSongsCount.value = prefs.getInt(KEY_PRELOAD_SONGS_COUNT, 10).coerceIn(0, 10)
+        historyDurationSeconds.value = prefs.getInt(KEY_HISTORY_DURATION_SECONDS, 30).coerceIn(5, 60)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1712,6 +1726,12 @@ object AppSettings {
         val clamped = value.coerceIn(preloadSongsCountRange)
         preloadSongsCount.value = clamped
         prefs.edit().putInt(KEY_PRELOAD_SONGS_COUNT, clamped).apply()
+    }
+
+    fun setHistoryDurationSeconds(value: Int) {
+        val clamped = value.coerceIn(historyDurationRange)
+        historyDurationSeconds.value = clamped
+        prefs.edit().putInt(KEY_HISTORY_DURATION_SECONDS, clamped).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2984,6 +3004,7 @@ object AppSettings {
     private const val KEY_PAUSE_AT_ZERO_VOLUME = "pause_at_zero_volume"
     private const val KEY_AUTO_START_ON_BLUETOOTH = "auto_start_on_bluetooth"
     private const val KEY_PRELOAD_SONGS_COUNT = "preload_songs_count"
+    private const val KEY_HISTORY_DURATION_SECONDS = "history_duration_seconds"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

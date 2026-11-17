@@ -255,6 +255,7 @@ fun SettingsScreen(
     val persistentQueue by AppSettings.persistentQueue.collectAsStateWithLifecycle()
     val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
     val autoStartOnBluetooth by AppSettings.autoStartOnBluetooth.collectAsStateWithLifecycle()
+    val historyDurationSeconds by AppSettings.historyDurationSeconds.collectAsStateWithLifecycle()
     val preloadSongsCount by AppSettings.preloadSongsCount.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
@@ -961,6 +962,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setAutoStartOnBluetooth(!autoStartOnBluetooth) },
+                )
+            }
+            // Ported from ArchiveTune's history duration: how long a track
+            // plays before it counts as listened to.
+            val historyDurationTitle = stringResource(R.string.history_duration)
+            row(historyDurationTitle, "history", "stats", "listen") {
+                SliderRow(
+                    icon = SfIcons.GraphicEq,
+                    title = historyDurationTitle,
+                    subtitle = stringResource(R.string.history_duration_subtitle),
+                    value = stringResource(R.string.history_duration_value, historyDurationSeconds),
+                    sliderValue = historyDurationSeconds.toFloat(),
+                    onSliderValue = { AppSettings.setHistoryDurationSeconds(it.roundToInt()) },
+                    valueRange = 5f..60f,
+                    steps = 54,
                 )
             }
             // Ported from ArchiveTune's preload songs: how many upcoming

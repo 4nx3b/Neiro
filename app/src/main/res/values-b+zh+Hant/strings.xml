@@ -1510,4 +1510,8 @@
     <string name="preload_songs">預載歌曲</string>
     <string name="preload_songs_subtitle">預先解析接下來若干首歌曲；預設為 10</string>
     <string name="preload_songs_value">%1$d 首歌曲</string>
+
+    <string name="history_duration">歷史時長</string>
+    <string name="history_duration_subtitle">歌曲播放多久才算作已收聽</string>
+    <string name="history_duration_value">%1$d 秒</string>
 </resources>

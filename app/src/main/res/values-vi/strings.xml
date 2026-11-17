@@ -1621,4 +1621,8 @@
     <string name="preload_songs">Tải trước bài hát</string>
     <string name="preload_songs_subtitle">Chuẩn bị trước bấy nhiêu bài hát sắp tới; mặc định là 10</string>
     <string name="preload_songs_value">%1$d bài hát</string>
+
+    <string name="history_duration">Thời lượng lịch sử</string>
+    <string name="history_duration_subtitle">Một bài hát phải phát bao lâu trước khi tính là đã nghe</string>
+    <string name="history_duration_value">%1$d giây</string>
 </resources>

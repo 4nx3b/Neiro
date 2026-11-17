@@ -1705,4 +1705,8 @@
     <string name="preload_songs">Chansons préchargées</string>
     <string name="preload_songs_subtitle">Résout d\'avance autant de chansons à venir ; 10 par défaut</string>
     <string name="preload_songs_value">%1$d chansons</string>
+
+    <string name="history_duration">Durée d'écoute</string>
+    <string name="history_duration_subtitle">Temps de lecture requis pour qu\'une chanson compte comme écoutée</string>
+    <string name="history_duration_value">%1$d s</string>
 </resources>

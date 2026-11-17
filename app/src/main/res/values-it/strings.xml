@@ -1643,4 +1643,8 @@
     <string name="preload_songs">Pre-carica brani</string>
     <string name="preload_songs_subtitle">Risolve in anticipo altrettanti brani in arrivo; 10 è lo standard</string>
     <string name="preload_songs_value">%1$d brani</string>
+
+    <string name="history_duration">Durata cronologia</string>
+    <string name="history_duration_subtitle">Quanto a lungo deve suonare un brano prima di contare come ascoltato</string>
+    <string name="history_duration_value">%1$d s</string>
 </resources>

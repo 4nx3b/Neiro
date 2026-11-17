@@ -1676,4 +1676,8 @@
     <string name="preload_songs">Preload songs</string>
     <string name="preload_songs_subtitle">Resuelve por adelantado esta cantidad de próximas canciones; 10 es lo habitual</string>
     <string name="preload_songs_value">%1$d canciones</string>
+
+    <string name="history_duration">Duración del historial</string>
+    <string name="history_duration_subtitle">Cuánto debe reproducirse una canción antes de contar como escuchada</string>
+    <string name="history_duration_value">%1$d s</string>
 </resources>

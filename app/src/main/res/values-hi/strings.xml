@@ -1704,4 +1704,8 @@
     <string name="preload_songs">गाने पहले से लोड करें</string>
     <string name="preload_songs_subtitle">आगे आने वाले गाने पहले से हल करता है; 10 डिफ़ॉल्ट</string>
     <string name="preload_songs_value">%1$d गाने</string>
+
+    <string name="history_duration">इतिहास अवधि</string>
+    <string name="history_duration_subtitle">एक गाना कितनी देर बजने पर सुना हुआ माना जाता है</string>
+    <string name="history_duration_value">%1$d सेकंड</string>
 </resources>

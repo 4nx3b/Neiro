@@ -1681,4 +1681,8 @@
     <string name="preload_songs">Preload lagu</string>
     <string name="preload_songs_subtitle">Menyelesaikan di muka sebanyak itu lagu berikutnya; 10 bawaan</string>
     <string name="preload_songs_value">%1$d lagu</string>
+
+    <string name="history_duration">Durasi riwayat</string>
+    <string name="history_duration_subtitle">Berapa lama lagu diputar sebelum dihitung sebagai didengarkan</string>
+    <string name="history_duration_value">%1$d dtk</string>
 </resources>

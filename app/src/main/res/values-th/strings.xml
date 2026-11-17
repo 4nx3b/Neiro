@@ -1687,4 +1687,8 @@
     <string name="preload_songs">โหลดเพลงล่วงหน้า</string>
     <string name="preload_songs_subtitle">เตรียมเพลงถัดไปจำนวนนี้ล่วงหน้า; ค่าเริ่มต้นคือ 10</string>
     <string name="preload_songs_value">%1$d เพลง</string>
+
+    <string name="history_duration">ระยะเวลาประวัติ</string>
+    <string name="history_duration_subtitle">เพลงต้องเล่นนานแค่ไหนจึงนับว่าฟังแล้ว</string>
+    <string name="history_duration_value">%1$d วิ</string>
 </resources>

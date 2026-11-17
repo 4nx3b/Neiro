@@ -1744,4 +1744,8 @@
     <string name="preload_songs">Wstępne ładowanie utworów</string>
     <string name="preload_songs_subtitle">Wcześniej rozwiązuje tyle nadchodzących utworów; domyślnie 10</string>
     <string name="preload_songs_value">%1$d utworów</string>
+
+    <string name="history_duration">Czas historii</string>
+    <string name="history_duration_subtitle">Jak długo utwór gra, zanim policzy się jako przesłuchany</string>
+    <string name="history_duration_value">%1$d s</string>
 </resources>
