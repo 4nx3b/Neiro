@@ -1418,3 +1418,189 @@ Stage Summary:
   reduce-animation aware, redraw-only), and "Canvas in headers" takes the
   looping artwork out of the album and artist page headers when off (default
   on keeps today's look exactly). Task 4's "known remainder" is closed.
+
+## Task 5-a: locale pass, batch 1 — the 234 new strings translated into the nine Asian catalogues
+
+Task ID: 5-a
+Agent: Super Z (sub agent, session task-5a)
+
+Task: Localize the 234 newly added English strings (Backup and restore port,
+Music Together port, Canvas/Downloads/Storage ports) into the nine Asian
+locale catalogues — values-zh, values-zh-rTW, values-zh-rHK,
+values-b+zh+Hant, values-ja, values-ko, values-vi, values-th, values-id —
+plus the one new plural, backup_playlist_song_count, keeping the
+LocaleStringsTest contract (every locale carries every base key) and the
+translation-source priority: ArchiveTune's own translations first, then
+fresh translation in each file's register. Code/translations only; no
+commit.
+
+Work Log:
+- Sources mined. ArchiveTune's values-zh-rCN / -zh-rTW / -ja / -ko / -vi /
+  -th / -in-rID (strings.xml + archivetune_strings.xml) were indexed by
+  English text and by key family; 138 of the 234 matched ArchiveTune wording
+  exactly, and the rest mapped by wording family (together_* ↔ together_*,
+  backup_* ↔ scheduled_backup_*/import_*/export_*/restore_*/backup_*,
+  canvas/storage ↔ canvas_*/max_cache_size/clear_*_cache/smart_trimmer/
+  external_downloader*/auto_download_on_like). The gms Drive-backup strings
+  turned out to be a different feature (Google account sign-in, no locale
+  folders at all), so the whole backup_cloud_* family is fresh per locale.
+- Reuse/rewrite split per locale (234 strings + 1 plural each): zh 129 from
+  ArchiveTune / 105 fresh-or-adapted; zh-rTW 129/105; zh-rHK and b+zh+Hant
+  mirror zh-rTW (HK only swaps 帳號→帳戶 per that file's own convention);
+  ja 113/121; ko 53/181; vi 122/112; th 21/213 (ArchiveTune's Thai catalogue
+  is 452 entries — only 21 of the mapped keys exist there); id 147/87.
+  ArchiveTune brand was swapped to Neiro everywhere it appeared (welcome
+  titles, welcome host bodies, backup_schedule_subtitle's "how often
+  ArchiveTune creates a backup" → brandless), and "Internal service" flipped
+  ArchiveTune's External Service translations rather than re-translating.
+  Machine-translation damage in ArchiveTune's ja/ko files was fixed instead
+  of copied (ja dismiss "解雇する"→閉じる, leave "休暇を取る"→退出, playing
+  "遊ぶ"→再生中, the mangled room-events channel name; ko's embellished
+  session strings trimmed to match Neiro's shorter English). Register was
+  kept per file: zh 画布/全角标点, TW/HK/Hant 畫布/快取/連線/資料夾, ja 「」
+  quoting and 高評価 (Neiro ja's own like-term, over ArchiveTune's
+  「いいね！」), ko 캔버스/세션/대기열, vi bộ đệm/danh sách phát, th แคนวาส/
+  เซสชัน, id kanvas/antrean — reusing each file's own twin keys where the
+  same English already existed (downloaded_songs, lyrics, song_cache_
+  unlimited, export_failed patterns).
+- Placement and format. Entries appended at each file's end before
+  </resources> in newkeys.txt order, 4-space indent, apostrophes escaped
+  per file convention (ko's '좋아요' keeps ArchiveTune's \'…\' form; no other
+  locale needed one), no straight double quotes introduced (curly/「」
+  quotes instead — the only raw-quote string in the tree, ko's pre-existing
+  listen_together_code_footer, was left untouched), brand names (Neiro,
+  BitChord, Spotify, Tidal, Apple Music, Google Drive, Dropbox, Nextcloud,
+  OneDrive, m3u, csv, LAN, Wi-Fi) untranslated. The plural follows each
+  file's own plurals style: other-only for zh/zh-rTW/zh-rHK/b+zh+Hant/ja/
+  vi/th/id, one+other for ko.
+- Verification (scripted, re-run independently after the last write):
+  ElementTree parses all nine files; the 234 newkeys present in every one
+  (parity 0 missing — was 234); no duplicate keys; format-arg sets match
+  the base for every entry and plural item (%1$s/%2$s/%1$d, incl. the
+  positional order-swaps ja/ko/vi/zh use for "Restored %1$s from v%2$s");
+  git numstat confirms the nine files are purely additive (237/238 added,
+  0 removed). A full LocaleStringsTest simulation over SUPPORTED_LANGUAGES
+  now reads 0 missing for zh, zh-rTW, ja, ko, vi, th, id (the seven this
+  test covers); zh-rHK and b+zh+Hant (untested, maintained in parallel)
+  also carry all 234 new keys — their pre-existing gaps (221/207 keys,
+  present before this task) are untouched and out of scope. The 11
+  non-Asian languages still miss the 234 keys — that is the next batches'
+  work. Note: backup_playlist_song_count is still translatable="false" in
+  the base, so the test does not yet demand the plural, but all nine
+  catalogues carry it anyway; dropping that flag later is a one-line base
+  change with nothing else to do.
+
+Stage Summary:
+- The nine Asian catalogues now carry all 234 new strings plus the
+  backup_playlist_song_count plural, seven of them fully satisfying
+  LocaleStringsTest's whole-catalogue parity (base keys 1674, missing 0),
+  with ArchiveTune's own translations as the base layer everywhere they
+  exist (from 147/234 in id down to 21/234 in th) and fresh translations
+  in each file's register for the Neiro-specific wording. No commit was
+  made; the work sits in the working tree for the owner's review.
+
+## Task 5-b: locale pass, batch 2 — the 234 new strings translated into the ten European/Middle-Eastern catalogues
+
+Task ID: 5-b
+Agent: Super Z (sub agent, session task-5b)
+
+Task: Localize the 234 newly added English strings (Backup and restore
+port, Music Together port, Canvas/Downloads/Storage ports) into the ten
+European/Middle-Eastern locale catalogues — values-de, values-es,
+values-fr, values-it, values-pt, values-ru, values-pl, values-he,
+values-hi, values-tr — plus the one new plural,
+backup_playlist_song_count, keeping the LocaleStringsTest contract
+(every locale carries every base key) and the translation-source
+priority: ArchiveTune's own translations first, then fresh translation
+in each file's register. Code/translations only; no commit.
+
+Work Log:
+- Sources mined. ArchiveTune's values-de-rDE / -es / -fr / -it / -pt +
+  -pt-rBR / -ru / -iw / -tr (strings.xml + archivetune_strings.xml)
+  were indexed by English text and key family (values-pl / values-hi
+  checked: neither translates these features — ~100 unrelated app
+  strings only). 133 of the 234 matched ArchiveTune wording exactly,
+  the rest mapped by family, same as batch 1 (together_* ↔ together_*,
+  backup_* ↔ scheduled_backup_*/import_*/export_*/restore_*/backup_*,
+  canvas/storage ↔ canvas_*/max_cache_size/clear_*_cache/
+  smart_trimmer/external_downloader*/auto_download_on_like; the
+  backup_cloud_* family is fresh everywhere — ArchiveTune has no Drive
+  backup feature, and its export_playlist_* keys are untranslated in
+  de/es/fr/pt/ru/he). values-es/strings.xml in ArchiveTune is
+  encoding-corrupted in place (mixed latin-1 bytes near
+  together_requesting_song_change), so it was mined by regex with
+  utf-8/replace instead of ElementTree. Neiro's values-pt turned out to
+  be Brazilian register ("Tocando agora", "Baixando", "sua pasta"), so
+  ArchiveTune's values-pt-rBR is the Portuguese source layer, not its
+  pt-PT values-pt.
+- Reuse/rewrite split per locale (234 strings + 1 plural each): de 135
+  from ArchiveTune / 99 fresh-or-adapted; es 138/96; fr 136/98; pt
+  138/96; he 114/120; ru 87/147 (ArchiveTune's ru catalogue carries
+  only 48 together_* plus the archivetune_strings.xml backup subset);
+  tr 41/193 (AT tr has 21 together_*); it 29/205 (AT it has 13
+  together_*); pl 0/234 and hi 0/234 — entirely fresh, no ArchiveTune
+  source exists. ArchiveTune brand was swapped to Neiro everywhere it
+  appeared (welcome titles, welcome host bodies, neiro_canvas), and AT's
+  machine-translation damage was fixed rather than copied: de
+  "Stauts"→Status, "fragt den Betritt an", "Host hat Sitzungen
+  verlassen"; es "Tú nombre", "abandono la sala", the "cvs" typo and
+  "En linea"; fr "Session d'adhésion"→Connexion à la session,
+  "Sessions laissées par l'hôte", "Se connecter depuis…" (log-in sense)
+  →Rejoindre; it "Attendendo l'approvazione"; ru "Сессии покинутые
+  хостом", "Онлайн сессии"→Онлайн-сессии; tr "Yönetici Tarafından
+  Sonlandırılan Oturumlar", leftover English "playback", "Paylaşımcı"/
+  "Katılımcı" as host/guest → Yönetici/Misafir; he "Host Leaved
+  Sessions"-class sources re-translated, „…” quotes kept per file
+  convention. Register kept per file: de du-form + „“ + Sicherung/
+  Backupdatei compounds; es tú + ¿? + «» + caché; fr vous + « » with a
+  space before : ? !; it tu + « » + cache dei canvas + brani; pt (BR)
+  você + “” + cache de músicas; ru Вы + «» + кэш with е (the file's own
+  spelling, over ArchiveTune's "кеш"); pl imperative + pamięć podręczna
+  + utwór; he masculine singular + קנבס + geresh (no ASCII apostrophes —
+  צ׳אט); hi आप-register + danda + “”; tr siz + dotted İ + \'
+  (Katıl\'a) + çalma listesi (the file's own term over ArchiveTune's
+  "oynatma listesi"). LAN kept untranslated per the brand rule (AT's fr
+  "Réseau local" and ru "Локальная сеть" not carried; he keeps רשת LAN,
+  which retains the term). Brand names Neiro, BitChord, Spotify, Tidal,
+  Apple Music, Google Drive, Dropbox, Nextcloud, OneDrive, m3u, csv,
+  Wi-Fi, M3U, CSV untouched.
+- Placement and format. Entries appended at each file's end before
+  </resources> in newkeys.txt order, 4-space indent, one section comment
+  per file matching the existing comment style (the files already carry
+  "Listen together"-style section comments), apostrophes and straight
+  double quotes escaped (\' and \") per Android rules — the escaped
+  \"csv\"/\"m3u\" forms follow the base entry, de uses „CSV“, fr
+  « csv », es/it/pt/he/hi/tr use \". The plural follows each file's own
+  song-count plural style: one/other (de Song/Songs, es canción/
+  canciones, fr chanson/chansons, it brano/brani, pt música/músicas, hi
+  गाना/गाने, tr şarkı/şarkı), one/few/many/other (ru песня/песни/песен/
+  песен, pl utwór/utwory/utworów/utworów), one/two/other (he שיר/
+  שירים/שירים) — mirroring song_count_plural/track_count_plural/
+  uploading_song_count in each catalogue.
+- Verification (scripted, re-run independently after the last write):
+  ElementTree parses all ten files; the 234 newkeys present in every
+  one (parity 0 missing — was 234); no duplicate keys; format-arg sets
+  match the base for every entry and every plural item (%1$s/%2$s/
+  %1$d and the literal %%, positional order-swaps preserved — hi
+  "%2$s में से %1$s", the queue-position "of"-forms); git numstat
+  confirms the ten files are purely additive (240 added / 0 removed,
+  241/242 where extra plural quantities add lines). A full
+  LocaleStringsTest simulation over all 17 SUPPORTED_LANGUAGES tags
+  (minus en) now reads 0 missing — with this batch, whole-catalogue
+  parity (1674 base keys) holds for every offered language; the
+  untested parallel-maintained values-zh-rHK/values-b+zh+Hant were
+  already covered by batch 5-a. backup_playlist_song_count remains
+  translatable="false" in the base (test-exempt), yet all ten
+  catalogues carry the translated plural anyway — same call as
+  batch 5-a's nine.
+
+Stage Summary:
+- The ten European/Middle-Eastern catalogues now carry all 234 new
+  strings plus the backup_playlist_song_count plural, ArchiveTune's own
+  translations as the base layer everywhere they exist (135/234 in de
+  and es-pt-fr-he down to 29/234 in it, 0 in pl/hi) and fresh
+  translations in each file's register for the Neiro-specific wording.
+  Combined with batch 5-a, LocaleStringsTest's parity contract is now
+  satisfied across all seventeen offered languages (0 missing keys per
+  locale, 1674 base keys). No commit was made; the work sits in the
+  working tree for the owner's review.

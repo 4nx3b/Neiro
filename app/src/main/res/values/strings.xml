@@ -1099,67 +1099,67 @@
     <string name="swipe_plays_next">Swiping a song plays it next</string>
     <string name="swipe_adds_to_queue">When disabled, swiping adds the song to the end of the queue</string>
     <string name="import_backup_warning">This replaces this device’s settings and listening history with the contents of the file. Export the current data first if you want to keep it.</string>
-    <string name="backup_scheduled_section" translatable="false">Scheduled auto backup</string>
-    <string name="backup_scheduled_enabled" translatable="false">Enable scheduled backup</string>
-    <string name="backup_scheduled_running" translatable="false">Backups run automatically using the schedule below.</string>
-    <string name="backup_scheduled_paused" translatable="false">Automatic backups are paused.</string>
-    <string name="backup_schedule" translatable="false">Backup schedule</string>
-    <string name="backup_schedule_subtitle" translatable="false">Choose how often a backup is created.</string>
-    <string name="backup_schedule_custom_next" translatable="false">Next backup: %1$s</string>
-    <string name="backup_frequency_daily" translatable="false">Daily</string>
-    <string name="backup_frequency_weekly" translatable="false">Weekly</string>
-    <string name="backup_frequency_monthly" translatable="false">Monthly</string>
-    <string name="backup_frequency_custom" translatable="false">Custom</string>
-    <string name="backup_custom_date_title" translatable="false">Choose backup date</string>
-    <string name="backup_directory" translatable="false">Backup directory</string>
-    <string name="backup_directory_unset" translatable="false">Choose a folder to enable scheduled backups.</string>
-    <string name="backup_overwrite" translatable="false">Overwrite existing backup</string>
-    <string name="backup_overwrite_subtitle" translatable="false">Keep one current backup instead of creating a dated history.</string>
-    <string name="backup_cloud_section" translatable="false">Cloud storage sync</string>
-    <string name="backup_cloud_info" translatable="false">A cloud storage app (Google Drive, Dropbox, Nextcloud, or OneDrive) must be installed on this phone for backups to reach the cloud. Without one, the system folder picker only shows local storage and backups stay on this device.</string>
-    <string name="backup_cloud_folder" translatable="false">Drive folder</string>
-    <string name="backup_cloud_folder_unset" translatable="false">Not set — tap to pick a Drive folder</string>
-    <string name="backup_cloud_enabled" translatable="false">Enable cloud sync</string>
-    <string name="backup_cloud_running" translatable="false">Auto-sync to Google Drive is running.</string>
-    <string name="backup_cloud_paused" translatable="false">Auto-sync to Google Drive is paused.</string>
-    <string name="backup_cloud_schedule_hint" translatable="false">Choose a Drive folder, or use My Drive root.</string>
-    <string name="backup_cloud_overwrite" translatable="false">Overwrite existing Drive backup</string>
-    <string name="backup_cloud_sync_now" translatable="false">Sync now</string>
-    <string name="backup_cloud_last_sync_never" translatable="false">Never synced</string>
-    <string name="backup_cloud_last_sync" translatable="false">Last synced %1$s</string>
-    <string name="backup_internal_section" translatable="false">Internal service</string>
-    <string name="backup_action_backup" translatable="false">Backup</string>
-    <string name="backup_action_backup_desc" translatable="false">Export library, settings, and account details.</string>
-    <string name="backup_action_restore" translatable="false">Restore</string>
-    <string name="backup_action_restore_desc" translatable="false">Select a backup file to restore.</string>
-    <string name="backup_import_m3u" translatable="false">Import a \"m3u\" playlists</string>
-    <string name="backup_import_m3u_desc" translatable="false">M3U audio playlist</string>
-    <string name="backup_import_csv" translatable="false">Import a \"csv\" playlists</string>
-    <string name="backup_import_csv_desc" translatable="false">CSV playlist file</string>
-    <string name="backup_export_csv" translatable="false">Export playlist as CSV</string>
-    <string name="backup_export_csv_desc" translatable="false">Choose a playlist and save its songs as a CSV file</string>
-    <string name="backup_export_picker_title" translatable="false">Choose a playlist</string>
-    <string name="backup_created" translatable="false">Backup created successfully</string>
-    <string name="backup_create_failed" translatable="false">Backup failed: %1$s</string>
-    <string name="backup_restored" translatable="false">Restored %1$s from v%2$s</string>
-    <string name="backup_restore_failed" translatable="false">Restore failed: %1$s</string>
-    <string name="backup_restore_failed_title" translatable="false">Restore failed</string>
-    <string name="backup_restore_confirm_title" translatable="false">Restore this backup?</string>
-    <string name="backup_restore_invalid" translatable="false">The selected file is not a valid backup archive.</string>
-    <string name="backup_restore_corrupted" translatable="false">The backup file appears to be corrupted and could not be read.</string>
-    <string name="backup_restore_missing" translatable="false">The backup archive does not contain any restorable data.</string>
-    <string name="backup_restore_newer" translatable="false">That backup was written by a newer version of BitChord.</string>
-    <string name="backup_restore_meta" translatable="false">Backup made %1$s with %2$s.</string>
-    <string name="backup_restore_legacy" translatable="false">This is an older single-file backup; it will be restored as-is.</string>
-    <string name="backup_import_created" translatable="false">%1$d songs imported into “%2$s”.</string>
-    <string name="backup_import_empty" translatable="false">No songs found. Invalid file, or perhaps no song matches were found.</string>
-    <string name="backup_import_default_title" translatable="false">Imported playlist</string>
-    <string name="backup_export_done" translatable="false">Playlist exported as CSV</string>
-    <string name="backup_export_failed" translatable="false">Unable to export playlist: %1$s</string>
-    <string name="backup_export_none" translatable="false">No non-empty playlists are available</string>
-    <string name="backup_sync_done" translatable="false">Backup synced to the Drive folder</string>
-    <string name="backup_sync_failed" translatable="false">Sync failed: %1$s</string>
-    <plurals name="backup_playlist_song_count" translatable="false">
+    <string name="backup_scheduled_section">Scheduled auto backup</string>
+    <string name="backup_scheduled_enabled">Enable scheduled backup</string>
+    <string name="backup_scheduled_running">Backups run automatically using the schedule below.</string>
+    <string name="backup_scheduled_paused">Automatic backups are paused.</string>
+    <string name="backup_schedule">Backup schedule</string>
+    <string name="backup_schedule_subtitle">Choose how often a backup is created.</string>
+    <string name="backup_schedule_custom_next">Next backup: %1$s</string>
+    <string name="backup_frequency_daily">Daily</string>
+    <string name="backup_frequency_weekly">Weekly</string>
+    <string name="backup_frequency_monthly">Monthly</string>
+    <string name="backup_frequency_custom">Custom</string>
+    <string name="backup_custom_date_title">Choose backup date</string>
+    <string name="backup_directory">Backup directory</string>
+    <string name="backup_directory_unset">Choose a folder to enable scheduled backups.</string>
+    <string name="backup_overwrite">Overwrite existing backup</string>
+    <string name="backup_overwrite_subtitle">Keep one current backup instead of creating a dated history.</string>
+    <string name="backup_cloud_section">Cloud storage sync</string>
+    <string name="backup_cloud_info">A cloud storage app (Google Drive, Dropbox, Nextcloud, or OneDrive) must be installed on this phone for backups to reach the cloud. Without one, the system folder picker only shows local storage and backups stay on this device.</string>
+    <string name="backup_cloud_folder">Drive folder</string>
+    <string name="backup_cloud_folder_unset">Not set — tap to pick a Drive folder</string>
+    <string name="backup_cloud_enabled">Enable cloud sync</string>
+    <string name="backup_cloud_running">Auto-sync to Google Drive is running.</string>
+    <string name="backup_cloud_paused">Auto-sync to Google Drive is paused.</string>
+    <string name="backup_cloud_schedule_hint">Choose a Drive folder, or use My Drive root.</string>
+    <string name="backup_cloud_overwrite">Overwrite existing Drive backup</string>
+    <string name="backup_cloud_sync_now">Sync now</string>
+    <string name="backup_cloud_last_sync_never">Never synced</string>
+    <string name="backup_cloud_last_sync">Last synced %1$s</string>
+    <string name="backup_internal_section">Internal service</string>
+    <string name="backup_action_backup">Backup</string>
+    <string name="backup_action_backup_desc">Export library, settings, and account details.</string>
+    <string name="backup_action_restore">Restore</string>
+    <string name="backup_action_restore_desc">Select a backup file to restore.</string>
+    <string name="backup_import_m3u">Import a \"m3u\" playlists</string>
+    <string name="backup_import_m3u_desc">M3U audio playlist</string>
+    <string name="backup_import_csv">Import a \"csv\" playlists</string>
+    <string name="backup_import_csv_desc">CSV playlist file</string>
+    <string name="backup_export_csv">Export playlist as CSV</string>
+    <string name="backup_export_csv_desc">Choose a playlist and save its songs as a CSV file</string>
+    <string name="backup_export_picker_title">Choose a playlist</string>
+    <string name="backup_created">Backup created successfully</string>
+    <string name="backup_create_failed">Backup failed: %1$s</string>
+    <string name="backup_restored">Restored %1$s from v%2$s</string>
+    <string name="backup_restore_failed">Restore failed: %1$s</string>
+    <string name="backup_restore_failed_title">Restore failed</string>
+    <string name="backup_restore_confirm_title">Restore this backup?</string>
+    <string name="backup_restore_invalid">The selected file is not a valid backup archive.</string>
+    <string name="backup_restore_corrupted">The backup file appears to be corrupted and could not be read.</string>
+    <string name="backup_restore_missing">The backup archive does not contain any restorable data.</string>
+    <string name="backup_restore_newer">That backup was written by a newer version of BitChord.</string>
+    <string name="backup_restore_meta">Backup made %1$s with %2$s.</string>
+    <string name="backup_restore_legacy">This is an older single-file backup; it will be restored as-is.</string>
+    <string name="backup_import_created">%1$d songs imported into “%2$s”.</string>
+    <string name="backup_import_empty">No songs found. Invalid file, or perhaps no song matches were found.</string>
+    <string name="backup_import_default_title">Imported playlist</string>
+    <string name="backup_export_done">Playlist exported as CSV</string>
+    <string name="backup_export_failed">Unable to export playlist: %1$s</string>
+    <string name="backup_export_none">No non-empty playlists are available</string>
+    <string name="backup_sync_done">Backup synced to the Drive folder</string>
+    <string name="backup_sync_failed">Sync failed: %1$s</string>
+    <plurals name="backup_playlist_song_count">
         <item quantity="one">%1$d song</item>
         <item quantity="other">%1$d songs</item>
     </plurals>
@@ -1306,111 +1306,111 @@
     <string name="listen_together_status_all_offline">Both custom server and default server are offline</string>
     <string name="listen_together_top_bar_fallback">Fallback · %1$s</string>
 
-    <string name="together_lan" translatable="false">LAN</string>
-    <string name="together_online" translatable="false">Online</string>
-    <string name="together_host_section" translatable="false">Host</string>
-    <string name="together_join_section" translatable="false">Join</string>
-    <string name="together_status" translatable="false">Status</string>
-    <string name="together_idle" translatable="false">Not in a session</string>
-    <string name="together_hosting" translatable="false">Hosting session</string>
-    <string name="together_joining" translatable="false">Joining session</string>
-    <string name="together_connected" translatable="false">Connected</string>
-    <string name="together_error_state" translatable="false">Error</string>
-    <string name="together_waiting_approval" translatable="false">Waiting for approval</string>
-    <string name="together_display_name" translatable="false">Display name</string>
-    <string name="together_display_name_placeholder" translatable="false">Your name</string>
-    <string name="together_port" translatable="false">Session port</string>
-    <string name="together_allow_guests_add" translatable="false">Guests can add songs</string>
-    <string name="together_allow_guests_control" translatable="false">Guests can control playback</string>
-    <string name="together_require_approval" translatable="false">Require approval</string>
-    <string name="together_participants" translatable="false">Participants</string>
-    <string name="together_connected_count" translatable="false">%1$d connected</string>
-    <string name="together_participants_empty" translatable="false">No participants yet</string>
-    <string name="together_participants_empty_body" translatable="false">People who join this session will appear here.</string>
-    <string name="together_role_host" translatable="false">Host</string>
-    <string name="together_role_guest" translatable="false">Guest</string>
-    <string name="together_pending_approval" translatable="false">Pending approval</string>
-    <string name="together_unknown_participant" translatable="false">Someone</string>
-    <string name="together_approve" translatable="false">Approve</string>
-    <string name="together_reject" translatable="false">Reject</string>
-    <string name="together_kick" translatable="false">Kick</string>
-    <string name="together_ban" translatable="false">Ban</string>
-    <string name="together_transfer_host" translatable="false">Transfer host</string>
-    <string name="together_kick_confirm" translatable="false">Kick %1$s?</string>
-    <string name="together_ban_confirm" translatable="false">Ban %1$s?</string>
-    <string name="together_transfer_host_confirm" translatable="false">Transfer host ownership to %1$s?</string>
-    <string name="together_current_playback" translatable="false">Current playback</string>
-    <string name="together_playback_empty" translatable="false">Nothing playing</string>
-    <string name="together_playback_playing" translatable="false">Playing</string>
-    <string name="together_playback_paused" translatable="false">Paused</string>
-    <string name="together_queue_count" translatable="false">%1$d in queue</string>
-    <string name="together_queue_position" translatable="false">%1$d of %2$d</string>
-    <string name="together_shuffle_on" translatable="false">Shuffle on</string>
-    <string name="together_shuffle_off" translatable="false">Shuffle off</string>
-    <string name="together_repeat_mode" translatable="false">Repeat %1$d</string>
-    <string name="together_join_link" translatable="false">Link</string>
-    <string name="together_join_code" translatable="false">Code</string>
-    <string name="together_join_link_hint" translatable="false">Paste a join link or code</string>
-    <string name="together_join_code_hint" translatable="false">Enter a session code</string>
-    <string name="together_online_not_configured" translatable="false">Online sessions aren\'t configured</string>
-    <string name="together_token_missing" translatable="false">Online sessions aren\'t available in this build</string>
-    <string name="together_server_unreachable" translatable="false">Server unreachable</string>
-    <string name="together_connection_timed_out" translatable="false">Connection timed out</string>
-    <string name="together_session_not_found" translatable="false">Session not found</string>
-    <string name="together_server_error" translatable="false">Server error, please try again later</string>
-    <string name="together_invalid_ws_url" translatable="false">Invalid server websocket URL</string>
-    <string name="together_host_left_session" translatable="false">Host left the session</string>
-    <string name="together_song_change_failed" translatable="false">Song change not applied. Please try again.</string>
-    <string name="together_participant_joined_notification" translatable="false">%1$s joined the room</string>
-    <string name="together_participant_left_notification" translatable="false">%1$s left the room</string>
-    <string name="together_room_closed_inactivity_notification" translatable="false">Room closed because no one joined for 10 minutes</string>
-    <string name="together_room_events_channel_name" translatable="false">Music Together</string>
-    <string name="together_room_events_channel_description" translatable="false">People joining and leaving your session</string>
-    <string name="together_chat" translatable="false">Chat</string>
-    <string name="together_chat_empty" translatable="false">No messages yet</string>
-    <string name="together_chat_empty_body" translatable="false">Messages sent in this session appear here.</string>
-    <string name="together_chat_input_hint" translatable="false">Message the room</string>
-    <string name="together_chat_send" translatable="false">Send</string>
-    <string name="together_activity_log" translatable="false">Activity log</string>
-    <string name="together_activity_log_subtitle" translatable="false">Session and playback events</string>
-    <string name="together_activity_log_empty" translatable="false">No activity yet</string>
-    <string name="together_activity_log_empty_body" translatable="false">Session events will appear here as they happen.</string>
-    <string name="together_activity_session_started" translatable="false">Session started</string>
-    <string name="together_activity_joining_session" translatable="false">Joining session</string>
-    <string name="together_activity_join_requested" translatable="false">%1$s requested to join</string>
-    <string name="together_activity_host_transferred" translatable="false">Host transferred to %1$s</string>
-    <string name="together_activity_playback_paused" translatable="false">%1$s paused playback</string>
-    <string name="together_activity_playback_resumed" translatable="false">%1$s resumed playback</string>
-    <string name="together_activity_song_changed" translatable="false">%1$s changed the song to %2$s</string>
-    <string name="together_activity_song_skipped" translatable="false">%1$s skipped to %2$s</string>
-    <string name="together_activity_queue_updated" translatable="false">%1$s changed the queue</string>
-    <string name="together_activity_playback_state_changed" translatable="false">%1$s changed playback state</string>
-    <string name="together_activity_error" translatable="false">Error: %1$s</string>
-    <string name="together_dont_show_again" translatable="false">Don\'t show this again</string>
-    <string name="together_welcome_title" translatable="false">Welcome to Neiro Music Together</string>
-    <string name="together_welcome_body" translatable="false">Music Together lets multiple devices share a live session with a synced queue and playback.</string>
-    <string name="together_welcome_host_title" translatable="false">Host a session</string>
-    <string name="together_welcome_host_body" translatable="false">Tap Start session, then share the session link. Keep Neiro open in the background while hosting.</string>
-    <string name="together_welcome_join_title" translatable="false">Join from another device</string>
-    <string name="together_welcome_join_body" translatable="false">Open the shared link, or enter code and tap Join. Your queue and playback will follow the host.</string>
-    <string name="together_welcome_permissions_title" translatable="false">Permissions and safety</string>
-    <string name="together_welcome_permissions_body" translatable="false">Hosts can decide whether guests can add songs, control playback, or require approval to join.</string>
-    <string name="start_session" translatable="false">Start session</string>
-    <string name="join_session" translatable="false">Join session</string>
-    <string name="session_link" translatable="false">Session link</string>
-    <string name="session_code" translatable="false">Session code</string>
-    <string name="leave" translatable="false">Leave</string>
-    <string name="join" translatable="false">Join</string>
-    <string name="joined" translatable="false">Joined</string>
-    <string name="loading" translatable="false">Loading</string>
-    <string name="connecting" translatable="false">Connecting</string>
-    <string name="copied" translatable="false">Copied to clipboard</string>
-    <string name="copy_link" translatable="false">Copy link</string>
-    <string name="dismiss" translatable="false">Dismiss</string>
-    <string name="invalid_link" translatable="false">Invalid link</string>
-    <string name="invalid_code" translatable="false">Invalid code</string>
-    <string name="not_allowed" translatable="false">Not allowed</string>
-    <string name="network_unavailable" translatable="false">Network unavailable</string>
+    <string name="together_lan">LAN</string>
+    <string name="together_online">Online</string>
+    <string name="together_host_section">Host</string>
+    <string name="together_join_section">Join</string>
+    <string name="together_status">Status</string>
+    <string name="together_idle">Not in a session</string>
+    <string name="together_hosting">Hosting session</string>
+    <string name="together_joining">Joining session</string>
+    <string name="together_connected">Connected</string>
+    <string name="together_error_state">Error</string>
+    <string name="together_waiting_approval">Waiting for approval</string>
+    <string name="together_display_name">Display name</string>
+    <string name="together_display_name_placeholder">Your name</string>
+    <string name="together_port">Session port</string>
+    <string name="together_allow_guests_add">Guests can add songs</string>
+    <string name="together_allow_guests_control">Guests can control playback</string>
+    <string name="together_require_approval">Require approval</string>
+    <string name="together_participants">Participants</string>
+    <string name="together_connected_count">%1$d connected</string>
+    <string name="together_participants_empty">No participants yet</string>
+    <string name="together_participants_empty_body">People who join this session will appear here.</string>
+    <string name="together_role_host">Host</string>
+    <string name="together_role_guest">Guest</string>
+    <string name="together_pending_approval">Pending approval</string>
+    <string name="together_unknown_participant">Someone</string>
+    <string name="together_approve">Approve</string>
+    <string name="together_reject">Reject</string>
+    <string name="together_kick">Kick</string>
+    <string name="together_ban">Ban</string>
+    <string name="together_transfer_host">Transfer host</string>
+    <string name="together_kick_confirm">Kick %1$s?</string>
+    <string name="together_ban_confirm">Ban %1$s?</string>
+    <string name="together_transfer_host_confirm">Transfer host ownership to %1$s?</string>
+    <string name="together_current_playback">Current playback</string>
+    <string name="together_playback_empty">Nothing playing</string>
+    <string name="together_playback_playing">Playing</string>
+    <string name="together_playback_paused">Paused</string>
+    <string name="together_queue_count">%1$d in queue</string>
+    <string name="together_queue_position">%1$d of %2$d</string>
+    <string name="together_shuffle_on">Shuffle on</string>
+    <string name="together_shuffle_off">Shuffle off</string>
+    <string name="together_repeat_mode">Repeat %1$d</string>
+    <string name="together_join_link">Link</string>
+    <string name="together_join_code">Code</string>
+    <string name="together_join_link_hint">Paste a join link or code</string>
+    <string name="together_join_code_hint">Enter a session code</string>
+    <string name="together_online_not_configured">Online sessions aren\'t configured</string>
+    <string name="together_token_missing">Online sessions aren\'t available in this build</string>
+    <string name="together_server_unreachable">Server unreachable</string>
+    <string name="together_connection_timed_out">Connection timed out</string>
+    <string name="together_session_not_found">Session not found</string>
+    <string name="together_server_error">Server error, please try again later</string>
+    <string name="together_invalid_ws_url">Invalid server websocket URL</string>
+    <string name="together_host_left_session">Host left the session</string>
+    <string name="together_song_change_failed">Song change not applied. Please try again.</string>
+    <string name="together_participant_joined_notification">%1$s joined the room</string>
+    <string name="together_participant_left_notification">%1$s left the room</string>
+    <string name="together_room_closed_inactivity_notification">Room closed because no one joined for 10 minutes</string>
+    <string name="together_room_events_channel_name">Music Together</string>
+    <string name="together_room_events_channel_description">People joining and leaving your session</string>
+    <string name="together_chat">Chat</string>
+    <string name="together_chat_empty">No messages yet</string>
+    <string name="together_chat_empty_body">Messages sent in this session appear here.</string>
+    <string name="together_chat_input_hint">Message the room</string>
+    <string name="together_chat_send">Send</string>
+    <string name="together_activity_log">Activity log</string>
+    <string name="together_activity_log_subtitle">Session and playback events</string>
+    <string name="together_activity_log_empty">No activity yet</string>
+    <string name="together_activity_log_empty_body">Session events will appear here as they happen.</string>
+    <string name="together_activity_session_started">Session started</string>
+    <string name="together_activity_joining_session">Joining session</string>
+    <string name="together_activity_join_requested">%1$s requested to join</string>
+    <string name="together_activity_host_transferred">Host transferred to %1$s</string>
+    <string name="together_activity_playback_paused">%1$s paused playback</string>
+    <string name="together_activity_playback_resumed">%1$s resumed playback</string>
+    <string name="together_activity_song_changed">%1$s changed the song to %2$s</string>
+    <string name="together_activity_song_skipped">%1$s skipped to %2$s</string>
+    <string name="together_activity_queue_updated">%1$s changed the queue</string>
+    <string name="together_activity_playback_state_changed">%1$s changed playback state</string>
+    <string name="together_activity_error">Error: %1$s</string>
+    <string name="together_dont_show_again">Don\'t show this again</string>
+    <string name="together_welcome_title">Welcome to Neiro Music Together</string>
+    <string name="together_welcome_body">Music Together lets multiple devices share a live session with a synced queue and playback.</string>
+    <string name="together_welcome_host_title">Host a session</string>
+    <string name="together_welcome_host_body">Tap Start session, then share the session link. Keep Neiro open in the background while hosting.</string>
+    <string name="together_welcome_join_title">Join from another device</string>
+    <string name="together_welcome_join_body">Open the shared link, or enter code and tap Join. Your queue and playback will follow the host.</string>
+    <string name="together_welcome_permissions_title">Permissions and safety</string>
+    <string name="together_welcome_permissions_body">Hosts can decide whether guests can add songs, control playback, or require approval to join.</string>
+    <string name="start_session">Start session</string>
+    <string name="join_session">Join session</string>
+    <string name="session_link">Session link</string>
+    <string name="session_code">Session code</string>
+    <string name="leave">Leave</string>
+    <string name="join">Join</string>
+    <string name="joined">Joined</string>
+    <string name="loading">Loading</string>
+    <string name="connecting">Connecting</string>
+    <string name="copied">Copied to clipboard</string>
+    <string name="copy_link">Copy link</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="invalid_link">Invalid link</string>
+    <string name="invalid_code">Invalid code</string>
+    <string name="not_allowed">Not allowed</string>
+    <string name="network_unavailable">Network unavailable</string>
 
     <string name="vietnamese">Vietnamese</string>
 
@@ -1792,74 +1792,74 @@
     <string name="skip_gapless_albums">Skip gapless albums</string>
     <string name="skip_gapless_albums_subtitle">Do not crossfade consecutive songs from the same album</string>
 
-    <string name="canvas" translatable="false">Canvas</string>
-    <string name="canvas_subtitle" translatable="false">The looping artwork behind the sleeve and the page headers</string>
-    <string name="neiro_canvas" translatable="false">Neiro canvas</string>
-    <string name="neiro_canvas_subtitle" translatable="false">Play the looping cover art some releases publish, in place of the still sleeve</string>
-    <string name="spotify_canvas" translatable="false">Spotify Canvas</string>
-    <string name="spotify_canvas_subtitle" translatable="false">Also look up clips through a connected Spotify session</string>
-    <string name="animated_cover_cellular_subtitle" translatable="false">Loop the animated cover over mobile data — a clip is fetched again on every loop, so this is not a one-time video cost</string>
-    <string name="integrate_spotify_canvas_subtitle" translatable="false">Connect a sp_dc cookie to look up Spotify\'s own canvas clips</string>
-    <string name="canvas_in_headers" translatable="false">Canvas in headers</string>
-    <string name="canvas_in_headers_subtitle" translatable="false">Play the looping artwork behind album, playlist and artist page headers</string>
-    <string name="canvas_check" translatable="false">Canvas check</string>
-    <string name="canvas_check_subtitle" translatable="false">Ask every canvas provider whether it is reachable right now</string>
-    <string name="canvas_check_dialog_title" translatable="false">Canvas providers</string>
-    <string name="canvas_health_ok" translatable="false">Ok</string>
-    <string name="canvas_health_fail" translatable="false">Unreachable</string>
-    <string name="canvas_health_not_connected" translatable="false">Not connected</string>
-    <string name="canvas_source_apple_music" translatable="false">Apple Music</string>
-    <string name="canvas_source_tidal" translatable="false">Tidal</string>
-    <string name="canvas_source_community" translatable="false">Community</string>
-    <string name="canvas_artwork_section" translatable="false">Canvas artwork</string>
-    <string name="canvas_page_footer" translatable="false">Canvas is the short looping video some releases publish in place of a still cover. Neiro layers the providers that have one and caches the clips it plays.</string>
-    <string name="use_tidal_artwork" translatable="false">Use Tidal artwork</string>
-    <string name="use_tidal_artwork_subtitle" translatable="false">Fall back to a Tidal cover when a track resolves no artwork at all</string>
-    <string name="artwork_priority" translatable="false">Artwork priority</string>
-    <string name="artwork_priority_order_spotify_first" translatable="false">Spotify first</string>
-    <string name="artwork_priority_order_spotify_last" translatable="false">The other providers first</string>
-    <string name="artwork_priority_spotify_first" translatable="false">Spotify</string>
-    <string name="artwork_priority_spotify_first_detail" translatable="false">Try Spotify\'s canvas before the other providers</string>
-    <string name="artwork_priority_spotify_last" translatable="false">Others</string>
-    <string name="artwork_priority_spotify_last_detail" translatable="false">Try every other provider before Spotify\'s canvas</string>
-    <string name="animate_static_album_art" translatable="false">Animate static album art</string>
-    <string name="animate_static_album_art_subtitle" translatable="false">Breathe a slow zoom into the still sleeve while a track has no canvas to play</string>
-    <string name="ok" translatable="false">OK</string>
+    <string name="canvas">Canvas</string>
+    <string name="canvas_subtitle">The looping artwork behind the sleeve and the page headers</string>
+    <string name="neiro_canvas">Neiro canvas</string>
+    <string name="neiro_canvas_subtitle">Play the looping cover art some releases publish, in place of the still sleeve</string>
+    <string name="spotify_canvas">Spotify Canvas</string>
+    <string name="spotify_canvas_subtitle">Also look up clips through a connected Spotify session</string>
+    <string name="animated_cover_cellular_subtitle">Loop the animated cover over mobile data — a clip is fetched again on every loop, so this is not a one-time video cost</string>
+    <string name="integrate_spotify_canvas_subtitle">Connect a sp_dc cookie to look up Spotify\'s own canvas clips</string>
+    <string name="canvas_in_headers">Canvas in headers</string>
+    <string name="canvas_in_headers_subtitle">Play the looping artwork behind album, playlist and artist page headers</string>
+    <string name="canvas_check">Canvas check</string>
+    <string name="canvas_check_subtitle">Ask every canvas provider whether it is reachable right now</string>
+    <string name="canvas_check_dialog_title">Canvas providers</string>
+    <string name="canvas_health_ok">Ok</string>
+    <string name="canvas_health_fail">Unreachable</string>
+    <string name="canvas_health_not_connected">Not connected</string>
+    <string name="canvas_source_apple_music">Apple Music</string>
+    <string name="canvas_source_tidal">Tidal</string>
+    <string name="canvas_source_community">Community</string>
+    <string name="canvas_artwork_section">Canvas artwork</string>
+    <string name="canvas_page_footer">Canvas is the short looping video some releases publish in place of a still cover. Neiro layers the providers that have one and caches the clips it plays.</string>
+    <string name="use_tidal_artwork">Use Tidal artwork</string>
+    <string name="use_tidal_artwork_subtitle">Fall back to a Tidal cover when a track resolves no artwork at all</string>
+    <string name="artwork_priority">Artwork priority</string>
+    <string name="artwork_priority_order_spotify_first">Spotify first</string>
+    <string name="artwork_priority_order_spotify_last">The other providers first</string>
+    <string name="artwork_priority_spotify_first">Spotify</string>
+    <string name="artwork_priority_spotify_first_detail">Try Spotify\'s canvas before the other providers</string>
+    <string name="artwork_priority_spotify_last">Others</string>
+    <string name="artwork_priority_spotify_last_detail">Try every other provider before Spotify\'s canvas</string>
+    <string name="animate_static_album_art">Animate static album art</string>
+    <string name="animate_static_album_art_subtitle">Breathe a slow zoom into the still sleeve while a track has no canvas to play</string>
+    <string name="ok">OK</string>
 
-    <string name="downloaded_songs_section" translatable="false">Downloaded songs</string>
-    <string name="clear_all_downloads" translatable="false">Clear all downloads</string>
-    <string name="downloaded_songs_size" translatable="false">Holding %1$s on disk</string>
-    <string name="clear_downloads_confirm" translatable="false">Delete every finished download on this device? Their files and their library records go together. Anything still queued or running is left to finish.</string>
-    <string name="downloads_cleared" translatable="false">Downloads cleared</string>
-    <string name="export_downloads" translatable="false">Export</string>
-    <string name="export_downloads_subtitle" translatable="false">Save a copy of every downloaded song to a folder you choose, in its original audio format</string>
-    <string name="download_export_running" translatable="false">Copying %1$d of %2$d…</string>
-    <string name="download_export_done" translatable="false">Copied %1$d songs to the chosen folder</string>
-    <string name="download_export_with_failures" translatable="false">Copied %1$d songs; %2$d could not be copied</string>
-    <string name="download_export_failed" translatable="false">Export failed: %1$s</string>
-    <string name="auto_download_on_like" translatable="false">Auto download on like</string>
-    <string name="auto_download_on_like_subtitle" translatable="false">Queue a download for a song the moment it is liked; the Wi-Fi-only rule still applies</string>
-    <string name="download_source_priority" translatable="false">Download source priority</string>
-    <string name="external_downloader" translatable="false">External downloader</string>
-    <string name="external_downloader_subtitle" translatable="false">Hand the download of a YouTube track to another app instead of downloading it here; a track another source serves still downloads through this app</string>
-    <string name="external_downloader_package" translatable="false">Downloader app package</string>
-    <string name="external_downloader_package_subtitle" translatable="false">The app that takes over YouTube downloads, by package name — e.g. com.deniscerri.ytdl</string>
-    <string name="external_downloader_missing" translatable="false">%1$s is not installed, so the download was not started</string>
-    <string name="canvas_cache_section" translatable="false">Canvas cache</string>
-    <string name="max_canvas_cache_size" translatable="false">Max cache size</string>
-    <string name="canvas_cache_usage" translatable="false">Usage</string>
-    <string name="canvas_cache_unlimited" translatable="false">Unlimited</string>
-    <string name="canvas_cache_off" translatable="false">Off</string>
-    <string name="canvas_cache_usage_limited" translatable="false">%1$s of %2$s · %3$d%% used</string>
-    <string name="canvas_cache_usage_unlimited" translatable="false">%1$s on disk · no limit</string>
-    <string name="canvas_cache_usage_off" translatable="false">%1$s · nothing is kept</string>
-    <string name="clear_canvas_cache" translatable="false">Clear canvas cache</string>
-    <string name="clear_canvas_cache_confirm" translatable="false">Drop every cached canvas clip? The next play of each track fetches its clip again.</string>
-    <string name="canvas_cache_cleared" translatable="false">Canvas cache cleared</string>
-    <string name="lyrics_cache_section" translatable="false">Lyrics</string>
-    <string name="clear_lyrics_cache" translatable="false">Clear lyrics cache</string>
-    <string name="clear_lyrics_cache_confirm" translatable="false">Delete the saved translated and romanized lyrics? Each song fetches them again the next time it plays.</string>
-    <string name="lyrics_cache_cleared" translatable="false">Lyrics cache cleared</string>
-    <string name="smart_trimmer" translatable="false">Smart trimmer</string>
-    <string name="smart_trimmer_subtitle" translatable="false">Prune old image and song cache entries to save disk space</string>
+    <string name="downloaded_songs_section">Downloaded songs</string>
+    <string name="clear_all_downloads">Clear all downloads</string>
+    <string name="downloaded_songs_size">Holding %1$s on disk</string>
+    <string name="clear_downloads_confirm">Delete every finished download on this device? Their files and their library records go together. Anything still queued or running is left to finish.</string>
+    <string name="downloads_cleared">Downloads cleared</string>
+    <string name="export_downloads">Export</string>
+    <string name="export_downloads_subtitle">Save a copy of every downloaded song to a folder you choose, in its original audio format</string>
+    <string name="download_export_running">Copying %1$d of %2$d…</string>
+    <string name="download_export_done">Copied %1$d songs to the chosen folder</string>
+    <string name="download_export_with_failures">Copied %1$d songs; %2$d could not be copied</string>
+    <string name="download_export_failed">Export failed: %1$s</string>
+    <string name="auto_download_on_like">Auto download on like</string>
+    <string name="auto_download_on_like_subtitle">Queue a download for a song the moment it is liked; the Wi-Fi-only rule still applies</string>
+    <string name="download_source_priority">Download source priority</string>
+    <string name="external_downloader">External downloader</string>
+    <string name="external_downloader_subtitle">Hand the download of a YouTube track to another app instead of downloading it here; a track another source serves still downloads through this app</string>
+    <string name="external_downloader_package">Downloader app package</string>
+    <string name="external_downloader_package_subtitle">The app that takes over YouTube downloads, by package name — e.g. com.deniscerri.ytdl</string>
+    <string name="external_downloader_missing">%1$s is not installed, so the download was not started</string>
+    <string name="canvas_cache_section">Canvas cache</string>
+    <string name="max_canvas_cache_size">Max cache size</string>
+    <string name="canvas_cache_usage">Usage</string>
+    <string name="canvas_cache_unlimited">Unlimited</string>
+    <string name="canvas_cache_off">Off</string>
+    <string name="canvas_cache_usage_limited">%1$s of %2$s · %3$d%% used</string>
+    <string name="canvas_cache_usage_unlimited">%1$s on disk · no limit</string>
+    <string name="canvas_cache_usage_off">%1$s · nothing is kept</string>
+    <string name="clear_canvas_cache">Clear canvas cache</string>
+    <string name="clear_canvas_cache_confirm">Drop every cached canvas clip? The next play of each track fetches its clip again.</string>
+    <string name="canvas_cache_cleared">Canvas cache cleared</string>
+    <string name="lyrics_cache_section">Lyrics</string>
+    <string name="clear_lyrics_cache">Clear lyrics cache</string>
+    <string name="clear_lyrics_cache_confirm">Delete the saved translated and romanized lyrics? Each song fetches them again the next time it plays.</string>
+    <string name="lyrics_cache_cleared">Lyrics cache cleared</string>
+    <string name="smart_trimmer">Smart trimmer</string>
+    <string name="smart_trimmer_subtitle">Prune old image and song cache entries to save disk space</string>
 </resources>
