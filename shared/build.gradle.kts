@@ -65,5 +65,6 @@ kotlin {
 
 android {
     namespace = "com.music.bitchord.shared"
-    compileSdk = 36
+    // InnerTubeX's AAR requires compiling against 37; minSdk (behaviour) stays 26.
+    compileSdk = 37
 }

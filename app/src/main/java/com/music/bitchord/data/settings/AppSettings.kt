@@ -517,8 +517,12 @@ object AppSettings {
      */
     val disableBlendEffects = MutableStateFlow(false)
 
-    /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
-    val liquidGlass = MutableStateFlow(false)
+    /**
+     * Real backdrop-sampled glass (blur, lens refraction) on the floating nav
+     * bar, Android 12+ only. On by default, and switched on once for an
+     * upgrade too (see [GlassDefault]).
+     */
+    val liquidGlass = MutableStateFlow(GlassDefault.DEFAULT_ON)
 
     /**
      * Frosts the glass instead of refracting it, for phones the lens shader is too
@@ -1284,7 +1288,19 @@ object AppSettings {
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
-        liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
+        run {
+            val glass = GlassDefault.decide(
+                stored = if (prefs.contains(KEY_LIQUID_GLASS)) prefs.getBoolean(KEY_LIQUID_GLASS, true) else null,
+                migrated = prefs.getBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, false),
+            )
+            liquidGlass.value = glass.liquidGlass
+            if (glass.markMigrated) {
+                prefs.edit()
+                    .putBoolean(KEY_LIQUID_GLASS, glass.liquidGlass)
+                    .putBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, true)
+                    .apply()
+            }
+        }
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
         liquidGlassIntensity.value = runCatching {
@@ -3013,6 +3029,7 @@ object AppSettings {
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
     private const val KEY_LIQUID_GLASS = "liquid_glass"
+    private const val KEY_LIQUID_GLASS_DEFAULT_ON_V1 = "liquid_glass_default_on_v1"
     private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LIQUID_GLASS_INTENSITY = "liquid_glass_intensity"
