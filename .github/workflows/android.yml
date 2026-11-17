@@ -2,8 +2,16 @@ name: Android Release APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
+
+# The Gradle wrapper JVM does not read gradle.properties, and its own
+# connect timeout is a hardcoded 10s. Runners whose IPv6 route to the
+# distribution CDN is blackholed die inside it; forcing IPv4 for every
+# JVM the workflow starts (wrapper included) keeps the download on the
+# route that answers.
+env:
+  JAVA_TOOL_OPTIONS: -Djava.net.preferIPv4Stack=true
 
 jobs:
   build-prod-release:
@@ -26,31 +34,65 @@ jobs:
         echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> local.properties
         echo "LISTEN_TOGETHER_SERVER=${{ secrets.LISTEN_TOGETHER_SERVER }}" >> local.properties
 
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > bitchord-release.jks
-        {
-          echo "storeFile=bitchord-release.jks"
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}"
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
-        } > keystore.properties
+        # Nightlies are signed: the fork's own release key lives in the
+        # KEYSTORE_* secrets, so every nightly APK installs over the one
+        # before it. With the secrets absent (a fresh clone's PR), the
+        # build scripts' own absent-keystore path takes over and the
+        # release comes out unsigned instead of failing.
+        if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > bitchord-release.jks
+          {
+            echo "storeFile=bitchord-release.jks"
+            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
+            echo "keyAlias=${{ secrets.KEY_ALIAS }}"
+            echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
+          } > keystore.properties
+        fi
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+    # The wrapper JVM's own download dies inside its hardcoded 10s connect
+    # timeout whenever the route to the distribution CDN degrades - which is
+    # exactly what an incident window looks like from a runner. Seeding the
+    # zip with a patient curl sidesteps it: the wrapper skips a download
+    # whose zip already sits in its expected slot (Installer: "if
+    # (!localZipFile.exists())"), so gradlew proceeds straight to unzip.
+    # The hash directory is Gradle's own PathAssembler scheme - base36 of the
+    # MD5 of the distributionUrl - and is stable for this URL.
+    - name: Pre-seed the Gradle distribution
+      run: |
+        DIST="$HOME/.gradle/wrapper/dists/gradle-9.3.1-bin/4mmrk48ojqgqwhmlxtzuti6qa"
+        mkdir -p "$DIST"
+        if [ ! -f "$DIST/gradle-9.3.1-bin.zip" ]; then
+          for attempt in 1 2 3 4 5; do
+            curl -L --retry 5 --retry-delay 10 --retry-all-errors \
+              --connect-timeout 60 --max-time 900 --fail \
+              -o "$DIST/gradle-9.3.1-bin.zip.part" \
+              https://github.com/gradle/gradle-distributions/releases/download/v9.3.1/gradle-9.3.1-bin.zip && break
+            echo "download attempt $attempt failed; retrying" >&2
+            sleep 15
+          done
+          mv "$DIST/gradle-9.3.1-bin.zip.part" "$DIST/gradle-9.3.1-bin.zip"
+        fi
 
-    - name: Build Signed Prod Release APK
-      run: ./gradlew assembleProdRelease
+    # The nightly artifact is the arm64-v8a phone APK only: that is the ABI
+    # every phone this fork targets ships, and building the one split (not
+    # the armeabi/x86_64/universal siblings) keeps the per-push pipeline as
+    # short as it can be. The ABI restriction rides the fork's bitchord.abis
+    # Gradle property, which narrows :app's abi splits at configuration time.
+    # Never use AGP's android.injected.build.abi here: the IDE-deployment
+    # property is process-global, so it reaches :wearos too, where it leaves
+    # the phone's embedded watch-app bundling without its single APK output
+    # ("Expected exactly one watch APK"). The watch APK still rides inside
+    # the phone APK as the in-app watch install - it is just no longer a
+    # pipeline artifact of its own. The upload path below still matches on
+    # the file name so a packaging-name change can never let a wrong-ABI APK
+    # through.
+    - name: Build Signed Prod Release APK (arm64-v8a)
+      run: ./gradlew :app:assembleProdRelease -Pbitchord.abis=arm64-v8a
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: bitchord-prod-release-signed
-        path: app/build/outputs/apk/prod/release/*.apk
-
-    # Built by the same assembleProdRelease, with the same key. The watch app
-    # only pairs with a phone app signed by the same key, so a prod watch APK
-    # for these phone builds can only come from here, never a local build.
-    - name: Upload Wear OS APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: bitchord-wear-prod-release-signed
-        path: wearos/build/outputs/apk/prod/release/*.apk
+        name: bitchord-prod-release-arm64-v8a-signed
+        path: app/build/outputs/apk/prod/release/*arm64*v8a*.apk

@@ -105,11 +105,6 @@
     <item quantity="other">%d 分钟</item>
   </plurals>
   <string name="eq_import_success">已导入%1$d个配置文件</string>
-  <string name="slider_style_standard">标准</string>
-  <string name="slider_style_wavy">波纹</string>
-  <string name="slider_style_thick">粗体</string>
-  <string name="slider_style_circular">圆形</string>
-  <string name="slider_style_simple">简约</string>
   <string name="copy_link">复制链接</string>
   <string name="got_it">我知道了</string>
 </resources>

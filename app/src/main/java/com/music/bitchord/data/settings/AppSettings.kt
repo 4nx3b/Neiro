@@ -12,6 +12,7 @@ import com.music.bitchord.BuildConfig
 import com.music.bitchord.auth.AuthStore
 import com.music.bitchord.data.canvas.SpotifyToken
 import com.music.bitchord.data.lyrics.LyricsSource
+import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.playback.EqLayout
 import com.music.bitchord.playback.EqualizerPreset
@@ -299,6 +300,96 @@ object AppSettings {
     /** The CPU budget used by Beat This! and vocal analysis for Automix. */
     val automixPerformanceMode = MutableStateFlow(AutomixPerformanceMode.BALANCED)
     val skipSilence = MutableStateFlow(false)
+
+    /**
+     * Whether shuffle survives a fresh queue. Ported from ArchiveTune's
+     * permanent shuffle: off, starting a new queue plays it in order and turns
+     * shuffle off — the queue the listener left shuffled does not silently
+     * follow them into an album they chose to hear from the top; on, shuffle
+     * carries over into whatever starts next.
+     */
+    val permanentShuffle = MutableStateFlow(false)
+
+    /**
+     * Whether a track the recovery ladder has given up on is skipped past or
+     * left stopped on. Ported from ArchiveTune's auto skip on error: on (the
+     * fork's default, and this one's) the queue moves past a track nobody can
+     * play, kept honest by the consecutive-skip cap; off, playback stops on
+     * it and the error stays in front of the listener.
+     */
+    val autoSkipOnError = MutableStateFlow(true)
+
+    /**
+     * Whether playback holds a partial wake lock. Ported from ArchiveTune's
+     * wake lock setting: the CPU stays awake while the music plays, for
+     * devices whose deep doze cuts the stream mid-track; paused or stopped,
+     * the lock goes with it and the device sleeps exactly as before. Off by
+     * default, as a lock the system cannot take back costs battery.
+     */
+    val keepCpuAwake = MutableStateFlow(false)
+
+    /**
+     * Whether the queue survives an app restart. Ported from ArchiveTune's
+     * persistent queue: on, the last queue and position are saved as the app
+     * leaves them and restored when it opens; off, every launch starts empty
+     * and the snapshot on disk is cleared rather than left stale.
+     */
+    val persistentQueue = MutableStateFlow(true)
+
+    /**
+     * Whether playback pauses when the device's media volume hits zero, and
+     * resumes when it comes back. Ported from ArchiveTune's pause on device
+     * mute: the player parks itself instead of playing a stream nobody can
+     * hear, and picks up exactly where it left off the moment the volume
+     * returns. Off by default — a paused-looking player with volume slid to
+     * zero is what Android itself does, and some listeners expect that.
+     */
+    val pauseAtZeroVolume = MutableStateFlow(false)
+
+    /**
+     * Whether playback resumes on its own when a Bluetooth audio device
+     * connects. Ported from ArchiveTune's auto start on Bluetooth: the
+     * receiver waits the fork's second-and-a-half for the link to settle
+     * before it touches the player, and only an audio-shaped device wakes
+     * it at all. Off by default — a connection is not always the listener
+     * asking to hear something.
+     */
+    val autoStartOnBluetooth = MutableStateFlow(false)
+
+    /**
+     * How many upcoming songs read-ahead warms stream URLs for, ported from
+     * ArchiveTune's preload songs: a resolve is cheap and staggered, so
+     * warming several at once is what makes a run of skips land already
+     * resolved. The full-byte half of read-ahead stays exactly one track —
+     * its tuning — whatever this dial says. Ten, the fork's default.
+     */
+    val preloadSongsCount = MutableStateFlow(10)
+
+    /** The dial's bounds, inclusive; read-ahead never warms more than ten or fewer than none. */
+    val preloadSongsCountRange = 0..10
+
+    /**
+     * How long a track has to play before the listening history counts it,
+     * ported from ArchiveTune's history duration: under the floor a skip is a
+     * skip, whatever it ended up being; over it, listened to. The half-a-track
+     * rule with its four-minute ceiling stands above it exactly as before —
+     * this is the floor. Thirty seconds, the fork's default, is what the
+     * recorder's own floor has always been.
+     */
+    val historyDurationSeconds = MutableStateFlow(30)
+
+    /** The dial's bounds, inclusive — the fork's own. */
+    val historyDurationRange = 5..60
+
+    /**
+     * Whether the crossfade stands down between consecutive songs from the
+     * same album, ported from ArchiveTune's skip gapless albums: an album the
+     * artist mixed to run continuously does not want a blend stamped across
+     * the join, so the manual crossfade is suppressed for those pairs —
+     * Automix is its own judgement and decides for itself. On by default, as
+     * the fork ships it.
+     */
+    val skipGaplessAlbums = MutableStateFlow(true)
 
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
@@ -596,21 +687,6 @@ object AppSettings {
      */
     val miniPlayerBarBehavior = MutableStateFlow(MiniPlayerBarBehavior.ADAPTIVE)
 
-    /**
-     * The standard bar's frosted surface — the haze it has always drawn. One of
-     * the three bar styles with [navBarTint] and [liquidGlassNavBar].
-     */
-    val navBarFrosted = MutableStateFlow(true)
-
-    /** The standard bar's accent-tinted surface, one of the three bar styles. */
-    val navBarTint = MutableStateFlow(false)
-
-    /**
-     * The standard bar drawn as Liquid Glass with its own fixed geometry, one of
-     * the three bar styles — the dimensions are the glass's own while it is on.
-     */
-    val liquidGlassNavBar = MutableStateFlow(false)
-
     /** The Nuvio-style rim light and soft sheen on the bar and compact circles. */
     val navBarGlassGlow = MutableStateFlow(true)
 
@@ -668,37 +744,12 @@ object AppSettings {
     /** Hides the player's seek bar, leaving the transport and the times off. */
     val hideSlideBar = MutableStateFlow(false)
 
-    /** Hides the sleeve in the player, leaving the backdrop and the controls. */
-    val hidePlayerThumbnail = MutableStateFlow(false)
-
-    /**
-     * The sleeve's corner radius in dp. 8 is the corner the app has always
-     * drawn, so that is the default — the stock look until it is moved.
-     */
-    val thumbnailCornerRadius = MutableStateFlow(DEFAULT_THUMBNAIL_CORNER_RADIUS)
-
-    val playerButtonsStyle = MutableStateFlow(PlayerButtonsStyle.DEFAULT)
-
-    val playerSliderStyle = MutableStateFlow(PlayerSliderStyle.STANDARD)
-
-    val lyricsBackgroundStyle = MutableStateFlow(LyricsBackgroundStyle.DEFAULT)
-
-    val miniPlayerBackgroundStyle = MutableStateFlow(MiniPlayerBackgroundStyle.FROSTED)
-
     // ---- The Appearance page's home, misc and extras groups ----
 
     /** The home feed keeps only the lead shelf, as a screen saver keeps a clock. */
     val minimalHomeMode = MutableStateFlow(false)
 
     val defaultOpenTab = MutableStateFlow(DefaultOpenTab.HOME)
-
-    /**
-     * Draws the player the way a tablet-sized window gets it — the full-cover
-     * blur standing behind everything — at any width. Ported from ArchiveTune's
-     * tablet mode; the window's own width still decides on its own until this
-     * is switched on.
-     */
-    val tabletMode = MutableStateFlow(false)
 
     val backAnimationStyle = MutableStateFlow(BackAnimationStyle.DEFAULT)
 
@@ -998,6 +1049,21 @@ object AppSettings {
     val lastfmScrobbleEnabled = MutableStateFlow(false)
     val lastfmNowPlaying = MutableStateFlow(false)
     val lastfmPrimaryArtistOnly = MutableStateFlow(false)
+
+    /**
+     * Which AudioScrobbler service the Last.fm rows speak to, carried by the
+     * endpoint setting itself so there is one truth: blank is Last.fm,
+     * [LastFM.LIBREFM_API_ENDPOINT] is Libre.fm. A provider switch is a
+     * different service, so the session belongs to the old one and the
+     * caller clears it — the same five writes as signing out.
+     */
+    val libreFmActive: Boolean
+        get() = lastfmEndpoint.value == LastFM.LIBREFM_API_ENDPOINT
+
+    fun setLastfmProvider(libreFm: Boolean) {
+        setLastfmEndpoint(if (libreFm) LastFM.LIBREFM_API_ENDPOINT else "")
+    }
+
     val scrobbleMinDuration = MutableStateFlow(30)
     val scrobbleDelayPercent = MutableStateFlow(0.5f)
     val scrobbleDelaySeconds = MutableStateFlow(180)
@@ -1225,6 +1291,15 @@ object AppSettings {
             )
         }.getOrDefault(AutomixPerformanceMode.BALANCED)
         skipSilence.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)
+        permanentShuffle.value = prefs.getBoolean(KEY_PERMANENT_SHUFFLE, false)
+        autoSkipOnError.value = prefs.getBoolean(KEY_AUTO_SKIP_ON_ERROR, true)
+        keepCpuAwake.value = prefs.getBoolean(KEY_KEEP_CPU_AWAKE, false)
+        persistentQueue.value = prefs.getBoolean(KEY_PERSISTENT_QUEUE, true)
+        pauseAtZeroVolume.value = prefs.getBoolean(KEY_PAUSE_AT_ZERO_VOLUME, false)
+        autoStartOnBluetooth.value = prefs.getBoolean(KEY_AUTO_START_ON_BLUETOOTH, false)
+        preloadSongsCount.value = prefs.getInt(KEY_PRELOAD_SONGS_COUNT, 10).coerceIn(0, 10)
+        historyDurationSeconds.value = prefs.getInt(KEY_HISTORY_DURATION_SECONDS, 30).coerceIn(5, 60)
+        skipGaplessAlbums.value = prefs.getBoolean(KEY_SKIP_GAPLESS_ALBUMS, true)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1327,9 +1402,6 @@ object AppSettings {
         miniPlayerBarBehavior.value = runCatching {
             MiniPlayerBarBehavior.valueOf(prefs.getString(KEY_MINI_PLAYER_BAR_BEHAVIOR, null) ?: "ADAPTIVE")
         }.getOrDefault(MiniPlayerBarBehavior.ADAPTIVE)
-        navBarFrosted.value = prefs.getBoolean(KEY_NAV_BAR_FROSTED, true)
-        navBarTint.value = prefs.getBoolean(KEY_NAV_BAR_TINT, false)
-        liquidGlassNavBar.value = prefs.getBoolean(KEY_LIQUID_GLASS_NAV_BAR, false)
         navBarGlassGlow.value = prefs.getBoolean(KEY_NAV_BAR_GLASS_GLOW, true)
         navBarGlassGlowIntensity.value = prefs.getFloat(KEY_NAV_BAR_GLASS_GLOW_INTENSITY, 1f).coerceIn(0.2f, 2f)
         navBarWidth.value = prefs.getFloat(KEY_NAV_BAR_WIDTH, 1.0f).coerceIn(0.5f, 1.0f)
@@ -1345,16 +1417,8 @@ object AppSettings {
         customFontUri.value = prefs.getString(KEY_CUSTOM_FONT_URI, "").orEmpty()
         movingBlur.value = prefs.getBoolean(KEY_MOVING_BLUR, false)
         hideSlideBar.value = prefs.getBoolean(KEY_HIDE_SLIDE_BAR, false)
-        hidePlayerThumbnail.value = prefs.getBoolean(KEY_HIDE_PLAYER_THUMBNAIL, false)
-        thumbnailCornerRadius.value = prefs.getFloat(KEY_THUMBNAIL_CORNER_RADIUS, DEFAULT_THUMBNAIL_CORNER_RADIUS)
-            .coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
-        playerButtonsStyle.value = readEnum(KEY_PLAYER_BUTTONS_STYLE, PlayerButtonsStyle.DEFAULT)
-        playerSliderStyle.value = readEnum(KEY_PLAYER_SLIDER_STYLE, PlayerSliderStyle.STANDARD)
-        lyricsBackgroundStyle.value = readEnum(KEY_LYRICS_BACKGROUND_STYLE, LyricsBackgroundStyle.DEFAULT)
-        miniPlayerBackgroundStyle.value = readEnum(KEY_MINI_PLAYER_BACKGROUND_STYLE, MiniPlayerBackgroundStyle.FROSTED)
         minimalHomeMode.value = prefs.getBoolean(KEY_MINIMAL_HOME_MODE, false)
         defaultOpenTab.value = readEnum(KEY_DEFAULT_OPEN_TAB, DefaultOpenTab.HOME)
-        tabletMode.value = prefs.getBoolean(KEY_TABLET_MODE, false)
         backAnimationStyle.value = readEnum(KEY_BACK_ANIMATION_STYLE, BackAnimationStyle.DEFAULT)
         navBarShowLabels.value = prefs.getBoolean(KEY_NAV_BAR_SHOW_LABELS, true)
         hideSignInBanner.value = prefs.getBoolean(KEY_HIDE_SIGN_IN_BANNER, false)
@@ -1637,6 +1701,53 @@ object AppSettings {
     fun setSkipSilence(value: Boolean) {
         skipSilence.value = value
         prefs.edit().putBoolean(KEY_SKIP_SILENCE, value).apply()
+    }
+
+    fun setPermanentShuffle(value: Boolean) {
+        permanentShuffle.value = value
+        prefs.edit().putBoolean(KEY_PERMANENT_SHUFFLE, value).apply()
+    }
+
+    fun setAutoSkipOnError(value: Boolean) {
+        autoSkipOnError.value = value
+        prefs.edit().putBoolean(KEY_AUTO_SKIP_ON_ERROR, value).apply()
+    }
+
+    fun setKeepCpuAwake(value: Boolean) {
+        keepCpuAwake.value = value
+        prefs.edit().putBoolean(KEY_KEEP_CPU_AWAKE, value).apply()
+    }
+
+    fun setPersistentQueue(value: Boolean) {
+        persistentQueue.value = value
+        prefs.edit().putBoolean(KEY_PERSISTENT_QUEUE, value).apply()
+    }
+
+    fun setPauseAtZeroVolume(value: Boolean) {
+        pauseAtZeroVolume.value = value
+        prefs.edit().putBoolean(KEY_PAUSE_AT_ZERO_VOLUME, value).apply()
+    }
+
+    fun setAutoStartOnBluetooth(value: Boolean) {
+        autoStartOnBluetooth.value = value
+        prefs.edit().putBoolean(KEY_AUTO_START_ON_BLUETOOTH, value).apply()
+    }
+
+    fun setPreloadSongsCount(value: Int) {
+        val clamped = value.coerceIn(preloadSongsCountRange)
+        preloadSongsCount.value = clamped
+        prefs.edit().putInt(KEY_PRELOAD_SONGS_COUNT, clamped).apply()
+    }
+
+    fun setHistoryDurationSeconds(value: Int) {
+        val clamped = value.coerceIn(historyDurationRange)
+        historyDurationSeconds.value = clamped
+        prefs.edit().putInt(KEY_HISTORY_DURATION_SECONDS, clamped).apply()
+    }
+
+    fun setSkipGaplessAlbums(value: Boolean) {
+        skipGaplessAlbums.value = value
+        prefs.edit().putBoolean(KEY_SKIP_GAPLESS_ALBUMS, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -1958,49 +2069,6 @@ object AppSettings {
         prefs.edit().putString(KEY_MINI_PLAYER_BAR_BEHAVIOR, value.name).apply()
     }
 
-    /**
-     * The three bar styles are one choice, ported from ArchiveTune's mutual
-     * exclusion: turning one on turns the others off, so exactly one surface is
-     * in force (or none, with all three off).
-     */
-    private fun persistNavBarStyles() {
-        prefs.edit()
-            .putBoolean(KEY_NAV_BAR_FROSTED, navBarFrosted.value)
-            .putBoolean(KEY_NAV_BAR_TINT, navBarTint.value)
-            .putBoolean(KEY_LIQUID_GLASS_NAV_BAR, liquidGlassNavBar.value)
-            .apply()
-    }
-
-    fun setNavBarFrosted(value: Boolean) {
-        navBarFrosted.value = value
-        if (value) {
-            navBarTint.value = false
-            liquidGlassNavBar.value = false
-        }
-        persistNavBarStyles()
-    }
-
-    fun setNavBarTint(value: Boolean) {
-        navBarTint.value = value
-        if (value) {
-            navBarFrosted.value = false
-            liquidGlassNavBar.value = false
-        }
-        persistNavBarStyles()
-    }
-
-    fun setLiquidGlassNavBar(value: Boolean) {
-        liquidGlassNavBar.value = value
-        if (value) {
-            navBarFrosted.value = false
-            navBarTint.value = false
-            // The glass bar's fixed shape assumes the adaptive behavior, the
-            // same way the master glass switch does.
-            setMiniPlayerBarBehavior(MiniPlayerBarBehavior.ADAPTIVE)
-        }
-        persistNavBarStyles()
-    }
-
     fun setNavBarGlassGlow(value: Boolean) {
         navBarGlassGlow.value = value
         prefs.edit().putBoolean(KEY_NAV_BAR_GLASS_GLOW, value).apply()
@@ -2097,37 +2165,6 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_HIDE_SLIDE_BAR, value).apply()
     }
 
-    fun setHidePlayerThumbnail(value: Boolean) {
-        hidePlayerThumbnail.value = value
-        prefs.edit().putBoolean(KEY_HIDE_PLAYER_THUMBNAIL, value).apply()
-    }
-
-    fun setThumbnailCornerRadius(value: Float) {
-        val clamped = value.coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
-        thumbnailCornerRadius.value = clamped
-        prefs.edit().putFloat(KEY_THUMBNAIL_CORNER_RADIUS, clamped).apply()
-    }
-
-    fun setPlayerButtonsStyle(value: PlayerButtonsStyle) {
-        playerButtonsStyle.value = value
-        prefs.edit().putString(KEY_PLAYER_BUTTONS_STYLE, value.name).apply()
-    }
-
-    fun setPlayerSliderStyle(value: PlayerSliderStyle) {
-        playerSliderStyle.value = value
-        prefs.edit().putString(KEY_PLAYER_SLIDER_STYLE, value.name).apply()
-    }
-
-    fun setLyricsBackgroundStyle(value: LyricsBackgroundStyle) {
-        lyricsBackgroundStyle.value = value
-        prefs.edit().putString(KEY_LYRICS_BACKGROUND_STYLE, value.name).apply()
-    }
-
-    fun setMiniPlayerBackgroundStyle(value: MiniPlayerBackgroundStyle) {
-        miniPlayerBackgroundStyle.value = value
-        prefs.edit().putString(KEY_MINI_PLAYER_BACKGROUND_STYLE, value.name).apply()
-    }
-
     fun setMinimalHomeMode(value: Boolean) {
         minimalHomeMode.value = value
         prefs.edit().putBoolean(KEY_MINIMAL_HOME_MODE, value).apply()
@@ -2136,11 +2173,6 @@ object AppSettings {
     fun setDefaultOpenTab(value: DefaultOpenTab) {
         defaultOpenTab.value = value
         prefs.edit().putString(KEY_DEFAULT_OPEN_TAB, value.name).apply()
-    }
-
-    fun setTabletMode(value: Boolean) {
-        tabletMode.value = value
-        prefs.edit().putBoolean(KEY_TABLET_MODE, value).apply()
     }
 
     fun setBackAnimationStyle(value: BackAnimationStyle) {
@@ -2981,6 +3013,15 @@ object AppSettings {
     private const val KEY_SMART_FADE = "smart_fade_enabled"
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
     private const val KEY_SKIP_SILENCE = "skip_silence"
+    private const val KEY_PERMANENT_SHUFFLE = "permanent_shuffle"
+    private const val KEY_AUTO_SKIP_ON_ERROR = "auto_skip_on_error"
+    private const val KEY_KEEP_CPU_AWAKE = "keep_cpu_awake"
+    private const val KEY_PERSISTENT_QUEUE = "persistent_queue"
+    private const val KEY_PAUSE_AT_ZERO_VOLUME = "pause_at_zero_volume"
+    private const val KEY_AUTO_START_ON_BLUETOOTH = "auto_start_on_bluetooth"
+    private const val KEY_PRELOAD_SONGS_COUNT = "preload_songs_count"
+    private const val KEY_HISTORY_DURATION_SECONDS = "history_duration_seconds"
+    private const val KEY_SKIP_GAPLESS_ALBUMS = "skip_gapless_albums"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"
@@ -3047,9 +3088,6 @@ object AppSettings {
     private const val KEY_GLASS_MINI_PLAYER = "glass_mini_player"
     private const val KEY_GLASS_MENUS = "glass_menus"
     private const val KEY_MINI_PLAYER_BAR_BEHAVIOR = "mini_player_bar_behavior"
-    private const val KEY_NAV_BAR_FROSTED = "nav_bar_frosted"
-    private const val KEY_NAV_BAR_TINT = "nav_bar_tint"
-    private const val KEY_LIQUID_GLASS_NAV_BAR = "liquid_glass_nav_bar"
     private const val KEY_NAV_BAR_GLASS_GLOW = "nav_bar_glass_glow"
     private const val KEY_NAV_BAR_GLASS_GLOW_INTENSITY = "nav_bar_glass_glow_intensity"
     private const val KEY_NAV_BAR_WIDTH = "nav_bar_width"
@@ -3065,15 +3103,8 @@ object AppSettings {
     private const val KEY_CUSTOM_FONT_URI = "custom_font_uri"
     private const val KEY_MOVING_BLUR = "moving_blur"
     private const val KEY_HIDE_SLIDE_BAR = "hide_slide_bar"
-    private const val KEY_HIDE_PLAYER_THUMBNAIL = "hide_player_thumbnail"
-    private const val KEY_THUMBNAIL_CORNER_RADIUS = "thumbnail_corner_radius"
-    private const val KEY_PLAYER_BUTTONS_STYLE = "player_buttons_style"
-    private const val KEY_PLAYER_SLIDER_STYLE = "player_slider_style"
-    private const val KEY_LYRICS_BACKGROUND_STYLE = "lyrics_background_style"
-    private const val KEY_MINI_PLAYER_BACKGROUND_STYLE = "mini_player_background_style"
     private const val KEY_MINIMAL_HOME_MODE = "minimal_home_mode"
     private const val KEY_DEFAULT_OPEN_TAB = "default_open_tab"
-    private const val KEY_TABLET_MODE = "tablet_mode"
     private const val KEY_BACK_ANIMATION_STYLE = "back_animation_style"
     private const val KEY_NAV_BAR_SHOW_LABELS = "nav_bar_show_labels"
     private const val KEY_HIDE_SIGN_IN_BANNER = "hide_sign_in_banner"
@@ -3093,10 +3124,6 @@ object AppSettings {
     private const val KEY_AOD_AUTO_TIMER_SECONDS = "aod_auto_timer_seconds"
     private const val KEY_AOD_TOUCH_LOCK = "aod_touch_lock"
     private const val KEY_AOD_PIXEL_SHIFT = "aod_pixel_shift"
-
-    /** The sleeve's stock corner, which the corner-radius row opens on. */
-    const val DEFAULT_THUMBNAIL_CORNER_RADIUS = 8f
-    const val MAX_THUMBNAIL_CORNER_RADIUS = 28f
 
     /** Reads an enum by name, falling back when the stored name isn't one. */
     private inline fun <reified T : Enum<T>> readEnum(key: String, default: T): T =

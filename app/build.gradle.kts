@@ -105,15 +105,25 @@ android {
 
     splits {
         abi {
-            // The release build is arm64-v8a only: the one APK every phone
-            // this app runs on is, and the only artifact the nightly carries —
-            // no universal, no other splits, nothing else to discard. The
-            // update checker already takes the per-ABI split when no
-            // universal is in the release, so in-app updates are unaffected.
+            // The ABI matrix answers one property: unset, the full split
+            // matrix every store listing wants; `bitchord.abis` (comma
+            // separated) narrows it for the arm64-v8a-only nightly pipeline
+            // without touching the wear module's outputs (never use
+            // android.injected.build.abi — see AGENTS.md).
             isEnable = true
             reset()
-            include("arm64-v8a")
-            isUniversalApk = false
+            val restrictedAbis = providers.gradleProperty("bitchord.abis").orNull
+                ?.split(',')
+                ?.map(String::trim)
+                ?.filter(String::isNotEmpty)
+                ?.takeIf { it.isNotEmpty() }
+            if (restrictedAbis == null) {
+                include("armeabi-v7a", "arm64-v8a", "x86_64")
+                isUniversalApk = true
+            } else {
+                include(*restrictedAbis.toTypedArray())
+                isUniversalApk = false
+            }
         }
     }
 
@@ -499,6 +509,10 @@ dependencies {
     implementation("org.bouncycastle:bcpkix-jdk18on:1.85")
 
     testImplementation("junit:junit:4.13.2")
+    // The real org.json, whose classes the mockable android.jar stubs into
+    // no-ops on the unit-test classpath: the fork's ported sources parse their
+    // payloads with it, and their tests have to parse them for real.
+    testImplementation("org.json:json:20240303")
     // A real HTTP server for the addon tests. The addon protocol is entirely
     // "what does this app send, and what does it do with what comes back", and
     // a hand-rolled fake of the client would be a test of the fake. Pinned to

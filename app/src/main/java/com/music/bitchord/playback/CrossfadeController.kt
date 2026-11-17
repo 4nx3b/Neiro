@@ -1019,6 +1019,16 @@ class CrossfadeController(
             return
         }
 
+        // Skip gapless albums, ported from ArchiveTune: an album the artist
+        // mixed to run continuously does not want a blend stamped across the
+        // join, so the manual crossfade stands down for a pair from one album.
+        // Automix above is its own judgement and decides its own transitions
+        // from the audio — this gate is the manual dial's alone. Album ids are
+        // compared when both sides state one, which the album page always
+        // queued; a pair without them falls to the album *titles*, which the
+        // media metadata carries for every track that stated one anywhere.
+        if (AppSettings.skipGaplessAlbums.value && sameAlbum(player)) return
+
         if (configuredFadeMs() <= 0L) return
         val fade = fadeFor(duration)
         if (fade <= 0L) return
@@ -3061,6 +3071,29 @@ class CrossfadeController(
     // ---- Numbers ------------------------------------------------------------
 
     private fun configuredFadeMs(): Long = AppSettings.crossfadeSeconds.value * 1000L
+
+    /** The queue item's album id, as [Song.toMediaItem] packs it — see [sameAlbum]. */
+    private val ALBUM_ID_EXTRA = "bitchord.albumId"
+
+    /**
+     * Whether the current item and the next one are from one album, as the
+     * gapless-albums gate needs it: album ids first (the album page queues
+     * them), album titles second (the session's metadata carries them
+     * everywhere else), and null on either side — a track that stated no album
+     * is not gapless with anything.
+     */
+    private fun sameAlbum(player: ExoPlayer): Boolean {
+        val current = player.currentMediaItem ?: return false
+        val next = player.getMediaItemAt(player.nextMediaItemIndex)
+        val currentAlbumId = current.mediaMetadata.extras?.getString(ALBUM_ID_EXTRA)
+        val nextAlbumId = next.mediaMetadata.extras?.getString(ALBUM_ID_EXTRA)
+        if (currentAlbumId != null && nextAlbumId != null) {
+            return currentAlbumId == nextAlbumId
+        }
+        val currentAlbum = current.mediaMetadata.albumTitle
+        val nextAlbum = next.mediaMetadata.albumTitle
+        return currentAlbum != null && currentAlbum == nextAlbum
+    }
 
     /**
      * The configured length, kept off tracks too short to spend it on. A fade

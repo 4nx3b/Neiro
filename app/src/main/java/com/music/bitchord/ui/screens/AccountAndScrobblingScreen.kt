@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.model.Account
+import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
 import kotlin.math.roundToInt
 
@@ -45,6 +46,7 @@ fun AccountAndScrobblingScreen(
     onSignOut: () -> Unit,
     onOpenListenBrainzLogin: () -> Unit,
     onOpenLastfmLogin: () -> Unit,
+    onChooseLastfmService: () -> Unit,
     onOpenDiscord: () -> Unit,
     onOpenSpotify: () -> Unit,
     contentPadding: PaddingValues,
@@ -53,6 +55,7 @@ fun AccountAndScrobblingScreen(
     val lastfmEnabled by AppSettings.lastfmEnabled.collectAsStateWithLifecycle()
     val lastfmUsername by AppSettings.lastfmUsername.collectAsStateWithLifecycle()
     val lastfmSessionKey by AppSettings.lastfmSessionKey.collectAsStateWithLifecycle()
+    val lastfmEndpoint by AppSettings.lastfmEndpoint.collectAsStateWithLifecycle()
     val lastfmScrobbleEnabled by AppSettings.lastfmScrobbleEnabled.collectAsStateWithLifecycle()
     val lastfmNowPlayingEnabled by AppSettings.lastfmNowPlaying.collectAsStateWithLifecycle()
     val lastfmPrimaryArtistOnly by AppSettings.lastfmPrimaryArtistOnly.collectAsStateWithLifecycle()
@@ -186,8 +189,23 @@ fun AccountAndScrobblingScreen(
                 }
                 RowDivider()
                 SettingsRow(
+                    icon = SfIcons.Cloud,
+                    title = stringResource(R.string.scrobble_service),
+                    subtitle = if (lastfmEndpoint == LastFM.LIBREFM_API_ENDPOINT) {
+                        stringResource(R.string.libre_fm)
+                    } else {
+                        "Last.fm"
+                    },
+                    onClick = onChooseLastfmService,
+                )
+                RowDivider()
+                SettingsRow(
                     icon = SfIcons.History,
-                    title = "Last.fm",
+                    title = if (lastfmEndpoint == LastFM.LIBREFM_API_ENDPOINT) {
+                        stringResource(R.string.libre_fm)
+                    } else {
+                        "Last.fm"
+                    },
                     subtitle = if (lastfmSessionKey.isNotBlank()) {
                         stringResource(R.string.signed_in_as, lastfmUsername)
                     } else {

@@ -22,7 +22,6 @@
   <string name="close">Закрыть</string>
   <string name="minimum_volume">Минимальная громкость</string>
   <string name="maximum_volume">Максимальная громкость</string>
-  <string name="hide_player_thumbnail">Скрыть миниатюру плеера</string>
   <plurals name="n_element">
     <item quantity="one">%d элемент</item>
     <item quantity="few">%d элементов</item>

@@ -38,7 +38,6 @@
   <string name="close">إغلاق</string>
   <string name="minimum_volume">الحد الأدنى لمستوى الصوت</string>
   <string name="maximum_volume">الحد الأقصى لمستوى الصوت</string>
-  <string name="hide_player_thumbnail">إخفاء الصورة المصغرة للمشغل</string>
   <plurals name="n_element">
     <item quantity="one">ولا عنصر</item>
     <item quantity="other">عنصر واحد</item>

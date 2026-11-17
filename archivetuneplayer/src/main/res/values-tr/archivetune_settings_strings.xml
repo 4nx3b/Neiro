@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Çalma Listesi Etiketler</string>
     <string name="manage_playlist_tags_desc">Çalma listelerini düzenlemek için etiketler oluşturun ve yönetin</string>
-    <string name="hide_player_thumbnail_desc">Albüm resmini oynatıcıdaki uygulama logosuyla değiştirin</string>
     <string name="show_tags_in_library">Etiketleri kitaplıkta göster</string>
     <string name="show_tags_in_library_desc">Kitaplıkta etiket filtre çiplerini göster</string>
     <string name="seek_seconds_addup">Aşamalı arama</string>
@@ -12,15 +11,10 @@
     <string name="follow_theme">Temayı takip et</string>
     <string name="gradient">Gradyan</string>
     <string name="player_design_style">Oyuncu tasarım stili</string>
-    <string name="player_design_v4">Sinematik</string>
-    <string name="player_design_v5">Ufak</string>
     <string name="player_background_blur">Bulanıklaştırma</string>
     <string name="coloring">Boyama</string>
     <string name="blur_gradient">Bulanık Degrade</string>
     <string name="glow">Parıltı</string>
-    <string name="player_buttons_style">Oynatıcı düğme renkleri</string>
-    <string name="default_style">Varsayılan</string>
-    <string name="secondary_color_style">İkincil</string>
     <string name="enable_swipe_thumbnail">Şarkıyı değiştirmek için kaydırmayı etkinleştirin</string>
     <string name="swipe_song_to_add">Şarkıyı sıraya eklemek için sola, sonraki çalmak için sağa kaydırın</string>
     <string name="lyrics_click_change">Tıkladığınızda şarkı sözlerini değiştirin</string>
@@ -128,11 +122,9 @@
     <string name="dark_theme">Koyu tema</string>
     <string name="dark_theme_on">Açık</string>
     <string name="dark_theme_off">Kapalı</string>
-    <string name="corner_radius">Köşe yarıçapı: %1$d</string>
     <string name="adjust_radius">Köşe yarıçapını ayarla</string>
     <string name="cancel_button">İptal</string>
     <string name="ok_button">tamam</string>
-    <string name="custom_radius">Küçük resim köşe yarıçapını özelleştirin</string>
     <string name="custom">Özel</string>
     <string name="customized_background">Özelleştirilmiş arka plan</string>
     <string name="customize_background_title">Arka planı özelleştir</string>
@@ -145,7 +137,6 @@
     <string name="disable_blur">Bulanıklaştırma efektlerini devre dışı bırak</string>
     <string name="disable_blur_desc">Uygulama genelinde bulanıklık efektlerini devre dışı bırakın</string>
     <string name="player">Oyuncu</string>
-    <string name="player_slider_style">Oyuncu kaydırıcı stili</string>
     <string name="misc">Çeşitli</string>
     <string name="default_open_tab">Varsayılan açık sekme</string>
     <string name="lyrics_animation_style">Şarkı sözü animasyon stili</string>

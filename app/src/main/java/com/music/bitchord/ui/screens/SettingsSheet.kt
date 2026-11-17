@@ -2,7 +2,6 @@ package com.music.bitchord.ui.screens
 
 import com.music.bitchord.ui.components.GlassAlertDialog
 import com.music.bitchord.ui.icons.SfIcons
-import com.music.bitchord.ui.player.ThinSlider
 import com.music.bitchord.wear.WatchInstaller
 import android.content.Context
 import androidx.annotation.StringRes
@@ -101,7 +100,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -169,10 +167,7 @@ import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
-import com.music.bitchord.data.settings.LyricsBackgroundStyle
-import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
-import com.music.bitchord.data.settings.PlayerButtonsStyle
-import com.music.bitchord.data.settings.PlayerSliderStyle
+import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.OutputPcmMode
 import com.music.bitchord.data.settings.BitPerfectMode
 import com.music.bitchord.data.settings.LiquidGlassIntensity
@@ -186,7 +181,6 @@ import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
 import com.music.bitchord.data.settings.AppFont
-import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
@@ -252,9 +246,18 @@ fun SettingsScreen(
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
+    val skipGaplessAlbums by AppSettings.skipGaplessAlbums.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
+    val permanentShuffle by AppSettings.permanentShuffle.collectAsStateWithLifecycle()
+    val autoSkipOnError by AppSettings.autoSkipOnError.collectAsStateWithLifecycle()
+    val keepCpuAwake by AppSettings.keepCpuAwake.collectAsStateWithLifecycle()
+    val persistentQueue by AppSettings.persistentQueue.collectAsStateWithLifecycle()
+    val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
+    val autoStartOnBluetooth by AppSettings.autoStartOnBluetooth.collectAsStateWithLifecycle()
+    val historyDurationSeconds by AppSettings.historyDurationSeconds.collectAsStateWithLifecycle()
+    val preloadSongsCount by AppSettings.preloadSongsCount.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -290,15 +293,8 @@ fun SettingsScreen(
     val customFontName by AppSettings.customFontName.collectAsStateWithLifecycle()
     val movingBlur by AppSettings.movingBlur.collectAsStateWithLifecycle()
     val hideSlideBar by AppSettings.hideSlideBar.collectAsStateWithLifecycle()
-    val hidePlayerThumbnail by AppSettings.hidePlayerThumbnail.collectAsStateWithLifecycle()
-    val thumbnailCornerRadius by AppSettings.thumbnailCornerRadius.collectAsStateWithLifecycle()
-    val playerButtonsStyle by AppSettings.playerButtonsStyle.collectAsStateWithLifecycle()
-    val playerSliderStyle by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
-    val lyricsBackgroundStyle by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
-    val miniPlayerBackgroundStyle by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
     val minimalHomeMode by AppSettings.minimalHomeMode.collectAsStateWithLifecycle()
     val defaultOpenTab by AppSettings.defaultOpenTab.collectAsStateWithLifecycle()
-    val tabletMode by AppSettings.tabletMode.collectAsStateWithLifecycle()
     val backAnimationStyle by AppSettings.backAnimationStyle.collectAsStateWithLifecycle()
     val sessionId by AppSettings.audioSessionId.collectAsStateWithLifecycle()
     val outputPcmMode by AppSettings.outputPcmMode.collectAsStateWithLifecycle()
@@ -843,6 +839,27 @@ fun SettingsScreen(
                     }
                 }
             }
+            // Ported from ArchiveTune's skip gapless albums: the manual
+            // crossfade stands down between consecutive songs from one album.
+            if (!smartFade) {
+                val gaplessTitle = stringResource(R.string.skip_gapless_albums)
+                row(gaplessTitle, "gapless", "album", "mix") {
+                    BypassedByBitPerfect(bitPerfectReady) {
+                        SettingsRow(
+                            icon = SfIcons.Album,
+                            title = gaplessTitle,
+                            subtitle = stringResource(R.string.skip_gapless_albums_subtitle),
+                            trailing = {
+                                IosSwitch(
+                                    checked = skipGaplessAlbums,
+                                    onCheckedChange = AppSettings::setSkipGaplessAlbums,
+                                )
+                            },
+                            onClick = { AppSettings.setSkipGaplessAlbums(!skipGaplessAlbums) },
+                        )
+                    }
+                }
+            }
             val automixTitle = stringResource(R.string.automix)
             row(automixTitle, "crossfade", "smart fade", "mix") {
                 BypassedByBitPerfect(bitPerfectReady) {
@@ -875,6 +892,133 @@ fun SettingsScreen(
                         onClick = { onOpenChoice(SettingsChoiceKind.AUTOMIX_PERFORMANCE) },
                     )
                 }
+            }
+            val permanentShuffleTitle = stringResource(R.string.permanent_shuffle)
+            row(permanentShuffleTitle, "shuffle", "queue") {
+                SettingsRow(
+                    icon = SfIcons.Shuffle,
+                    title = permanentShuffleTitle,
+                    subtitle = stringResource(R.string.permanent_shuffle_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = permanentShuffle,
+                            onCheckedChange = AppSettings::setPermanentShuffle,
+                        )
+                    },
+                    onClick = { AppSettings.setPermanentShuffle(!permanentShuffle) },
+                )
+            }
+            val autoSkipTitle = stringResource(R.string.auto_skip_on_error)
+            row(autoSkipTitle, "error", "skip") {
+                SettingsRow(
+                    icon = SfIcons.PlayNext,
+                    title = autoSkipTitle,
+                    subtitle = stringResource(R.string.auto_skip_on_error_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoSkipOnError,
+                            onCheckedChange = AppSettings::setAutoSkipOnError,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoSkipOnError(!autoSkipOnError) },
+                )
+            }
+            val keepCpuAwakeTitle = stringResource(R.string.keep_cpu_awake)
+            row(keepCpuAwakeTitle, "cpu", "battery", "doze") {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = keepCpuAwakeTitle,
+                    subtitle = stringResource(R.string.keep_cpu_awake_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = keepCpuAwake,
+                            onCheckedChange = AppSettings::setKeepCpuAwake,
+                        )
+                    },
+                    onClick = { AppSettings.setKeepCpuAwake(!keepCpuAwake) },
+                )
+            }
+            // Ported from ArchiveTune's persistent queue.
+            val persistentQueueTitle = stringResource(R.string.persistent_queue)
+            row(persistentQueueTitle, "queue", "restore", "startup", "resume") {
+                SettingsRow(
+                    icon = SfIcons.Revert,
+                    title = persistentQueueTitle,
+                    subtitle = stringResource(R.string.persistent_queue_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = persistentQueue,
+                            onCheckedChange = AppSettings::setPersistentQueue,
+                        )
+                    },
+                    onClick = { AppSettings.setPersistentQueue(!persistentQueue) },
+                )
+            }
+            // Ported from ArchiveTune's pause on device mute.
+            val pauseAtZeroTitle = stringResource(R.string.pause_at_zero_volume)
+            row(pauseAtZeroTitle, "volume", "mute", "zero") {
+                SettingsRow(
+                    icon = SfIcons.VolumeOff,
+                    title = pauseAtZeroTitle,
+                    subtitle = stringResource(R.string.pause_at_zero_volume_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = pauseAtZeroVolume,
+                            onCheckedChange = AppSettings::setPauseAtZeroVolume,
+                        )
+                    },
+                    onClick = { AppSettings.setPauseAtZeroVolume(!pauseAtZeroVolume) },
+                )
+            }
+            // Ported from ArchiveTune's auto start on Bluetooth.
+            val autoStartBluetoothTitle = stringResource(R.string.auto_start_on_bluetooth)
+            row(autoStartBluetoothTitle, "bluetooth", "auto", "resume", "connect") {
+                SettingsRow(
+                    icon = SfIcons.Bluetooth,
+                    title = autoStartBluetoothTitle,
+                    subtitle = stringResource(R.string.auto_start_on_bluetooth_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoStartOnBluetooth,
+                            onCheckedChange = AppSettings::setAutoStartOnBluetooth,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoStartOnBluetooth(!autoStartOnBluetooth) },
+                )
+            }
+            // Ported from ArchiveTune's history duration: how long a track
+            // plays before it counts as listened to.
+            val historyDurationTitle = stringResource(R.string.history_duration)
+            row(historyDurationTitle, "history", "stats", "listen") {
+                SliderRow(
+                    icon = SfIcons.GraphicEq,
+                    title = historyDurationTitle,
+                    subtitle = stringResource(R.string.history_duration_subtitle),
+                    value = stringResource(R.string.history_duration_value, historyDurationSeconds),
+                    sliderValue = historyDurationSeconds.toFloat(),
+                    onSliderValue = { AppSettings.setHistoryDurationSeconds(it.roundToInt()) },
+                    valueRange = 5f..60f,
+                    steps = 54,
+                )
+            }
+            // Ported from ArchiveTune's preload songs: how many upcoming
+            // tracks read-ahead warms stream URLs for.
+            val preloadSongsTitle = stringResource(R.string.preload_songs)
+            row(preloadSongsTitle, "preload", "warm", "ahead", "read") {
+                SliderRow(
+                    icon = SfIcons.Performance,
+                    title = preloadSongsTitle,
+                    subtitle = stringResource(R.string.preload_songs_subtitle),
+                    value = if (preloadSongsCount == 0) {
+                        stringResource(R.string.off)
+                    } else {
+                        stringResource(R.string.preload_songs_value, preloadSongsCount)
+                    },
+                    sliderValue = preloadSongsCount.toFloat(),
+                    onSliderValue = { AppSettings.setPreloadSongsCount(it.roundToInt()) },
+                    valueRange = 0f..10f,
+                    steps = 9,
+                )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)
             row(skipSilenceTitle, "silence") {
@@ -1277,13 +1421,12 @@ fun SettingsScreen(
                 )
             }
             // The player's own design, ported from ArchiveTune's PlayerDesignStyle
-            // picker: a whole layout of the now-playing screen, eleven of them,
+            // picker: a whole layout of the now-playing screen, four of them,
             // this app's own the default and first.
             val playerDesignTitle = stringResource(R.string.player_design_style)
             row(
                 playerDesignTitle,
-                "player", "design", "style", "layout", "cinematic", "little", "immersive", "editorial",
-                "apple", "tiktok", "simpmusic", "spatialflow", "looper", "material",
+                "player", "design", "style", "layout", "apple", "tiktok", "material",
             ) {
                 SettingsRow(
                     icon = SfIcons.Appearance,
@@ -1508,89 +1651,6 @@ fun SettingsScreen(
                     onClick = { AppSettings.setHideSlideBar(!hideSlideBar) },
                 )
             }
-            // Ported from ArchiveTune's player buttons style.
-            val buttonsStyleTitle = stringResource(R.string.player_buttons_style)
-            row(buttonsStyleTitle, "buttons", "color", "transport", "player") {
-                SettingsRow(
-                    icon = SfIcons.Tune,
-                    title = buttonsStyleTitle,
-                    enabled = playerDesignStyle.customizesControls(),
-                )
-                SegmentedControl(
-                    options = PlayerButtonsStyle.entries.map { it.localizedLabel() },
-                    selectedIndex = PlayerButtonsStyle.entries.indexOf(playerButtonsStyle),
-                    onSelect = { AppSettings.setPlayerButtonsStyle(PlayerButtonsStyle.entries[it]) },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
-                )
-            }
-            // Ported from ArchiveTune's slider style, as a page: each option
-            // carries a live preview of the bar it picks.
-            val sliderStyleTitle = stringResource(R.string.player_slider_style)
-            row(sliderStyleTitle, "seek", "slider", "wavy", "circular", "thick", "player") {
-                SettingsRow(
-                    icon = SfIcons.GraphicEq,
-                    title = sliderStyleTitle,
-                    value = playerSliderStyle.localizedLabel(),
-                    enabled = playerDesignStyle.customizesControls(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_SLIDER) },
-                )
-            }
-            // Ported from ArchiveTune's lyrics background style.
-            val lyricsBackgroundTitle = stringResource(R.string.lyrics_background_style)
-            row(lyricsBackgroundTitle, "lyrics", "background", "coloring") {
-                SettingsRow(
-                    icon = SfIcons.Notes,
-                    title = lyricsBackgroundTitle,
-                    value = lyricsBackgroundStyle.localizedLabel(),
-                    enabled = playerDesignStyle.customizesLyricsBackground(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.LYRICS_BACKGROUND) },
-                )
-            }
-            // Ported from ArchiveTune's mini player background style.
-            val miniPlayerBackgroundTitle = stringResource(R.string.mini_player_background_style)
-            row(miniPlayerBackgroundTitle, "mini player", "background", "frosted", "gradient", "glow") {
-                SettingsRow(
-                    icon = SfIcons.Gradient,
-                    title = miniPlayerBackgroundTitle,
-                    value = miniPlayerBackgroundStyle.localizedLabel(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.MINI_PLAYER_BACKGROUND) },
-                )
-            }
-            // Ported from ArchiveTune: the sleeve goes, leaving the backdrop
-            // and the controls.
-            val hideThumbnailTitle = stringResource(R.string.hide_player_thumbnail)
-            row(hideThumbnailTitle, "artwork", "sleeve", "cover", "player") {
-                SettingsRow(
-                    icon = SfIcons.VisibilityOff,
-                    title = hideThumbnailTitle,
-                    subtitle = stringResource(R.string.hide_player_thumbnail_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = hidePlayerThumbnail,
-                            onCheckedChange = AppSettings::setHidePlayerThumbnail,
-                        )
-                    },
-                    onClick = { AppSettings.setHidePlayerThumbnail(!hidePlayerThumbnail) },
-                )
-            }
-            // Ported from ArchiveTune's thumbnail corner radius: 8 is the
-            // corner the app has always drawn.
-            val cornerRadiusTitle = stringResource(R.string.thumbnail_corner_radius)
-            row(cornerRadiusTitle, "corner", "radius", "artwork", "sleeve") {
-                SliderRow(
-                    icon = SfIcons.Tune,
-                    title = cornerRadiusTitle,
-                    subtitle = stringResource(R.string.thumbnail_corner_radius_subtitle),
-                    value = stringResource(R.string.thumbnail_corner_radius_value, thumbnailCornerRadius.roundToInt()),
-                    sliderValue = thumbnailCornerRadius,
-                    onSliderValue = { AppSettings.setThumbnailCornerRadius(it.roundToInt().toFloat()) },
-                    valueRange = 0f..AppSettings.MAX_THUMBNAIL_CORNER_RADIUS,
-                    steps = 27,
-                )
-            }
         }
 
         // ---- The ported AOD group ----
@@ -1641,23 +1701,6 @@ fun SettingsScreen(
 
         // ---- The ported Misc group ----
         if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.misc)) {
-            // Ported from ArchiveTune's tablet mode: the player drawn as a
-            // tablet-sized window gets it, whatever this window is.
-            val tabletModeTitle = stringResource(R.string.tablet_mode)
-            row(tabletModeTitle, "tablet", "dual", "layout", "player") {
-                SettingsRow(
-                    icon = SfIcons.Fullscreen,
-                    title = tabletModeTitle,
-                    subtitle = stringResource(R.string.tablet_mode_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = tabletMode,
-                            onCheckedChange = AppSettings::setTabletMode,
-                        )
-                    },
-                    onClick = { AppSettings.setTabletMode(!tabletMode) },
-                )
-            }
             // Ported from ArchiveTune's navigation bar settings.
             val navBarTitle = stringResource(R.string.navigation_bar_settings_title)
             row(navBarTitle, "navigation", "bar", "labels", "tabs") {
@@ -2418,21 +2461,11 @@ private fun PlayerTheme.localizedLabel(): String = stringResource(
 
 /**
  * The design styles that stand on a picked background, ported from
- * ArchiveTune's isPlayerStyleCustomizationEnabled: V4 and V5 there, which here
- * are the app's own player, Cinematic and Little.
+ * ArchiveTune's isPlayerStyleCustomizationEnabled — now only the app's own
+ * player, after the legacy styles went.
  */
 private fun PlayerDesignStyle.customizesBackground(): Boolean =
-    this == PlayerDesignStyle.BITCHORD ||
-        this == PlayerDesignStyle.CINEMATIC ||
-        this == PlayerDesignStyle.LITTLE
-
-/** The same styles take the picked buttons and slider, as ArchiveTune gates them. */
-private fun PlayerDesignStyle.customizesControls(): Boolean = customizesBackground()
-
-/** The styles whose lyrics run on the shared background, rather than their own. */
-private fun PlayerDesignStyle.customizesLyricsBackground(): Boolean =
-    !(this == PlayerDesignStyle.APPLE_MUSIC || this == PlayerDesignStyle.TIKTOK ||
-        this == PlayerDesignStyle.SPATIALFLOW || this == PlayerDesignStyle.SIMPMUSIC)
+    this == PlayerDesignStyle.BITCHORD
 
 @Composable
 private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes())
@@ -2442,32 +2475,18 @@ private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes
 internal fun PlayerDesignStyle.labelRes(): Int =
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord
-        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic
-        PlayerDesignStyle.LITTLE -> R.string.player_design_little
-        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive
         PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended
-        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok
-        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic
-        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow
-        PlayerDesignStyle.LOOPER -> R.string.player_design_looper
     }
 
 @Composable
 private fun PlayerDesignStyle.localizedDetail(): String = stringResource(
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord_detail
-        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic_detail
-        PlayerDesignStyle.LITTLE -> R.string.player_design_little_detail
-        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive_detail
         PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended_detail
-        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial_detail
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music_detail
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok_detail
-        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic_detail
-        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow_detail
-        PlayerDesignStyle.LOOPER -> R.string.player_design_looper_detail
     },
 )
 
@@ -2500,78 +2519,6 @@ private fun AppFont.description(): String = stringResource(
         AppFont.LEGACY -> R.string.font_legacy_subtitle
         AppFont.SYSTEM -> R.string.font_system_subtitle
         AppFont.CUSTOM -> R.string.font_custom_subtitle
-    },
-)
-
-@Composable
-private fun PlayerButtonsStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        PlayerButtonsStyle.DEFAULT -> R.string.player_buttons_style_default
-        PlayerButtonsStyle.SECONDARY -> R.string.player_buttons_style_secondary
-    },
-)
-
-@Composable
-private fun PlayerSliderStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard
-        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy
-        PlayerSliderStyle.THICK -> R.string.slider_style_thick
-        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular
-        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple
-    },
-)
-
-@Composable
-private fun PlayerSliderStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard_detail
-        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy_detail
-        PlayerSliderStyle.THICK -> R.string.slider_style_thick_detail
-        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular_detail
-        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple_detail
-    },
-)
-
-@Composable
-private fun LyricsBackgroundStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default
-        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.follow_theme
-        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring
-        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur
-    },
-)
-
-@Composable
-private fun LyricsBackgroundStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default_detail
-        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.lyrics_background_follow_theme_detail
-        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring_detail
-        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur_detail
-    },
-)
-
-@Composable
-private fun MiniPlayerBackgroundStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted
-        MiniPlayerBackgroundStyle.THEME -> R.string.follow_theme
-        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient
-        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.liquid_glass
-    },
-)
-
-@Composable
-private fun MiniPlayerBackgroundStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted_detail
-        MiniPlayerBackgroundStyle.THEME -> R.string.mini_player_background_theme_detail
-        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient_detail
-        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow_detail
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.mini_player_background_liquid_glass_detail
     },
 )
 
@@ -3367,12 +3314,6 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
     SF_PRO_FONTS(R.string.sf_pro_fonts),
     /** What the player stands on, below the artwork. */
     PLAYER_BACKGROUND(R.string.player_background_style),
-    /** The seek bar's shape, each option with a live preview. */
-    PLAYER_SLIDER(R.string.player_slider_style),
-    /** What stands behind the lyrics. */
-    LYRICS_BACKGROUND(R.string.lyrics_background_style),
-    /** The mini player's surface. */
-    MINI_PLAYER_BACKGROUND(R.string.mini_player_background_style),
     /** The always-on playing screen's own settings. */
     AOD(R.string.aod_customize_title),
     /** The bottom bar's own settings. */
@@ -3531,36 +3472,6 @@ fun SettingsChoicePage(
                     footer = stringResource(R.string.player_background_style_footer),
                 ) { theme ->
                     AppSettings.setPlayerTheme(theme)
-                    onChosen()
-                }
-            }
-
-            SettingsChoiceKind.PLAYER_SLIDER -> PlayerSliderStylePage()
-
-            SettingsChoiceKind.LYRICS_BACKGROUND -> {
-                val selected by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
-                ChoiceGroup(
-                    options = LyricsBackgroundStyle.entries,
-                    selected = selected,
-                    label = { it.localizedLabel() },
-                    detail = { it.localizedDetail() },
-                    footer = stringResource(R.string.lyrics_background_style_footer),
-                ) { style ->
-                    AppSettings.setLyricsBackgroundStyle(style)
-                    onChosen()
-                }
-            }
-
-            SettingsChoiceKind.MINI_PLAYER_BACKGROUND -> {
-                val selected by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
-                ChoiceGroup(
-                    options = MiniPlayerBackgroundStyle.entries,
-                    selected = selected,
-                    label = { it.localizedLabel() },
-                    detail = { it.localizedDetail() },
-                    footer = stringResource(R.string.mini_player_background_style_footer),
-                ) { style ->
-                    AppSettings.setMiniPlayerBackgroundStyle(style)
                     onChosen()
                 }
             }
@@ -4043,61 +3954,6 @@ private fun SfProFontRow(
 }
 
 /**
- * The player slider style, ported from ArchiveTune: five shapes for the seek
- * bar, each drawn as the live bar it picks rather than described, so the
- * choice is made against the thing itself.
- */
-@Composable
-private fun PlayerSliderStylePage() {
-    val selected by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
-    SettingsGroup(topSpacing = 0.dp) {
-        PlayerSliderStyle.entries.forEachIndexed { index, style ->
-            if (index > 0) RowDivider()
-            var previewValue by remember { mutableFloatStateOf(0.4f) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { AppSettings.setPlayerSliderStyle(style) }
-                    .padding(horizontal = ROW_INSET, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = style.localizedLabel(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = style.localizedDetail(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                    // The bar itself, drawn in the style the row picks. Played
-                    // flat — the wave moves in the player, with the track.
-                    ThinSlider(
-                        value = previewValue,
-                        onValueChange = { previewValue = it },
-                        style = style,
-                        animated = false,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-                if (style == selected) {
-                    Spacer(Modifier.width(12.dp))
-                    Icon(
-                        imageVector = SfIcons.Check,
-                        contentDescription = stringResource(R.string.selected),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
  * The always-on playing screen's own settings, ported from ArchiveTune's AOD
  * customized page: the master switch, what appears on the screen, and how the
  * screen itself behaves.
@@ -4232,21 +4088,14 @@ private fun AodSettingsPage() {
 
 /**
  * The bottom bar's own settings, ported from ArchiveTune's navigation bar
- * page: what the mini player and bar do on scroll, the three surfaces the
- * standard bar can wear — frosted, tint, Liquid Glass, one at a time — the
- * glass glow with its strength, the labels, and the six dimension dials with
- * their reset. The BitChord and SukiSU bars of ArchiveTune's page stay
- * unported, as asked.
+ * page: what the mini player and bar do on scroll, the glass glow with its
+ * strength, the labels, and the six dimension dials with their reset. The
+ * BitChord and SukiSU bars of ArchiveTune's page stay unported, as asked.
  */
 @Composable
 private fun NavigationBarSettingsPage() {
     val showLabels by AppSettings.navBarShowLabels.collectAsStateWithLifecycle()
-    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
-    val glassSupported = isGlassSupported()
     val behavior by AppSettings.miniPlayerBarBehavior.collectAsStateWithLifecycle()
-    val navBarFrosted by AppSettings.navBarFrosted.collectAsStateWithLifecycle()
-    val navBarTint by AppSettings.navBarTint.collectAsStateWithLifecycle()
-    val liquidGlassNavBar by AppSettings.liquidGlassNavBar.collectAsStateWithLifecycle()
     val navBarGlassGlow by AppSettings.navBarGlassGlow.collectAsStateWithLifecycle()
     val navBarGlassGlowIntensity by AppSettings.navBarGlassGlowIntensity.collectAsStateWithLifecycle()
     val navBarWidth by AppSettings.navBarWidth.collectAsStateWithLifecycle()
@@ -4257,10 +4106,6 @@ private fun NavigationBarSettingsPage() {
     val navBarCornerRadius by AppSettings.navBarCornerRadius.collectAsStateWithLifecycle()
     val dimensionsAtDefault = navBarWidth == 1.0f && navBarHeight == 1.0f && navBarOpacity == 1.0f &&
         navBarTransparency == 0f && navBarLabelSpacing == 1f && navBarCornerRadius == 28f
-
-    // The glass bar claims the standard bar's geometry as its own, so the
-    // dials stand down while it is in force — ported from ArchiveTune.
-    val dimensionsEnabled = !liquidGlassNavBar
 
     SettingsGroup(
         header = stringResource(R.string.navigation_bar_compact_behavior),
@@ -4283,43 +4128,6 @@ private fun NavigationBarSettingsPage() {
         header = stringResource(R.string.general),
         footer = stringResource(R.string.navigation_bar_footer),
     ) {
-        val frostedTitle = stringResource(R.string.navigation_bar_frosted_blur)
-        SettingsRow(
-            title = frostedTitle,
-            subtitle = stringResource(R.string.navigation_bar_frosted_blur_desc),
-            trailing = { IosSwitch(checked = navBarFrosted, onCheckedChange = AppSettings::setNavBarFrosted) },
-            onClick = { AppSettings.setNavBarFrosted(!navBarFrosted) },
-        )
-        RowDivider()
-        val tintTitle = stringResource(R.string.navigation_bar_tint_frosted_blur)
-        SettingsRow(
-            title = tintTitle,
-            subtitle = stringResource(R.string.navigation_bar_tint_frosted_blur_desc),
-            trailing = { IosSwitch(checked = navBarTint, onCheckedChange = AppSettings::setNavBarTint) },
-            onClick = { AppSettings.setNavBarTint(!navBarTint) },
-        )
-        RowDivider()
-        val glassNavBarTitle = stringResource(R.string.liquid_glass_nav_bar)
-        SettingsRow(
-            title = glassNavBarTitle,
-            subtitle = stringResource(
-                when {
-                    !glassSupported -> R.string.liquid_glass_unavailable
-                    !liquidGlass -> R.string.liquid_glass_nav_bar_disabled
-                    else -> R.string.liquid_glass_nav_bar_desc
-                },
-            ),
-            enabled = glassSupported && liquidGlass,
-            trailing = {
-                IosSwitch(
-                    checked = liquidGlassNavBar,
-                    onCheckedChange = AppSettings::setLiquidGlassNavBar,
-                    enabled = glassSupported && liquidGlass,
-                )
-            },
-            onClick = { AppSettings.setLiquidGlassNavBar(!liquidGlassNavBar) },
-        )
-        RowDivider()
         val glassGlowTitle = stringResource(R.string.navigation_bar_glass_glow)
         SettingsRow(
             title = glassGlowTitle,
@@ -4366,7 +4174,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarWidth((it * 100f).roundToInt() / 100f) },
             valueRange = 0.5f..1f,
             steps = 9,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4377,7 +4184,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarHeight((it * 100f).roundToInt() / 100f) },
             valueRange = 0.8f..1.4f,
             steps = 11,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4388,7 +4194,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarOpacity((it * 100f).roundToInt() / 100f) },
             valueRange = 0.2f..1f,
             steps = 15,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4399,7 +4204,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarTransparency((it * 100f).roundToInt() / 100f) },
             valueRange = 0f..0.95f,
             steps = 18,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4410,7 +4214,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarLabelSpacing((it * 16f).roundToInt().toFloat()) },
             valueRange = 0f..1f,
             steps = 15,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4421,33 +4224,20 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarCornerRadius((it * 48f).roundToInt().toFloat()) },
             valueRange = 0f..1f,
             steps = 47,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SettingsRow(
             icon = SfIcons.Revert,
             title = stringResource(R.string.navigation_bar_reset_dimensions),
-            enabled = dimensionsEnabled && !dimensionsAtDefault,
+            enabled = !dimensionsAtDefault,
             onClick = { AppSettings.resetNavBarDimensions() },
         )
     }
 
-    // The one thing worth saying while the glass bar is the bar in force: its
-    // shape is the glass's own and not the dials' to take.
-    if (liquidGlassNavBar) {
-        SettingsGroup {
-            Text(
-                text = stringResource(R.string.navigation_bar_glass_note),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = GROUP_INSET + 4.dp, vertical = 12.dp),
-            )
-        }
-    }
 }
 
 /**
- * The player design page, ported from ArchiveTune's picker: eleven whole
+ * The player design page, ported from ArchiveTune's picker: four whole
  * layouts of the now-playing screen, this app's own the default and first.
  * Whichever is in force, the extra switches it carries sit under the list —
  * the ones each style owns, as ArchiveTune's Appearance page hangs them off
@@ -4521,20 +4311,6 @@ private fun PlayerDesignStylePage() {
         }
     }
 
-    // The Immersive player is the one style with a volume bar of its own, as
-    // V7's is — the same shared switch, offered where it applies.
-    if (selected == PlayerDesignStyle.IMMERSIVE) {
-        SettingsGroup(header = stringResource(R.string.player_design_immersive_extras)) {
-            SettingsRow(
-                title = stringResource(R.string.player_design_show_volume_bar),
-                subtitle = stringResource(R.string.player_design_immersive_volume_subtitle),
-                trailing = {
-                    IosSwitch(checked = !hideVolumeBar, onCheckedChange = { AppSettings.setHideVolumeBar(!it) })
-                },
-                onClick = { AppSettings.setHideVolumeBar(hideVolumeBar) },
-            )
-        }
-    }
 }
 
 /**

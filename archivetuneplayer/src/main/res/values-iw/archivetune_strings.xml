@@ -38,7 +38,6 @@
   <string name="close">סגירה</string>
   <string name="minimum_volume">עוצמת שמע מינימלית</string>
   <string name="maximum_volume">עוצמת שמע מקסימלית</string>
-  <string name="hide_player_thumbnail">הסתר תמונה ממוזערת של הנגן</string>
   <plurals name="n_element">
     <item quantity="one">פריט אחד</item>
     <item quantity="two">שני פריטים</item>

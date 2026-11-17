@@ -1,5 +1,7 @@
 package com.music.bitchord.data.stats
 
+import com.music.bitchord.data.settings.AppSettings
+
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.durationMillis
@@ -74,10 +76,11 @@ object ListeningRecorder {
         playedThisTrack += step
 
         val length = durationMs.takeIf { it > 0 } ?: song.durationMillis()
+        val floorMs = historyFloorMs()
         val threshold = if (length > 0) {
-            min(length / 2, PLAY_CEILING_MS).coerceAtLeast(PLAY_FLOOR_MS)
+            min(length / 2, PLAY_CEILING_MS).coerceAtLeast(floorMs)
         } else {
-            PLAY_FLOOR_MS
+            floorMs
         }
         val counts = !playCounted && playedThisTrack >= threshold
         if (counts) playCounted = true
@@ -174,8 +177,12 @@ object ListeningRecorder {
      */
     private const val MAX_STEP_MS = 8_000L
 
-    /** Under half a minute is not a listen, however it ended. */
-    private const val PLAY_FLOOR_MS = 30_000L
+    /**
+     * The play-count floor, answering the history duration setting ported
+     * from ArchiveTune: the dial moves in whole seconds between the fork's
+     * own bounds, and a value below it never widens past half a track.
+     */
+    private fun historyFloorMs(): Long = AppSettings.historyDurationSeconds.value * 1_000L
 
     /** Past four minutes, half a track is more listening than anyone disputes. */
     private const val PLAY_CEILING_MS = 4 * 60 * 1000L

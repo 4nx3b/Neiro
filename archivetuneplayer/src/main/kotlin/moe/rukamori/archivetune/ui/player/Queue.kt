@@ -419,64 +419,6 @@ fun Queue(
         onCollapsedContentClick = {},
         collapsedContent = {
             when (playerDesignStyle) {
-                PlayerDesignStyle.V5 -> {
-                    QueueCollapsedContentV3(
-                        showCodecOnPlayer = showCodecOnPlayer,
-                        currentFormat = currentFormat,
-                        textBackgroundColor = TextBackgroundColor,
-                        sleepTimerEnabled = sleepTimerEnabled,
-                        sleepTimerTimeLeft = sleepTimerTimeLeft,
-                        onExpandQueue = openQueue,
-                        onSleepTimerClick = {
-                            if (sleepTimerEnabled) {
-                                playerConnection.service.sleepTimer.clear()
-                            } else {
-                                showSleepTimerDialog = true
-                            }
-                        },
-                        onShowLyrics = onShowLyrics,
-                        onMenuClick = {
-                            menuState.showImmersive {
-                                PlayerMenu(
-                                    mediaMetadata = mediaMetadata,
-                                    navController = navController,
-                                    playerBottomSheetState = playerBottomSheetState,
-                                    onShowDetailsDialog = {
-                                        mediaMetadata?.id?.let {
-                                            bottomSheetPageState.show {
-                                                ShowMediaInfo(it)
-                                            }
-                                        }
-                                    },
-                                    onDismiss = menuState::dismiss,
-                                )
-                            }
-                        },
-                    )
-                }
-
-                PlayerDesignStyle.V4 -> {
-                    QueueCollapsedContentV4(
-                        showCodecOnPlayer = showCodecOnPlayer,
-                        currentFormat = currentFormat,
-                        textBackgroundColor = TextBackgroundColor,
-                        textButtonColor = textButtonColor,
-                        iconButtonColor = iconButtonColor,
-                        sleepTimerEnabled = sleepTimerEnabled,
-                        sleepTimerTimeLeft = sleepTimerTimeLeft,
-                        mediaMetadata = mediaMetadata,
-                        onExpandQueue = openQueue,
-                        onSleepTimerClick = {
-                            if (sleepTimerEnabled) {
-                                playerConnection.service.sleepTimer.clear()
-                            } else {
-                                showSleepTimerDialog = true
-                            }
-                        },
-                        onShowLyrics = onShowLyrics,
-                    )
-                }
-
                 PlayerDesignStyle.V9 -> {
                     val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsState()
                     QueueCollapsedContentV9(
@@ -518,61 +460,6 @@ fun Queue(
                     )
                 }
 
-                PlayerDesignStyle.V10 -> {
-                    val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsState()
-                    QueueCollapsedContentV10(
-                        showCodecOnPlayer = showCodecOnPlayer,
-                        currentFormat = currentFormat,
-                        accent = TextBackgroundColor,
-                        field = textButtonColor,
-                        shuffleModeEnabled = shuffleModeEnabled,
-                        repeatMode = repeatMode,
-                        currentSongLiked = currentSongLiked,
-                        onExpandQueue = openQueue,
-                        onShuffleClick = {
-                            playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
-                        },
-                        onRepeatModeClick = { playerConnection.player.toggleRepeatMode() },
-                        onToggleLike = playerConnection::toggleLike,
-                        onAddToPlaylistClick = { showChoosePlaylistDialog = true },
-                    )
-                }
-
-                PlayerDesignStyle.V7 -> {
-                    val audioDevice by playerConnection.service.activeAudioDevice.collectAsStateWithLifecycle()
-
-                    val view = LocalView.current
-                    DisposableEffect(view) {
-                        val listener =
-                            ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
-                                if (hasFocus) playerConnection.service.refreshActiveDevice()
-                            }
-                        view.viewTreeObserver.addOnWindowFocusChangeListener(listener)
-                        onDispose { view.viewTreeObserver.removeOnWindowFocusChangeListener(listener) }
-                    }
-
-                    QueueCollapsedContentV7(
-                        showCodecOnPlayer = showCodecOnPlayer,
-                        currentFormat = currentFormat,
-                        textBackgroundColor = TextBackgroundColor,
-                        sleepTimerEnabled = sleepTimerEnabled,
-                        sleepTimerTimeLeft = sleepTimerTimeLeft,
-                        onExpandQueue = openQueue,
-                        onShowLyrics = onShowLyrics,
-                        onSleepTimerClick = {
-                            if (sleepTimerEnabled) {
-                                playerConnection.service.sleepTimer.clear()
-                            } else {
-                                showSleepTimerDialog = true
-                            }
-                        },
-                        onDeviceClick = {
-                            SystemMediaControlResolver.openMediaOutputSwitcher(context)
-                        },
-                        device = audioDevice,
-                    )
-                }
-
                 PlayerDesignStyle.APPLE_MUSIC -> {
                 }
 
@@ -582,14 +469,6 @@ fun Queue(
                 PlayerDesignStyle.TIKTOK -> {
                 }
 
-                PlayerDesignStyle.SIMPMUSIC -> {
-                }
-
-                PlayerDesignStyle.SPATIALFLOW -> {
-                }
-
-                PlayerDesignStyle.LOOPER -> {
-                }
             }
 
             if (showSleepTimerDialog) {

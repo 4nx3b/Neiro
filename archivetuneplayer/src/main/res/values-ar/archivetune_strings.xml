@@ -22,7 +22,6 @@
   <string name="close">اغلاق</string>
   <string name="minimum_volume">ادنى مستوى للصوت</string>
   <string name="maximum_volume">اعلى مستوى للصوت</string>
-  <string name="hide_player_thumbnail">اخفاء غلاف المشغل</string>
   <string name="seek_forward_dynamic">+%1$d ثواني تقديم</string>
   <string name="seek_backward_dynamic">-%1$d ثواني تأخير</string>
   <plurals name="n_element">
