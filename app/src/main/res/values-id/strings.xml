@@ -1685,4 +1685,7 @@
     <string name="history_duration">Durasi riwayat</string>
     <string name="history_duration_subtitle">Berapa lama lagu diputar sebelum dihitung sebagai didengarkan</string>
     <string name="history_duration_value">%1$d dtk</string>
+
+    <string name="skip_gapless_albums">Lewati album gapless</string>
+    <string name="skip_gapless_albums_subtitle">Jangan crossfade lagu berurutan dari album yang sama</string>
 </resources>

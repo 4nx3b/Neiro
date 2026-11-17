@@ -1685,4 +1685,7 @@
     <string name="history_duration">历史时长</string>
     <string name="history_duration_subtitle">歌曲播放多久才算作已收听</string>
     <string name="history_duration_value">%1$d 秒</string>
+
+    <string name="skip_gapless_albums">跳过无缝专辑</string>
+    <string name="skip_gapless_albums_subtitle">不交叉淡化同一专辑中的连续歌曲</string>
 </resources>

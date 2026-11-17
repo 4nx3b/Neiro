@@ -1691,4 +1691,7 @@
     <string name="history_duration">ระยะเวลาประวัติ</string>
     <string name="history_duration_subtitle">เพลงต้องเล่นนานแค่ไหนจึงนับว่าฟังแล้ว</string>
     <string name="history_duration_value">%1$d วิ</string>
+
+    <string name="skip_gapless_albums">ข้ามอัลบั้มต่อเนื่อง</string>
+    <string name="skip_gapless_albums_subtitle">ไม่ครอสเฟดเพลงต่อเนื่องจากอัลบั้มเดียวกัน</string>
 </resources>

@@ -1708,4 +1708,7 @@
     <string name="history_duration">इतिहास अवधि</string>
     <string name="history_duration_subtitle">एक गाना कितनी देर बजने पर सुना हुआ माना जाता है</string>
     <string name="history_duration_value">%1$d सेकंड</string>
+
+    <string name="skip_gapless_albums">गैपलेस एल्बम छोड़ें</string>
+    <string name="skip_gapless_albums_subtitle">एक ही एल्बम के लगातार गानों के बीच क्रॉसफेड नहीं</string>
 </resources>

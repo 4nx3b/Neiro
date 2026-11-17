@@ -1713,4 +1713,7 @@
     <string name="history_duration">Duração do histórico</string>
     <string name="history_duration_subtitle">Quanto tempo uma música toca antes de contar como ouvida</string>
     <string name="history_duration_value">%1$d s</string>
+
+    <string name="skip_gapless_albums">Ignorar álbuns sem intervalos</string>
+    <string name="skip_gapless_albums_subtitle">Não crossfade músicas consecutivas do mesmo álbum</string>
 </resources>

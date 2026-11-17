@@ -1680,4 +1680,7 @@
     <string name="history_duration">Duración del historial</string>
     <string name="history_duration_subtitle">Cuánto debe reproducirse una canción antes de contar como escuchada</string>
     <string name="history_duration_value">%1$d s</string>
+
+    <string name="skip_gapless_albums">Omitir álbums sin pausas</string>
+    <string name="skip_gapless_albums_subtitle">No encadenar canciones consecutivas del mismo álbum</string>
 </resources>

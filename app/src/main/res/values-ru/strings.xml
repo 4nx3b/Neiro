@@ -1740,4 +1740,7 @@
     <string name="history_duration">Длительность истории</string>
     <string name="history_duration_subtitle">Сколько должен звучать трек, чтобы считаться прослушанным</string>
     <string name="history_duration_value">%1$d с</string>
+
+    <string name="skip_gapless_albums">Пропускать цельные альбомы</string>
+    <string name="skip_gapless_albums_subtitle">Не сводить подряд идущие песни одного альбома</string>
 </resources>

@@ -1665,4 +1665,7 @@
     <string name="history_duration">Geçmiş süresi</string>
     <string name="history_duration_subtitle">Bir şarkı dinlenmiş sayılmadan önce ne kadar çalar</string>
     <string name="history_duration_value">%1$d sn</string>
+
+    <string name="skip_gapless_albums">Aralıksız albümleri atla</string>
+    <string name="skip_gapless_albums_subtitle">Aynı albümün ardışık şarkıları arasında çapraz geçiş yapma</string>
 </resources>

@@ -246,6 +246,7 @@ fun SettingsScreen(
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
+    val skipGaplessAlbums by AppSettings.skipGaplessAlbums.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
@@ -834,6 +835,27 @@ fun SettingsScreen(
                             onSliderValue = { AppSettings.setCrossfadeSeconds(it.roundToInt()) },
                             valueRange = 0f..12f,
                             steps = 11,
+                        )
+                    }
+                }
+            }
+            // Ported from ArchiveTune's skip gapless albums: the manual
+            // crossfade stands down between consecutive songs from one album.
+            if (!smartFade) {
+                val gaplessTitle = stringResource(R.string.skip_gapless_albums)
+                row(gaplessTitle, "gapless", "album", "mix") {
+                    BypassedByBitPerfect(bitPerfectReady) {
+                        SettingsRow(
+                            icon = SfIcons.Album,
+                            title = gaplessTitle,
+                            subtitle = stringResource(R.string.skip_gapless_albums_subtitle),
+                            trailing = {
+                                IosSwitch(
+                                    checked = skipGaplessAlbums,
+                                    onCheckedChange = AppSettings::setSkipGaplessAlbums,
+                                )
+                            },
+                            onClick = { AppSettings.setSkipGaplessAlbums(!skipGaplessAlbums) },
                         )
                     }
                 }

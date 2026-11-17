@@ -381,6 +381,16 @@ object AppSettings {
     /** The dial's bounds, inclusive — the fork's own. */
     val historyDurationRange = 5..60
 
+    /**
+     * Whether the crossfade stands down between consecutive songs from the
+     * same album, ported from ArchiveTune's skip gapless albums: an album the
+     * artist mixed to run continuously does not want a blend stamped across
+     * the join, so the manual crossfade is suppressed for those pairs —
+     * Automix is its own judgement and decides for itself. On by default, as
+     * the fork ships it.
+     */
+    val skipGaplessAlbums = MutableStateFlow(true)
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1289,6 +1299,7 @@ object AppSettings {
         autoStartOnBluetooth.value = prefs.getBoolean(KEY_AUTO_START_ON_BLUETOOTH, false)
         preloadSongsCount.value = prefs.getInt(KEY_PRELOAD_SONGS_COUNT, 10).coerceIn(0, 10)
         historyDurationSeconds.value = prefs.getInt(KEY_HISTORY_DURATION_SECONDS, 30).coerceIn(5, 60)
+        skipGaplessAlbums.value = prefs.getBoolean(KEY_SKIP_GAPLESS_ALBUMS, true)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1732,6 +1743,11 @@ object AppSettings {
         val clamped = value.coerceIn(historyDurationRange)
         historyDurationSeconds.value = clamped
         prefs.edit().putInt(KEY_HISTORY_DURATION_SECONDS, clamped).apply()
+    }
+
+    fun setSkipGaplessAlbums(value: Boolean) {
+        skipGaplessAlbums.value = value
+        prefs.edit().putBoolean(KEY_SKIP_GAPLESS_ALBUMS, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -3005,6 +3021,7 @@ object AppSettings {
     private const val KEY_AUTO_START_ON_BLUETOOTH = "auto_start_on_bluetooth"
     private const val KEY_PRELOAD_SONGS_COUNT = "preload_songs_count"
     private const val KEY_HISTORY_DURATION_SECONDS = "history_duration_seconds"
+    private const val KEY_SKIP_GAPLESS_ALBUMS = "skip_gapless_albums"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

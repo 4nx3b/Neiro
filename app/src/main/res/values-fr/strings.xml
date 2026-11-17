@@ -1709,4 +1709,7 @@
     <string name="history_duration">Durée d'écoute</string>
     <string name="history_duration_subtitle">Temps de lecture requis pour qu\'une chanson compte comme écoutée</string>
     <string name="history_duration_value">%1$d s</string>
+
+    <string name="skip_gapless_albums">Passer les albums sans blancs</string>
+    <string name="skip_gapless_albums_subtitle">Ne pas fondre deux chansons consécutives du même album</string>
 </resources>

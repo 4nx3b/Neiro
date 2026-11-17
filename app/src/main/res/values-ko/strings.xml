@@ -1558,4 +1558,7 @@
     <string name="history_duration">재생 기록 기간</string>
     <string name="history_duration_subtitle">노래가 몇 초 재생되면 들은 것으로 기록되는지</string>
     <string name="history_duration_value">%1$d초</string>
+
+    <string name="skip_gapless_albums">갭리스 앨범 건너뛰기</string>
+    <string name="skip_gapless_albums_subtitle">같은 앨범의 연속 곡 사이를 크로스페이드하지 않음</string>
 </resources>

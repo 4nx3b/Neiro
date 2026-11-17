@@ -1581,4 +1581,7 @@
     <string name="history_duration">History duration</string>
     <string name="history_duration_subtitle">How long a track plays before the listening history counts it</string>
     <string name="history_duration_value">%1$d s</string>
+
+    <string name="skip_gapless_albums">Skip gapless albums</string>
+    <string name="skip_gapless_albums_subtitle">Do not crossfade consecutive songs from the same album</string>
 </resources>

@@ -1708,4 +1708,7 @@
     <string name="history_duration">Verlaufszeit</string>
     <string name="history_duration_subtitle">So lange muss ein Titel laufen, um als angehört zu gelten</string>
     <string name="history_duration_value">%1$d s</string>
+
+    <string name="skip_gapless_albums">Gapless-Alben nicht überblenden</string>
+    <string name="skip_gapless_albums_subtitle">Übergänge zwischen aufeinanderfolgenden Songs desselben Albums werden nicht überblendet</string>
 </resources>

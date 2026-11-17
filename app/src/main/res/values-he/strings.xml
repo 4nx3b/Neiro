@@ -1713,4 +1713,7 @@
     <string name="history_duration">משך היסטוריה</string>
     <string name="history_duration_subtitle">כמה זמן צריך שיר להתנגן לפני שהוא נחשב כמושמע</string>
     <string name="history_duration_value">%1$d שנ׳</string>
+
+    <string name="skip_gapless_albums">דלג על אלבומים רציפים</string>
+    <string name="skip_gapless_albums_subtitle">לא לחלוף בין שירים עוקבים מאותו אלבום</string>
 </resources>

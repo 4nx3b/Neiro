@@ -1647,4 +1647,7 @@
     <string name="history_duration">Durata cronologia</string>
     <string name="history_duration_subtitle">Quanto a lungo deve suonare un brano prima di contare come ascoltato</string>
     <string name="history_duration_value">%1$d s</string>
+
+    <string name="skip_gapless_albums">Salta gli album senza pause</string>
+    <string name="skip_gapless_albums_subtitle">Non fondere due brani consecutivi dello stesso album</string>
 </resources>

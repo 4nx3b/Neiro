@@ -1748,4 +1748,7 @@
     <string name="history_duration">Czas historii</string>
     <string name="history_duration_subtitle">Jak długo utwór gra, zanim policzy się jako przesłuchany</string>
     <string name="history_duration_value">%1$d s</string>
+
+    <string name="skip_gapless_albums">Pomiń albumy gapless</string>
+    <string name="skip_gapless_albums_subtitle">Bez przenikania między kolejnymi utworami z tego samego albumu</string>
 </resources>

@@ -1686,4 +1686,7 @@
     <string name="history_duration">履録の長さ</string>
     <string name="history_duration_subtitle">履録に聴いたと数える再生時間</string>
     <string name="history_duration_value">%1$d 秒</string>
+
+    <string name="skip_gapless_albums">ギャップレスアルバムをスキップ</string>
+    <string name="skip_gapless_albums_subtitle">同じアルバムの連続する曲の間でクロスフェードしない</string>
 </resources>
