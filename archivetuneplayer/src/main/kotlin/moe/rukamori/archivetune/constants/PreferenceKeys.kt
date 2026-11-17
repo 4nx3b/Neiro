@@ -18,8 +18,6 @@ import java.time.ZoneOffset
 import java.util.Locale
 
 val DynamicThemeKey = booleanPreferencesKey("dynamicTheme")
-val CustomThemeColorKey = stringPreferencesKey("customThemeColor")
-val RandomThemeOnStartupKey = booleanPreferencesKey("randomThemeOnStartup")
 val DarkModeKey = stringPreferencesKey("darkMode")
 val PureBlackKey = booleanPreferencesKey("pureBlack")
 val DisableAnimationsKey = booleanPreferencesKey("disableAnimations")
@@ -981,7 +979,6 @@ enum class HomeSource {
 val HomeSourceKey = stringPreferencesKey("homeSource")
 
 enum class PlayerDesignStyle {
-    V9,
     APPLE_MUSIC,
 
     BITCHORD,
@@ -1044,13 +1041,6 @@ val PlayerCustomBrightnessKey = floatPreferencesKey("playerCustomBrightness")
 val LyricsTextSizeKey = floatPreferencesKey("lyricsTextSize")
 val LyricsLineSpacingKey = floatPreferencesKey("lyricsLineSpacing")
 val LyricsLineBlurKey = booleanPreferencesKey("lyricsLineBlur")
-
-val EnhancedLyricsStyleKey = stringPreferencesKey("enhancedLyricsStyle")
-
-enum class EnhancedLyricsStyle(val displayName: String) {
-    ACCOMPANIST("Accompanist"),
-    SPICY_MOBILE("Spicy Mobile"),
-}
 
 val OverscrollStyleKey = stringPreferencesKey("overscrollStyle")
 

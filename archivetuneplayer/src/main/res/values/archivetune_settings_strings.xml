@@ -39,8 +39,6 @@
     <string name="lyrics_auto_scroll">Auto scroll lyrics</string>
     <string name="lyrics_text_size">Lyrics text size</string>
     <string name="lyrics_animation_style">Lyrics animation style</string>
-    <string name="lyrics_animation_style_accompanist_description">Karaoke sweep with breathing dots (accompanist lyrics-ui)</string>
-    <string name="lyrics_animation_style_spicy_description">Word-level karaoke, rising sung words and breathing interlude dots (Spicy Mobile)</string>
     <string name="lyrics_romanize_japanese">Romanize japanese lyrics</string>
     <string name="lyrics_romanize_korean">Romanize korean lyrics</string>
     <string name="lyrics_romanize_chinese">Romanize chinese lyrics</string>
