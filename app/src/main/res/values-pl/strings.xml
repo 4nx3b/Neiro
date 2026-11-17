@@ -1734,4 +1734,7 @@
 
     <string name="persistent_queue">Przywróć ostatnią kolejkę</string>
     <string name="persistent_queue_subtitle">Przywraca ostatnią kolejkę przy uruchamianiu aplikacji</string>
+
+    <string name="pause_at_zero_volume">Pauza przy zerowej głośności</string>
+    <string name="pause_at_zero_volume_subtitle">Pauza przy zerowej głośności i wznowienie, gdy głośność wróci</string>
 </resources>

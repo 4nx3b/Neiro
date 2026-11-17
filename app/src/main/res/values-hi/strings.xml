@@ -1694,4 +1694,7 @@
 
     <string name="persistent_queue">पिछली कतार पुनर्स्थापित करें</string>
     <string name="persistent_queue_subtitle">ऐप शुरू होने पर आपकी पिछली कतार पुनर्स्थापित करें</string>
+
+    <string name="pause_at_zero_volume">डिवाइस वॉल्यूम 0 होने पर रोकें</string>
+    <string name="pause_at_zero_volume_subtitle">शून्य वॉल्यूम पर रोकता है और वॉल्यूम बढ़ने पर फिर शुरू करता है</string>
 </resources>

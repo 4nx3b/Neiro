@@ -1672,4 +1672,7 @@
 
     <string name="persistent_queue">最後のキューを復元</string>
     <string name="persistent_queue_subtitle">アプリ起動時に最後のキューを復元します</string>
+
+    <string name="pause_at_zero_volume">音量ゼロで一時停止</string>
+    <string name="pause_at_zero_volume_subtitle">音量ゼロで一時停止し、音量が戻ると再開します</string>
 </resources>

@@ -1671,4 +1671,7 @@
 
     <string name="persistent_queue">Pulihkan antrean terakhir</string>
     <string name="persistent_queue_subtitle">Memulihkan antrean terakhir Anda saat aplikasi dimulai</string>
+
+    <string name="pause_at_zero_volume">Jeda saat volume perangkat 0</string>
+    <string name="pause_at_zero_volume_subtitle">Jeda di volume nol dan lanjut saat volume naik</string>
 </resources>

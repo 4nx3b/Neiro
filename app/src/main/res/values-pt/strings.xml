@@ -1699,4 +1699,7 @@
 
     <string name="persistent_queue">Restaurar a última fila</string>
     <string name="persistent_queue_subtitle">Restaura sua última fila quando o app inicia</string>
+
+    <string name="pause_at_zero_volume">Pausar quando o volume estiver em 0</string>
+    <string name="pause_at_zero_volume_subtitle">Pausa no volume zero e retoma quando o volume aumenta</string>
 </resources>

@@ -1699,4 +1699,7 @@
 
     <string name="persistent_queue">שחזור התור האחרון</string>
     <string name="persistent_queue_subtitle">משחזר את התור האחרון בהפעלת האפליקציה</string>
+
+    <string name="pause_at_zero_volume">השהיה בעוצמת אפס</string>
+    <string name="pause_at_zero_volume_subtitle">משהה בעוצמת אפס וממשיך כשהעוצמה עולה</string>
 </resources>

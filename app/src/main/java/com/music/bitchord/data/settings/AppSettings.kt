@@ -336,6 +336,16 @@ object AppSettings {
      */
     val persistentQueue = MutableStateFlow(true)
 
+    /**
+     * Whether playback pauses when the device's media volume hits zero, and
+     * resumes when it comes back. Ported from ArchiveTune's pause on device
+     * mute: the player parks itself instead of playing a stream nobody can
+     * hear, and picks up exactly where it left off the moment the volume
+     * returns. Off by default — a paused-looking player with volume slid to
+     * zero is what Android itself does, and some listeners expect that.
+     */
+    val pauseAtZeroVolume = MutableStateFlow(false)
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1240,6 +1250,7 @@ object AppSettings {
         autoSkipOnError.value = prefs.getBoolean(KEY_AUTO_SKIP_ON_ERROR, true)
         keepCpuAwake.value = prefs.getBoolean(KEY_KEEP_CPU_AWAKE, false)
         persistentQueue.value = prefs.getBoolean(KEY_PERSISTENT_QUEUE, true)
+        pauseAtZeroVolume.value = prefs.getBoolean(KEY_PAUSE_AT_ZERO_VOLUME, false)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1661,6 +1672,11 @@ object AppSettings {
     fun setPersistentQueue(value: Boolean) {
         persistentQueue.value = value
         prefs.edit().putBoolean(KEY_PERSISTENT_QUEUE, value).apply()
+    }
+
+    fun setPauseAtZeroVolume(value: Boolean) {
+        pauseAtZeroVolume.value = value
+        prefs.edit().putBoolean(KEY_PAUSE_AT_ZERO_VOLUME, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2930,6 +2946,7 @@ object AppSettings {
     private const val KEY_AUTO_SKIP_ON_ERROR = "auto_skip_on_error"
     private const val KEY_KEEP_CPU_AWAKE = "keep_cpu_awake"
     private const val KEY_PERSISTENT_QUEUE = "persistent_queue"
+    private const val KEY_PAUSE_AT_ZERO_VOLUME = "pause_at_zero_volume"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

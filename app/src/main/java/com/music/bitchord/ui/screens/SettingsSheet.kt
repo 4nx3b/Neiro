@@ -253,6 +253,7 @@ fun SettingsScreen(
     val autoSkipOnError by AppSettings.autoSkipOnError.collectAsStateWithLifecycle()
     val keepCpuAwake by AppSettings.keepCpuAwake.collectAsStateWithLifecycle()
     val persistentQueue by AppSettings.persistentQueue.collectAsStateWithLifecycle()
+    val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -926,6 +927,22 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setPersistentQueue(!persistentQueue) },
+                )
+            }
+            // Ported from ArchiveTune's pause on device mute.
+            val pauseAtZeroTitle = stringResource(R.string.pause_at_zero_volume)
+            row(pauseAtZeroTitle, "volume", "mute", "zero") {
+                SettingsRow(
+                    icon = SfIcons.VolumeOff,
+                    title = pauseAtZeroTitle,
+                    subtitle = stringResource(R.string.pause_at_zero_volume_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = pauseAtZeroVolume,
+                            onCheckedChange = AppSettings::setPauseAtZeroVolume,
+                        )
+                    },
+                    onClick = { AppSettings.setPauseAtZeroVolume(!pauseAtZeroVolume) },
                 )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)

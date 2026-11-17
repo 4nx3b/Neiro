@@ -1567,4 +1567,7 @@
 
     <string name="persistent_queue">Restore your last queue</string>
     <string name="persistent_queue_subtitle">Restore your last queue when the app starts</string>
+
+    <string name="pause_at_zero_volume">Pause when device volume is 0</string>
+    <string name="pause_at_zero_volume_subtitle">Pause at zero volume, and resume when volume increases</string>
 </resources>

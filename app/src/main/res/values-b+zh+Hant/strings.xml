@@ -1500,4 +1500,7 @@
 
     <string name="persistent_queue">恢復上次的播放佇列</string>
     <string name="persistent_queue_subtitle">應用程式啟動時恢復上次的播放佇列</string>
+
+    <string name="pause_at_zero_volume">裝置音量為 0 時暫停</string>
+    <string name="pause_at_zero_volume_subtitle">音量為零時暫停，音量恢復後繼續播放</string>
 </resources>

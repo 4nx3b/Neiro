@@ -1611,4 +1611,7 @@
 
     <string name="persistent_queue">Khôi phục hàng đợi cuối</string>
     <string name="persistent_queue_subtitle">Khôi phục hàng đợi cuối của bạn khi ứng dụng khởi động</string>
+
+    <string name="pause_at_zero_volume">Tạm dừng khi âm lượng bằng 0</string>
+    <string name="pause_at_zero_volume_subtitle">Tạm dừng khi âm lượng bằng 0 và tiếp tục khi âm lượng tăng lên</string>
 </resources>

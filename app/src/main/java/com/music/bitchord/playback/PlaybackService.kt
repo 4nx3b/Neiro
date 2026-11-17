@@ -552,6 +552,61 @@ class PlaybackService : MediaLibraryService() {
      */
     private var playbackWakeLock: PowerManager.WakeLock? = null
 
+    /**
+     * The volume observer behind Pause when device volume is 0, ported from
+     * ArchiveTune's pause on device mute: registered only while the setting is
+     * on, watching the system settings' volume tree the way a ContentObserver
+     * on it must. It parks the player when the media stream hits zero — with
+     * [pausedForZeroVolume] remembering that this pause was the volume's
+     * doing — and plays again, exactly where it left off, when the volume
+     * comes back.
+     */
+    private var zeroVolumeObserver: android.database.ContentObserver? = null
+    private var pausedForZeroVolume = false
+
+    private fun musicVolume(): Int =
+        runCatching { audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: -1 }.getOrDefault(-1)
+
+    private fun updateZeroVolumePause() {
+        val observer = zeroVolumeObserver ?: return
+        val volume = musicVolume()
+        val sessionPlayer = player ?: return
+        if (volume == 0) {
+            val canPauseNow = sessionPlayer.currentMediaItem != null &&
+                sessionPlayer.playWhenReady &&
+                sessionPlayer.playbackState != android.media3.common.Player.STATE_IDLE &&
+                sessionPlayer.playbackState != android.media3.common.Player.STATE_ENDED
+            if (canPauseNow) {
+                sessionPlayer.pause()
+                pausedForZeroVolume = true
+            }
+        } else if (volume > 0 && pausedForZeroVolume) {
+            pausedForZeroVolume = false
+            sessionPlayer.play()
+        }
+    }
+
+    private fun observeZeroVolume() {
+        if (zeroVolumeObserver != null) return
+        val observer = object : android.database.ContentObserver(Handler(mainLooper)) {
+            override fun onChange(selfChange: Boolean) {
+                updateZeroVolumePause()
+            }
+        }
+        contentResolver.registerContentObserver(
+            android.provider.Settings.System.CONTENT_URI,
+            true,
+            observer,
+        )
+        zeroVolumeObserver = observer
+    }
+
+    private fun stopObservingZeroVolume() {
+        zeroVolumeObserver?.let { contentResolver.unregisterContentObserver(it) }
+        zeroVolumeObserver = null
+        pausedForZeroVolume = false
+    }
+
     private fun updatePlaybackWakeLock() {
         val lock = playbackWakeLock ?: return
         val shouldHold = AppSettings.keepCpuAwake.value && player?.isPlaying == true
@@ -7336,6 +7391,18 @@ class PlaybackService : MediaLibraryService() {
             AppSettings.keepCpuAwake.collect { updatePlaybackWakeLock() }
         }
         scope.launch {
+            AppSettings.pauseAtZeroVolume.collect { on ->
+                if (on) {
+                    observeZeroVolume()
+                    // A setting flipped on under an already-zero volume should
+                    // park the player now rather than at the next volume event.
+                    updateZeroVolumePause()
+                } else {
+                    stopObservingZeroVolume()
+                }
+            }
+        }
+        scope.launch {
             AppSettings.skipSilence.collect { on -> eachPlayer { it.skipSilenceEnabled = on } }
         }
         scope.launch {
@@ -7937,6 +8004,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         if (playbackWakeLock?.isHeld == true) playbackWakeLock?.release()
+        stopObservingZeroVolume()
         WearBridge.attachStreams(null)
         WearBridge.releaseSpeaker()
         // Let go of the receiver's player but leave its session alone: a

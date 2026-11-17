@@ -1666,4 +1666,7 @@
 
     <string name="persistent_queue">Restaurar la última cola</string>
     <string name="persistent_queue_subtitle">Restaura tu última cola al abrir la app</string>
+
+    <string name="pause_at_zero_volume">Pausar con el volumen del dispositivo en 0</string>
+    <string name="pause_at_zero_volume_subtitle">Pausa al llegar al volumen cero y se reanuda cuando el volumen sube</string>
 </resources>
