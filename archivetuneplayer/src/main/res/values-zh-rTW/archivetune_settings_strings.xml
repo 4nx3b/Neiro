@@ -85,11 +85,9 @@
     <string name="dark_theme">深色主題</string>
     <string name="dark_theme_on">開啟</string>
     <string name="dark_theme_off">關閉</string>
-    <string name="corner_radius">圓角半徑：%1$d</string>
     <string name="adjust_radius">調整圓角半徑</string>
     <string name="cancel_button">取消</string>
     <string name="ok_button">確認</string>
-    <string name="custom_radius">自訂縮圖圓角半徑</string>
     <string name="custom">自訂</string>
     <string name="customized_background">自訂背景</string>
     <string name="customize_background_title">自訂背景</string>
@@ -113,7 +111,6 @@
     <string name="backdrop_blur_amount">背景模糊程度</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
     <string name="player">播放器</string>
-    <string name="player_slider_style">播放器滑桿樣式</string>
     <string name="misc">其他</string>
     <string name="default_open_tab">預設開啟頁面</string>
     <string name="lyrics_animation_style">歌詞動畫樣式</string>

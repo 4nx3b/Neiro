@@ -32,7 +32,6 @@
   <string name="close">Tutup</string>
   <string name="minimum_volume">Volume Minimal</string>
   <string name="maximum_volume">Volume Maksimum</string>
-  <string name="hide_player_thumbnail">Delikake Thumbnail Pemutar</string>
   <plurals name="n_element">
     <item quantity="other">%d elemen</item>
   </plurals>

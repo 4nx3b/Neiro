@@ -72,49 +72,6 @@ enum class PlayerTheme {
     GLOW,
 }
 
-/**
- * The shape the player's seek bar takes. Ported from ArchiveTune's SliderStyle
- * (Standard / Wavy / Thick / Circular / Simple), drawn as variants of the
- * player's own ThinSlider so the Automix sheen, the transition window and the
- * load morph keep working under every style.
- */
-enum class PlayerSliderStyle { STANDARD, WAVY, THICK, CIRCULAR, SIMPLE }
-
-/**
- * The colour the player's transport buttons take. Ported from ArchiveTune's
- * PlayerButtonsStyle: DEFAULT keeps the white chrome; SECONDARY tints the
- * transport with the theme's secondary colour.
- */
-enum class PlayerButtonsStyle { DEFAULT, SECONDARY }
-
-/**
- * What stands behind the lyrics panel. Ported from ArchiveTune's
- * LyricsBackgroundStyle minus the options that need a custom background image
- * (CUSTOM — that player background mode is not ported yet).
- */
-enum class LyricsBackgroundStyle {
-    /** The blurred cover, as the lyrics have always been drawn. */
-    DEFAULT,
-
-    /** The theme's own background, flat. */
-    FOLLOW_THEME,
-
-    /** A wash of the artwork's own colours. */
-    COLORING,
-
-    /** The blurred cover, drifting slowly behind the lyrics. */
-    MOVING_BLUR,
-}
-
-/**
- * The mini player's surface. Ported from ArchiveTune's
- * MiniPlayerBackgroundStyle; FROSTED is the frosted pill this app has always
- * drawn, so it is the default. LIQUID_GLASS is ArchiveTune's fifth option: the
- * bar drawn as a lens, which falls back to the theme surface wherever the
- * glass itself cannot run.
- */
-enum class MiniPlayerBackgroundStyle { THEME, GRADIENT, GLOW, FROSTED, LIQUID_GLASS }
-
 /** Which tab the app opens on. Ported from ArchiveTune's NavigationTab. */
 enum class DefaultOpenTab { HOME, SEARCH, LIBRARY }
 

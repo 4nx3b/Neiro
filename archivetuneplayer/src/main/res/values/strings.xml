@@ -129,11 +129,6 @@
   <string name="repeat_mode_all">Repeat queue</string>
   <string name="queue_continue_playing">Continue Playing</string>
   <string name="queue_autoplaying_similar">Autoplaying similar music</string>
-  <string name="slider_style_standard">Standard</string>
-  <string name="slider_style_wavy">Wavy</string>
-  <string name="slider_style_thick">Thick</string>
-  <string name="slider_style_circular">Circular</string>
-  <string name="slider_style_simple">Simple</string>
   <string name="login">Login</string>
   <string name="playback_login_po_token">Login PO Token</string>
   <string name="playback_confirmation_required">Playback confirmation required</string>

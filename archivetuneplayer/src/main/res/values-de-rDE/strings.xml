@@ -95,17 +95,12 @@
   <string name="remove_from_speed_dial">Aus der Schnellwahl entfernen</string>
   <string name="no_matching_playlists">Keine übereinstimmende Playlist</string>
   <string name="error_malformed_stream">Quellenfehler</string>
-  <string name="slider_style_standard">Standard</string>
   <string name="widget_pause">Pause</string>
   <string name="widget_previous">Vorheriger</string>
   <string name="removed_n_songs_from_queue">%d Songs aus der Warteschlange entfernt</string>
   <string name="aod_mode">AOD-Modus</string>
   <string name="aod_mode_exit">AOD verlassen</string>
   <string name="sort_by_most_played">Meistgespielt</string>
-  <string name="slider_style_wavy">Wellig</string>
-  <string name="slider_style_thick">Dick</string>
-  <string name="slider_style_circular">Rund</string>
-  <string name="slider_style_simple">Einfach</string>
   <string name="playback_confirmation_required">Wiedergabebestätigung erforderlich</string>
   <string name="playback_requires_youtube_music_confirmation">Wiedergabe in YouTube Music bestätigten, dann zu ArchiveTune zurückkehren.</string>
   <string name="playback_login_refresh_required">Erneuere YouTube Music Anmeldung</string>

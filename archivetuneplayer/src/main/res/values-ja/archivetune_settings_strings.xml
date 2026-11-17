@@ -6,7 +6,6 @@
     <string name="lyrics_line_blur">歌詞行をぼかす</string>
     <string name="manage_playlist_tags">プレイリストタグ</string>
     <string name="manage_playlist_tags_desc">プレイリストを整理するタグを作成・管理</string>
-    <string name="hide_player_thumbnail_desc">プレイヤー内のアルバムアートをアプリロゴに置き換える</string>
     <string name="crop_thumbnail_to_square">サムネイルを1:1に切り抜く</string>
     <string name="crop_thumbnail_to_square_desc">YouTubeサムネイルを16:9ではなく正方形で表示</string>
     <string name="show_home_category_chips">ホームカテゴリチップを表示</string>
@@ -16,7 +15,6 @@
     <string name="seek_seconds_addup">段階的シーク</string>
     <string name="seek_seconds_addup_description">有効にすると、シークスキップごとに追加の5秒を段階的に加算</string>
     <string name="player_background_style">プレイヤー背景スタイル</string>
-    <string name="mini_player_background_style">ミニプレイヤー背景スタイル</string>
     <string name="follow_theme">テーマに合わせる</string>
     <string name="gradient">グラデーション</string>
     <string name="player_design_style">プレイヤーデザインスタイル</string>
@@ -25,9 +23,6 @@
     <string name="coloring">色付け</string>
     <string name="blur_gradient">ぼかしグラデーション</string>
     <string name="glow">発光</string>
-    <string name="player_buttons_style">プレイヤーボタンの色</string>
-    <string name="default_style">デフォルト</string>
-    <string name="secondary_color_style">セカンダリ</string>
     <string name="enable_swipe_thumbnail">スワイプで曲変更を有効化</string>
     <string name="swipe_song_to_add">曲を左にスワイプするとキューに追加、右にスワイプすると次に再生</string>
     <string name="lyrics_click_change">クリックで歌詞を変更</string>
@@ -163,11 +158,9 @@
     <string name="dark_theme">ダークテーマ</string>
     <string name="dark_theme_on">オン</string>
     <string name="dark_theme_off">オフ</string>
-    <string name="corner_radius">角丸: %1$d</string>
     <string name="adjust_radius">角丸を調整</string>
     <string name="cancel_button">キャンセル</string>
     <string name="ok_button">OK</string>
-    <string name="custom_radius">サムネイルの角丸をカスタマイズ</string>
     <string name="custom">カスタム</string>
     <string name="customized_background">カスタム背景</string>
     <string name="customize_background_title">背景をカスタマイズ</string>
@@ -191,7 +184,6 @@
     <string name="backdrop_blur_amount">背景ぼかし量</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
     <string name="player">プレイヤー</string>
-    <string name="player_slider_style">プレイヤースライダーのスタイル</string>
     <string name="misc">その他</string>
     <string name="default_open_tab">デフォルトで開くタブ</string>
     <string name="lyrics_animation_style">歌詞アニメーションスタイル</string>

@@ -11,10 +11,7 @@ import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.LastPlayerScreen
-import com.music.bitchord.data.settings.LyricsBackgroundStyle
-import com.music.bitchord.data.settings.PlayerButtonsStyle
 import com.music.bitchord.data.settings.PlayerDesignStyle
-import com.music.bitchord.data.settings.PlayerSliderStyle
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.settings.SmartAnalysis
 import com.music.bitchord.data.settings.MixBlend
@@ -274,18 +271,6 @@ interface PlayerSettingsSource {
 
     /** Hides the seek bar. */
     val hideSlideBar: StateFlow<Boolean>
-
-    /** Hides the sleeve. */
-    val hidePlayerThumbnail: StateFlow<Boolean>
-
-    /** The sleeve's corner radius in dp; 8 is the stock corner. */
-    val thumbnailCornerRadius: StateFlow<Float>
-
-    val playerButtonsStyle: StateFlow<PlayerButtonsStyle>
-
-    val playerSliderStyle: StateFlow<PlayerSliderStyle>
-
-    val lyricsBackgroundStyle: StateFlow<LyricsBackgroundStyle>
 
     /**
      * Draws the player the way a tablet-sized window gets it, at any width.

@@ -37,12 +37,10 @@ val CustomFontUriKey = stringPreferencesKey("customFontUri")
 val CustomFontNameKey = stringPreferencesKey("customFontName")
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
-val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SwipeToSongKey = booleanPreferencesKey("SwipeToSong")
 val PlayerDesignStyleKey = stringPreferencesKey("playerDesignStyle")
 
 val ShowPlayerVolumeBarKey = booleanPreferencesKey("showPlayerVolumeBar")
-val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val ArchiveTuneCanvasKey = booleanPreferencesKey("archiveTuneCanvas")
 val SpotifyCanvasKey = booleanPreferencesKey("spotifyCanvas")
 val SongCanvasDisabledKey = stringPreferencesKey("songCanvasDisabled")
@@ -77,9 +75,7 @@ enum class ProceduralCanvasStyle {
     }
 }
 
-val ThumbnailCornerRadiusKey = floatPreferencesKey("thumbnailCornerRadius")
 val CropThumbnailToSquareKey = booleanPreferencesKey("cropThumbnailToSquare")
-
 val AodThumbnailShapeKey = stringPreferencesKey("aodThumbnailShape")
 val AodThumbnailSizeKey = floatPreferencesKey("aodThumbnailSize")
 val AodThumbnailShapeRotationKey = intPreferencesKey("aodThumbnailShapeRotation")
@@ -135,7 +131,6 @@ val BlurRadiusKey = floatPreferencesKey("blurRadius")
 val BackdropEnabledKey = booleanPreferencesKey("backdropEnabled")
 val BackdropBlurAmountKey = intPreferencesKey("backdropBlurAmount")
 val MiniPlayerLastAnchorKey = intPreferencesKey("miniPlayerLastAnchor")
-val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
 
 val LiquidGlassEnabledKey = booleanPreferencesKey("liquidGlassEnabled")
 val LiquidGlassNavBarEnabledKey = booleanPreferencesKey("liquidGlassNavBarEnabled")
@@ -980,11 +975,6 @@ fun deserializeArtworkProviderOrder(orderStr: String?): List<PreferredArtworkPro
     return parsed + missing
 }
 
-enum class PlayerButtonsStyle {
-    DEFAULT,
-    SECONDARY,
-}
-
 enum class HomeSource {
     YOUTUBE,
     SPOTIFY,
@@ -1013,29 +1003,6 @@ enum class PlayerBackgroundStyle {
     BLUR_GRADIENT,
     GLOW,
     GLOW_ANIMATED,
-}
-
-enum class LyricsBackgroundStyle {
-    DEFAULT,
-    FOLLOW_THEME,
-    COLORING,
-    MOVING_BLUR,
-    CUSTOM;
-
-    fun resolveFor(playerBackgroundStyle: PlayerBackgroundStyle): LyricsBackgroundStyle =
-        when {
-            playerBackgroundStyle == PlayerBackgroundStyle.CUSTOM -> CUSTOM
-            this == CUSTOM -> DEFAULT
-            else -> this
-        }
-}
-
-enum class MiniPlayerBackgroundStyle {
-    THEME,
-    GRADIENT,
-    GLOW,
-    FROSTED,
-    LIQUID_GLASS,
 }
 
 val NavigationBarFrostedBlurKey = booleanPreferencesKey("navigationBarFrostedBlur")
@@ -1122,9 +1089,7 @@ val PreloadSongsCountKey = intPreferencesKey("preloadSongsCount")
 
 const val DEFAULT_PRELOAD_SONGS_COUNT = 2
 
-val PlayerButtonsStyleKey = stringPreferencesKey("player_buttons_style")
 val PlayerBackgroundStyleKey = stringPreferencesKey("playerBackgroundStyle")
-val LyricsBackgroundStyleKey = stringPreferencesKey("lyricsBackgroundStyle")
 val ShowLyricsKey = booleanPreferencesKey("showLyrics")
 val LyricsTextPositionKey = stringPreferencesKey("lyricsTextPosition")
 val LyricsClickKey = booleanPreferencesKey("lyricsClick")

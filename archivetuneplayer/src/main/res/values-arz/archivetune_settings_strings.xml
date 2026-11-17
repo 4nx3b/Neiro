@@ -6,7 +6,6 @@
     <string name="lyrics_line_blur">ضبابية أسطر الكلمات</string>
     <string name="manage_playlist_tags">علامات البلاي ليستات</string>
     <string name="manage_playlist_tags_desc">إنشاء وإدارة العلامات لتنظيم البلاي ليستات</string>
-    <string name="hide_player_thumbnail_desc">استبدال غلاف الألبوم بشعار التطبيق في المشغل</string>
     <string name="crop_thumbnail_to_square">قص الصور المصغرة لنسبة 1:1</string>
     <string name="crop_thumbnail_to_square_desc">عرض الصور المصغرة ليوتيوب بتنسيق مربع بدلاً من 16:9</string>
     <string name="show_home_category_chips">إظهار تصنيفات الشاشة الرئيسية</string>
@@ -16,7 +15,6 @@
     <string name="seek_seconds_addup">التقديم التدريجي</string>
     <string name="seek_seconds_addup_description">إذا تم تفعيله، هيضيف 5 ثوانٍ إضافية تدريجياً مع كل تخطي</string>
     <string name="player_background_style">شكل خلفية المشغل</string>
-    <string name="mini_player_background_style">شكل خلفية المشغل المصغر</string>
     <string name="follow_theme">اتباع السمة</string>
     <string name="gradient">تدرج ألوان</string>
     <string name="player_design_style">تصميم المشغل</string>
@@ -25,9 +23,6 @@
     <string name="coloring">تلوين</string>
     <string name="blur_gradient">تدرج ضبابي</string>
     <string name="glow">توهج</string>
-    <string name="player_buttons_style">ألوان أزرار المشغل</string>
-    <string name="default_style">الافتراضي</string>
-    <string name="secondary_color_style">الثانوي</string>
     <string name="enable_swipe_thumbnail">تفعيل السحب لتغيير الأغنية</string>
     <string name="swipe_song_to_add">اسحب الأغنية لليسار لإضافتها للدور أو لليمين لتشغيلها تالياً</string>
     <string name="lyrics_click_change">تغيير الكلمات عند الضغط</string>
@@ -178,9 +173,7 @@
     <string name="dark_theme">السمة الداكنة</string>
     <string name="dark_theme_on">مفعل</string>
     <string name="dark_theme_off">غير مفعل</string>
-    <string name="corner_radius">نصف قطر الزاوية: %1$d</string>
     <string name="adjust_radius">ضبط نصف قطر الزاوية</string>
-    <string name="custom_radius">تخصيص نصف قطر زاوية الصورة المصغرة</string>
     <string name="archivetune_canvas">خلفية متحركة (ArchiveTune Canvas)</string>
     <string name="archivetune_canvas_desc">تحريك غلاف الألبوم أثناء التشغيل (بواسطة BetterLyrics)</string>
     <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
@@ -192,7 +185,6 @@
     <string name="blur_intensity">قوة الضبابية</string>
     <string name="blur_intensity_value">%1$d dp</string>
     <string name="player">المشغل</string>
-    <string name="player_slider_style">شريط تقدم المشغل</string>
     <string name="misc">متنوع</string>
     <string name="default_open_tab">التبويب الافتراضي عند الفتح</string>
     <string name="lyrics_animation_style">حركة الكلمات</string>

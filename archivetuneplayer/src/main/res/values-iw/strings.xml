@@ -44,7 +44,6 @@
   <string name="edit">עריכה</string>
   <string name="lyrics_synced_badge">מסונכרן</string>
   <string name="widget_pause">עצור</string>
-  <string name="slider_style_simple">בסיסי</string>
   <string name="queue_continue_playing">המשך הפעלה</string>
   <string name="codecs">קודקים</string>
   <string name="duplicates_description_multiple">%d שירים כבר נמצאים בפלייליסט שלך</string>
@@ -55,7 +54,6 @@
   <string name="delete">מחיקה</string>
   <string name="eq_bass_boost">הגברת בס</string>
   <string name="mime_type">סוג MIME</string>
-  <string name="slider_style_standard">סטנדרטי</string>
   <string name="copied">הועתק ללוח</string>
   <string name="widget_previous">קודם</string>
   <string name="error_no_stream">אין סטרימינג זמין</string>
@@ -70,7 +68,6 @@
   <string name="add_to_queue">הוסף לתור</string>
   <string name="eq_save_profile">שמירת פרופיל</string>
   <string name="external_downloader_not_configured">אין מוריד חיצוני מוגדר. הגדר אחד בהגדרות נגן.</string>
-  <string name="slider_style_thick">עבה</string>
   <string name="undo">בטל</string>
   <string name="repeat_mode_all">חזרה על התור</string>
   <string name="action_remove_like">מחק לייק</string>
@@ -79,7 +76,6 @@
   <string name="eq_bands">ערוצים</string>
   <string name="external_downloader_not_installed">אפליקציית הורדה חיצונית לא מותקנת</string>
   <string name="sort_by_most_played">הכי מושמע</string>
-  <string name="slider_style_wavy">גלי</string>
   <string name="more">עוד</string>
   <string name="eq_imported_profile">מיובא</string>
   <string name="action_shuffle_off">ערבוב כבוי</string>
@@ -99,7 +95,6 @@
   <string name="start_radio">התחל רדיו</string>
   <string name="eq_custom_profile">פרופיל מותאם אישית</string>
   <string name="search_online">חיפוש באינטרנט</string>
-  <string name="slider_style_circular">מעוגל</string>
   <string name="song_artists">אמני שיר</string>
   <string name="file_size">גודל קובץ</string>
   <string name="pin_to_speed_dial">הצמדה להפעלה מהירה</string>

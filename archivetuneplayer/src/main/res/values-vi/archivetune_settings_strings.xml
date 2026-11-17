@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Thẻ Danh sách phát</string>
     <string name="manage_playlist_tags_desc">Tạo và quản lý thẻ để sắp xếp danh sách phát</string>
-    <string name="hide_player_thumbnail_desc">Thay thế artwork album bằng logo ứng dụng trong trình phát</string>
     <string name="crop_thumbnail_to_square">Cắt hình thu nhỏ thành 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Hiển thị hình thu nhỏ YouTube ở định dạng vuông thay vì 16:9</string>
     <string name="show_tags_in_library">Hiển thị thẻ trong thư viện</string>
@@ -18,9 +17,6 @@
     <string name="coloring">Tô màu</string>
     <string name="blur_gradient">Gradient làm mờ</string>
     <string name="glow">Phát sáng</string>
-    <string name="player_buttons_style">Màu sắc nút trình phát</string>
-    <string name="default_style">Mặc định</string>
-    <string name="secondary_color_style">Phụ</string>
     <string name="enable_swipe_thumbnail">Bật vuốt để thay đổi bài hát</string>
     <string name="swipe_song_to_add">Vuốt sang trái để thêm vào Queue, sang phải để phát tiếp theo</string>
     <string name="lyrics_click_change">Thay đổi lời bài hát khi nhấp</string>
@@ -70,7 +66,6 @@
     <string name="aod_customize_title">Tùy chỉnh AOD</string>
     <string name="aod_customize_entry_desc">Tùy chỉnh màn hình trình phát luôn bật</string>
     <string name="player_design_v9">Material Extended</string>
-    <string name="mini_player_background_style">Kiểu nền trình phát mini</string>
     <string name="settings_lyrics_subtitle">Nhà cung cấp lời bài hát, tải trước và dịch thuật</string>
     <string name="history_duration_desc">Thời gian phát tối thiểu để tính là đã nghe</string>
     <string name="history_duration_seconds">%1$s giây</string>
@@ -153,11 +148,9 @@
     <string name="dark_theme">Giao diện tối</string>
     <string name="dark_theme_on">Bật</string>
     <string name="dark_theme_off">Tắt</string>
-    <string name="corner_radius">Bán kính góc: %1$d</string>
     <string name="adjust_radius">Điều chỉnh bán kính góc</string>
     <string name="cancel_button">Hủy</string>
     <string name="ok_button">OK</string>
-    <string name="custom_radius">Tùy chỉnh bán kính góc ảnh thumbnail</string>
     <string name="custom">Tùy chỉnh</string>
     <string name="customized_background">Nền được tùy chỉnh</string>
     <string name="customize_background_title">Tùy chỉnh nền</string>
@@ -172,7 +165,6 @@
     <string name="disable_blur">Tắt hiệu ứng làm mờ</string>
     <string name="disable_blur_desc">Tắt hiệu ứng làm mờ trong toàn bộ ứng dụng</string>
     <string name="player">Trình phát</string>
-    <string name="player_slider_style">Kiểu thanh trượt trình phát</string>
     <string name="misc">Khác</string>
     <string name="default_open_tab">Tab mặc định mở</string>
     <string name="lyrics_animation_style">Kiểu hoạt hình lời bài hát</string>

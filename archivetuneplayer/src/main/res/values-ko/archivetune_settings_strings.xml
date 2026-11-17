@@ -4,7 +4,6 @@
     <string name="lyrics_line_blur">가사 줄 블러 처리</string>
     <string name="manage_playlist_tags">재생목록 태그</string>
     <string name="manage_playlist_tags_desc">재생목록 정리를 위해 태그를 생성하고 관리합니다.</string>
-    <string name="hide_player_thumbnail_desc">재생 화면에서 앨범 아트 대신 앱 로고를 표시합니다.</string>
     <string name="crop_thumbnail_to_square">썸네일을 1:1로 자르기</string>
     <string name="crop_thumbnail_to_square_desc">YouTube 썸네일을 16:9 대신 정사각형으로 잘라 표시합니다.</string>
     <string name="show_home_category_chips">홈 카테고리 필터 칩 표시</string>
@@ -21,9 +20,6 @@
     <string name="coloring">색상 적용</string>
     <string name="blur_gradient">블러 그라데이션</string>
     <string name="glow">글로우</string>
-    <string name="player_buttons_style">플레이어 버튼 색상</string>
-    <string name="default_style">기본</string>
-    <string name="secondary_color_style">보조</string>
     <string name="enable_swipe_thumbnail">스와이프로 곡 전환 활성화</string>
     <string name="swipe_song_to_add">곡을 왼쪽으로 밀어 대기열에 추가하고, 오른쪽으로 밀어 다음에 재생합니다.</string>
     <string name="lyrics_click_change">탭하여 가사 전환</string>
@@ -71,7 +67,6 @@
     <string name="aod_customize_title">AOD 맞춤 설정</string>
     <string name="player_design_v9">머티리얼 익스텐디드</string>
     <string name="aod_customize_entry_desc">Always On Display 재생 화면을 취향에 맞게 설정합니다.</string>
-    <string name="mini_player_background_style">미니 플레이어 배경 스타일</string>
     <string name="history_duration_desc">기록에 반영할 최소 감상 시간 설정</string>
     <string name="history_duration_seconds">%1$s 초</string>
     <string name="theme_creator_title">테마 제작기</string>
@@ -153,11 +148,9 @@
     <string name="dark_theme">어두운 테마</string>
     <string name="dark_theme_on">켜짐</string>
     <string name="dark_theme_off">꺼짐</string>
-    <string name="corner_radius">모서리 곡률: %1$d</string>
     <string name="adjust_radius">모서리 곡률 조정</string>
     <string name="cancel_button">취소</string>
     <string name="ok_button">확인</string>
-    <string name="custom_radius">썸네일 모서리 곡률 사용자 지정</string>
     <string name="custom">사용자 지정</string>
     <string name="customized_background">사용자 지정 배경</string>
     <string name="customize_background_title">배경 화면 사용자 지정</string>
@@ -176,7 +169,6 @@
     <string name="blur_intensity">블러 강도</string>
     <string name="blur_intensity_value">%1$d dp</string>
     <string name="player">플레이어</string>
-    <string name="player_slider_style">플레이어 재생 바 스타일</string>
     <string name="misc">기타 설정</string>
     <string name="default_open_tab">기본 열릴 탭</string>
     <string name="lyrics_animation_style">가사 애니메이션 스타일</string>

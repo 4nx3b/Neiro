@@ -196,8 +196,6 @@ import moe.rukamori.archivetune.constants.InnerTubeCookieKey
 import moe.rukamori.archivetune.constants.MaxCanvasCacheSizeKey
 import moe.rukamori.archivetune.constants.PlayerBackgroundStyle
 import moe.rukamori.archivetune.constants.PlayerBackgroundStyleKey
-import moe.rukamori.archivetune.constants.PlayerButtonsStyle
-import moe.rukamori.archivetune.constants.PlayerButtonsStyleKey
 import moe.rukamori.archivetune.constants.PlayerCustomBlurKey
 import moe.rukamori.archivetune.constants.PlayerCustomBrightnessKey
 import moe.rukamori.archivetune.constants.PlayerCustomContrastKey
@@ -208,9 +206,6 @@ import moe.rukamori.archivetune.constants.PoTokenGvsKey
 import moe.rukamori.archivetune.constants.PoTokenPlayerKey
 import moe.rukamori.archivetune.constants.QueuePeekHeight
 import moe.rukamori.archivetune.constants.ShowPlayerVolumeBarKey
-import moe.rukamori.archivetune.constants.SliderStyle
-import moe.rukamori.archivetune.constants.SliderStyleKey
-import moe.rukamori.archivetune.constants.ThumbnailCornerRadiusKey
 import moe.rukamori.archivetune.extensions.metadata
 import moe.rukamori.archivetune.extensions.togglePlayPause
 import moe.rukamori.archivetune.innertube.utils.hasYouTubeLoginCookie
@@ -438,11 +433,6 @@ fun BottomSheetPlayer(
     var keyboardSkipMultiplier by remember { mutableStateOf(1) }
     var lastKeyboardTapTime by remember { mutableLongStateOf(0L) }
 
-    val playerButtonsStyle by rememberEnumPreference(
-        key = PlayerButtonsStyleKey,
-        defaultValue = PlayerButtonsStyle.DEFAULT,
-    )
-
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
     val useDarkTheme =
@@ -497,7 +487,6 @@ fun BottomSheetPlayer(
     val canSkipNext by playerConnection.canSkipNext.collectAsStateWithLifecycle()
 
     val aodModeEnabled by playerConnection.aodModeEnabled.collectAsStateWithLifecycle()
-    val (thumbnailCornerRadius) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = 8f)
     val archiveTuneCanvasEnabled by rememberPreference(ArchiveTuneCanvasKey, false)
     val spotifyCanvasEnabled by rememberPreference(SpotifyCanvasKey, false)
     val lowDataModeActive = rememberLowDataModeActive()
@@ -506,8 +495,6 @@ fun BottomSheetPlayer(
             key = MaxCanvasCacheSizeKey,
             defaultValue = 256,
         )
-
-    val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.Standard)
 
     LaunchedEffect(maxCanvasCacheSize) {
         CanvasArtworkPlaybackCache.setMaxSize(maxCanvasCacheSize)
@@ -752,18 +739,7 @@ fun BottomSheetPlayer(
         }
 
     val (textButtonColor, iconButtonColor) =
-        when (playerButtonsStyle) {
-            PlayerButtonsStyle.DEFAULT -> {
-                Pair(TextBackgroundColor, icBackgroundColor)
-            }
-
-            PlayerButtonsStyle.SECONDARY -> {
-                Pair(
-                    MaterialTheme.colorScheme.secondary,
-                    MaterialTheme.colorScheme.onSecondary,
-                )
-            }
-        }.let { (tb, ib) ->
+        Pair(TextBackgroundColor, icBackgroundColor).let { (tb, ib) ->
             if (playerDesignStyle == PlayerDesignStyle.V9) {
                 Pair(dynamicAccentColor, dynamicIconButtonColor)
             } else {
@@ -1850,20 +1826,6 @@ fun BottomSheetPlayer(
             }
         val queueSurfaceColor = if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surface
 
-        val (queueTextButtonColor, queueIconButtonColor) =
-            when (playerButtonsStyle) {
-                PlayerButtonsStyle.DEFAULT -> {
-                    Pair(queueOnBackgroundColor, queueSurfaceColor)
-                }
-
-                PlayerButtonsStyle.SECONDARY -> {
-                    Pair(
-                        MaterialTheme.colorScheme.secondary,
-                        MaterialTheme.colorScheme.onSecondary,
-                    )
-                }
-            }
-
         Box(
             modifier =
                 Modifier
@@ -1937,7 +1899,6 @@ fun BottomSheetPlayer(
                     sliderPosition = sliderPosition,
                     canSkipPrevious = canSkipPrevious,
                     canSkipNext = canSkipNext,
-                    thumbnailCornerRadius = thumbnailCornerRadius,
                     lyricsText = currentLyricsEntity?.lyrics,
                     onPlayPause = { playerConnection.player.togglePlayPause() },
                     onSkipPrevious = playerConnection::seekToPrevious,

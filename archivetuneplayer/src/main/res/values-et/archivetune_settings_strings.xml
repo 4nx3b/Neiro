@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Esitusloendi sildid</string>
     <string name="manage_playlist_tags_desc">Esitusloendite haldamiseks lisa ja halda silte</string>
-    <string name="hide_player_thumbnail_desc">Asenda pleieri albumi kaanepilt rakenduse logoga</string>
     <string name="seek_seconds_addup">Kumulatiivne kerimine</string>
     <string name="seek_seconds_addup_description">Kui see valik on kasutusel, siis iga kerimisega lisandub 5 täiendavat sekundit</string>
     <string name="player_background_style">Pleieri tausta stiil</string>
@@ -19,14 +18,11 @@
     <string name="lyrics_text_size">Laulusõnade teksti suurus</string>
     <string name="player_design_style">Pleieri kujundus</string>
     <string name="player_background_blur">Hägustamine</string>
-    <string name="player_buttons_style">Pleieri nuppude värvid</string>
     <string name="swipe_sensitivity">Pleieri väikese vaate nuppude tundlikkus</string>
     <string name="settings_section_player_content">Pleier ja sisu</string>
     <string name="coloring">Värvid</string>
     <string name="blur_gradient">Hägustatud gradient</string>
     <string name="glow">Kuma</string>
-    <string name="default_style">Vaikimisi</string>
-    <string name="secondary_color_style">Teisene</string>
     <string name="history_duration">Ajaloo kestus</string>
     <plurals name="seconds">
         <item quantity="one">1 sekund</item>
@@ -64,11 +60,9 @@
     <string name="color_palette">Värvipalett</string>
     <string name="customize_theme_colors">Vali sulle sobivad rakenduse kujunduse värvid</string>
     <string name="palette_default">Vaikimisi</string>
-    <string name="corner_radius">Nurga raadius: %1$d</string>
     <string name="adjust_radius">Kohenda nurga raadiust</string>
     <string name="cancel_button">Katkesta</string>
     <string name="ok_button">Sobib</string>
-    <string name="custom_radius">Kohenda pisipiltide nurgaraadiust</string>
     <string name="custom">Kohandatud</string>
     <string name="customized_background">Kohendatud taust</string>
     <string name="customize_background_title">Kohenda tausta</string>
@@ -80,7 +74,6 @@
     <string name="dark_theme_on">Kasutusel</string>
     <string name="dark_theme_off">Pole kasutusel</string>
     <string name="player">Meediaesitaja</string>
-    <string name="player_slider_style">Meediaesitaja liugurnupu stiil</string>
     <string name="misc">Varia</string>
     <string name="default_open_tab">Vaikimisi avatav vahekaart</string>
     <string name="lyrics_animation_style">Laulusõnade animatsiooni stiil</string>

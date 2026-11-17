@@ -669,23 +669,6 @@ object AppSettings {
     /** Hides the player's seek bar, leaving the transport and the times off. */
     val hideSlideBar = MutableStateFlow(false)
 
-    /** Hides the sleeve in the player, leaving the backdrop and the controls. */
-    val hidePlayerThumbnail = MutableStateFlow(false)
-
-    /**
-     * The sleeve's corner radius in dp. 8 is the corner the app has always
-     * drawn, so that is the default — the stock look until it is moved.
-     */
-    val thumbnailCornerRadius = MutableStateFlow(DEFAULT_THUMBNAIL_CORNER_RADIUS)
-
-    val playerButtonsStyle = MutableStateFlow(PlayerButtonsStyle.DEFAULT)
-
-    val playerSliderStyle = MutableStateFlow(PlayerSliderStyle.STANDARD)
-
-    val lyricsBackgroundStyle = MutableStateFlow(LyricsBackgroundStyle.DEFAULT)
-
-    val miniPlayerBackgroundStyle = MutableStateFlow(MiniPlayerBackgroundStyle.FROSTED)
-
     // ---- The Appearance page's home, misc and extras groups ----
 
     /** The home feed keeps only the lead shelf, as a screen saver keeps a clock. */
@@ -1361,13 +1344,6 @@ object AppSettings {
         customFontUri.value = prefs.getString(KEY_CUSTOM_FONT_URI, "").orEmpty()
         movingBlur.value = prefs.getBoolean(KEY_MOVING_BLUR, false)
         hideSlideBar.value = prefs.getBoolean(KEY_HIDE_SLIDE_BAR, false)
-        hidePlayerThumbnail.value = prefs.getBoolean(KEY_HIDE_PLAYER_THUMBNAIL, false)
-        thumbnailCornerRadius.value = prefs.getFloat(KEY_THUMBNAIL_CORNER_RADIUS, DEFAULT_THUMBNAIL_CORNER_RADIUS)
-            .coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
-        playerButtonsStyle.value = readEnum(KEY_PLAYER_BUTTONS_STYLE, PlayerButtonsStyle.DEFAULT)
-        playerSliderStyle.value = readEnum(KEY_PLAYER_SLIDER_STYLE, PlayerSliderStyle.STANDARD)
-        lyricsBackgroundStyle.value = readEnum(KEY_LYRICS_BACKGROUND_STYLE, LyricsBackgroundStyle.DEFAULT)
-        miniPlayerBackgroundStyle.value = readEnum(KEY_MINI_PLAYER_BACKGROUND_STYLE, MiniPlayerBackgroundStyle.FROSTED)
         minimalHomeMode.value = prefs.getBoolean(KEY_MINIMAL_HOME_MODE, false)
         defaultOpenTab.value = readEnum(KEY_DEFAULT_OPEN_TAB, DefaultOpenTab.HOME)
         tabletMode.value = prefs.getBoolean(KEY_TABLET_MODE, false)
@@ -2111,37 +2087,6 @@ object AppSettings {
     fun setHideSlideBar(value: Boolean) {
         hideSlideBar.value = value
         prefs.edit().putBoolean(KEY_HIDE_SLIDE_BAR, value).apply()
-    }
-
-    fun setHidePlayerThumbnail(value: Boolean) {
-        hidePlayerThumbnail.value = value
-        prefs.edit().putBoolean(KEY_HIDE_PLAYER_THUMBNAIL, value).apply()
-    }
-
-    fun setThumbnailCornerRadius(value: Float) {
-        val clamped = value.coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
-        thumbnailCornerRadius.value = clamped
-        prefs.edit().putFloat(KEY_THUMBNAIL_CORNER_RADIUS, clamped).apply()
-    }
-
-    fun setPlayerButtonsStyle(value: PlayerButtonsStyle) {
-        playerButtonsStyle.value = value
-        prefs.edit().putString(KEY_PLAYER_BUTTONS_STYLE, value.name).apply()
-    }
-
-    fun setPlayerSliderStyle(value: PlayerSliderStyle) {
-        playerSliderStyle.value = value
-        prefs.edit().putString(KEY_PLAYER_SLIDER_STYLE, value.name).apply()
-    }
-
-    fun setLyricsBackgroundStyle(value: LyricsBackgroundStyle) {
-        lyricsBackgroundStyle.value = value
-        prefs.edit().putString(KEY_LYRICS_BACKGROUND_STYLE, value.name).apply()
-    }
-
-    fun setMiniPlayerBackgroundStyle(value: MiniPlayerBackgroundStyle) {
-        miniPlayerBackgroundStyle.value = value
-        prefs.edit().putString(KEY_MINI_PLAYER_BACKGROUND_STYLE, value.name).apply()
     }
 
     fun setMinimalHomeMode(value: Boolean) {
@@ -3081,12 +3026,6 @@ object AppSettings {
     private const val KEY_CUSTOM_FONT_URI = "custom_font_uri"
     private const val KEY_MOVING_BLUR = "moving_blur"
     private const val KEY_HIDE_SLIDE_BAR = "hide_slide_bar"
-    private const val KEY_HIDE_PLAYER_THUMBNAIL = "hide_player_thumbnail"
-    private const val KEY_THUMBNAIL_CORNER_RADIUS = "thumbnail_corner_radius"
-    private const val KEY_PLAYER_BUTTONS_STYLE = "player_buttons_style"
-    private const val KEY_PLAYER_SLIDER_STYLE = "player_slider_style"
-    private const val KEY_LYRICS_BACKGROUND_STYLE = "lyrics_background_style"
-    private const val KEY_MINI_PLAYER_BACKGROUND_STYLE = "mini_player_background_style"
     private const val KEY_MINIMAL_HOME_MODE = "minimal_home_mode"
     private const val KEY_DEFAULT_OPEN_TAB = "default_open_tab"
     private const val KEY_TABLET_MODE = "tablet_mode"
@@ -3109,10 +3048,6 @@ object AppSettings {
     private const val KEY_AOD_AUTO_TIMER_SECONDS = "aod_auto_timer_seconds"
     private const val KEY_AOD_TOUCH_LOCK = "aod_touch_lock"
     private const val KEY_AOD_PIXEL_SHIFT = "aod_pixel_shift"
-
-    /** The sleeve's stock corner, which the corner-radius row opens on. */
-    const val DEFAULT_THUMBNAIL_CORNER_RADIUS = 8f
-    const val MAX_THUMBNAIL_CORNER_RADIUS = 28f
 
     /** Reads an enum by name, falling back when the stored name isn't one. */
     private inline fun <reified T : Enum<T>> readEnum(key: String, default: T): T =

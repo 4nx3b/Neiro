@@ -117,11 +117,6 @@
   <string name="remove_from_speed_dial">Eliminar de los contactos de marcación rápida</string>
   <string name="sort_by_most_played">Los más escuchados</string>
   <string name="no_matching_playlists">No hay listas de reproducción que coincidan</string>
-  <string name="slider_style_standard">Estandar</string>
-  <string name="slider_style_wavy">Ondulado</string>
-  <string name="slider_style_thick">Grueso</string>
-  <string name="slider_style_circular">Circular</string>
-  <string name="slider_style_simple">Sencillo</string>
   <string name="playback_confirmation_required">Se requiere confirmación de reproducción</string>
   <string name="playback_requires_youtube_music_confirmation">Confirma la reproducción en YouTube Music y, a continuación, vuelve a ArchiveTune.</string>
   <string name="playback_login_refresh_required">Actualizar el inicio de sesión en YouTube Music</string>

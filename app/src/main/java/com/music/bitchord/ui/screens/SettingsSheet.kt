@@ -2,7 +2,6 @@ package com.music.bitchord.ui.screens
 
 import com.music.bitchord.ui.components.GlassAlertDialog
 import com.music.bitchord.ui.icons.SfIcons
-import com.music.bitchord.ui.player.ThinSlider
 import com.music.bitchord.wear.WatchInstaller
 import android.content.Context
 import androidx.annotation.StringRes
@@ -101,7 +100,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -169,10 +167,7 @@ import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
-import com.music.bitchord.data.settings.LyricsBackgroundStyle
-import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
-import com.music.bitchord.data.settings.PlayerButtonsStyle
-import com.music.bitchord.data.settings.PlayerSliderStyle
+import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.OutputPcmMode
 import com.music.bitchord.data.settings.BitPerfectMode
 import com.music.bitchord.data.settings.LiquidGlassIntensity
@@ -290,12 +285,6 @@ fun SettingsScreen(
     val customFontName by AppSettings.customFontName.collectAsStateWithLifecycle()
     val movingBlur by AppSettings.movingBlur.collectAsStateWithLifecycle()
     val hideSlideBar by AppSettings.hideSlideBar.collectAsStateWithLifecycle()
-    val hidePlayerThumbnail by AppSettings.hidePlayerThumbnail.collectAsStateWithLifecycle()
-    val thumbnailCornerRadius by AppSettings.thumbnailCornerRadius.collectAsStateWithLifecycle()
-    val playerButtonsStyle by AppSettings.playerButtonsStyle.collectAsStateWithLifecycle()
-    val playerSliderStyle by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
-    val lyricsBackgroundStyle by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
-    val miniPlayerBackgroundStyle by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
     val minimalHomeMode by AppSettings.minimalHomeMode.collectAsStateWithLifecycle()
     val defaultOpenTab by AppSettings.defaultOpenTab.collectAsStateWithLifecycle()
     val tabletMode by AppSettings.tabletMode.collectAsStateWithLifecycle()
@@ -1507,89 +1496,6 @@ fun SettingsScreen(
                     onClick = { AppSettings.setHideSlideBar(!hideSlideBar) },
                 )
             }
-            // Ported from ArchiveTune's player buttons style.
-            val buttonsStyleTitle = stringResource(R.string.player_buttons_style)
-            row(buttonsStyleTitle, "buttons", "color", "transport", "player") {
-                SettingsRow(
-                    icon = SfIcons.Tune,
-                    title = buttonsStyleTitle,
-                    enabled = playerDesignStyle.customizesControls(),
-                )
-                SegmentedControl(
-                    options = PlayerButtonsStyle.entries.map { it.localizedLabel() },
-                    selectedIndex = PlayerButtonsStyle.entries.indexOf(playerButtonsStyle),
-                    onSelect = { AppSettings.setPlayerButtonsStyle(PlayerButtonsStyle.entries[it]) },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
-                )
-            }
-            // Ported from ArchiveTune's slider style, as a page: each option
-            // carries a live preview of the bar it picks.
-            val sliderStyleTitle = stringResource(R.string.player_slider_style)
-            row(sliderStyleTitle, "seek", "slider", "wavy", "circular", "thick", "player") {
-                SettingsRow(
-                    icon = SfIcons.GraphicEq,
-                    title = sliderStyleTitle,
-                    value = playerSliderStyle.localizedLabel(),
-                    enabled = playerDesignStyle.customizesControls(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_SLIDER) },
-                )
-            }
-            // Ported from ArchiveTune's lyrics background style.
-            val lyricsBackgroundTitle = stringResource(R.string.lyrics_background_style)
-            row(lyricsBackgroundTitle, "lyrics", "background", "coloring") {
-                SettingsRow(
-                    icon = SfIcons.Notes,
-                    title = lyricsBackgroundTitle,
-                    value = lyricsBackgroundStyle.localizedLabel(),
-                    enabled = playerDesignStyle.customizesLyricsBackground(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.LYRICS_BACKGROUND) },
-                )
-            }
-            // Ported from ArchiveTune's mini player background style.
-            val miniPlayerBackgroundTitle = stringResource(R.string.mini_player_background_style)
-            row(miniPlayerBackgroundTitle, "mini player", "background", "frosted", "gradient", "glow") {
-                SettingsRow(
-                    icon = SfIcons.Gradient,
-                    title = miniPlayerBackgroundTitle,
-                    value = miniPlayerBackgroundStyle.localizedLabel(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.MINI_PLAYER_BACKGROUND) },
-                )
-            }
-            // Ported from ArchiveTune: the sleeve goes, leaving the backdrop
-            // and the controls.
-            val hideThumbnailTitle = stringResource(R.string.hide_player_thumbnail)
-            row(hideThumbnailTitle, "artwork", "sleeve", "cover", "player") {
-                SettingsRow(
-                    icon = SfIcons.VisibilityOff,
-                    title = hideThumbnailTitle,
-                    subtitle = stringResource(R.string.hide_player_thumbnail_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = hidePlayerThumbnail,
-                            onCheckedChange = AppSettings::setHidePlayerThumbnail,
-                        )
-                    },
-                    onClick = { AppSettings.setHidePlayerThumbnail(!hidePlayerThumbnail) },
-                )
-            }
-            // Ported from ArchiveTune's thumbnail corner radius: 8 is the
-            // corner the app has always drawn.
-            val cornerRadiusTitle = stringResource(R.string.thumbnail_corner_radius)
-            row(cornerRadiusTitle, "corner", "radius", "artwork", "sleeve") {
-                SliderRow(
-                    icon = SfIcons.Tune,
-                    title = cornerRadiusTitle,
-                    subtitle = stringResource(R.string.thumbnail_corner_radius_subtitle),
-                    value = stringResource(R.string.thumbnail_corner_radius_value, thumbnailCornerRadius.roundToInt()),
-                    sliderValue = thumbnailCornerRadius,
-                    onSliderValue = { AppSettings.setThumbnailCornerRadius(it.roundToInt().toFloat()) },
-                    valueRange = 0f..AppSettings.MAX_THUMBNAIL_CORNER_RADIUS,
-                    steps = 27,
-                )
-            }
         }
 
         // ---- The ported AOD group ----
@@ -2423,13 +2329,6 @@ private fun PlayerTheme.localizedLabel(): String = stringResource(
 private fun PlayerDesignStyle.customizesBackground(): Boolean =
     this == PlayerDesignStyle.BITCHORD
 
-/** The same styles take the picked buttons and slider, as ArchiveTune gates them. */
-private fun PlayerDesignStyle.customizesControls(): Boolean = customizesBackground()
-
-/** The styles whose lyrics run on the shared background, rather than their own. */
-private fun PlayerDesignStyle.customizesLyricsBackground(): Boolean =
-    !(this == PlayerDesignStyle.APPLE_MUSIC || this == PlayerDesignStyle.TIKTOK)
-
 @Composable
 private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes())
 
@@ -2482,78 +2381,6 @@ private fun AppFont.description(): String = stringResource(
         AppFont.LEGACY -> R.string.font_legacy_subtitle
         AppFont.SYSTEM -> R.string.font_system_subtitle
         AppFont.CUSTOM -> R.string.font_custom_subtitle
-    },
-)
-
-@Composable
-private fun PlayerButtonsStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        PlayerButtonsStyle.DEFAULT -> R.string.player_buttons_style_default
-        PlayerButtonsStyle.SECONDARY -> R.string.player_buttons_style_secondary
-    },
-)
-
-@Composable
-private fun PlayerSliderStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard
-        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy
-        PlayerSliderStyle.THICK -> R.string.slider_style_thick
-        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular
-        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple
-    },
-)
-
-@Composable
-private fun PlayerSliderStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard_detail
-        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy_detail
-        PlayerSliderStyle.THICK -> R.string.slider_style_thick_detail
-        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular_detail
-        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple_detail
-    },
-)
-
-@Composable
-private fun LyricsBackgroundStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default
-        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.follow_theme
-        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring
-        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur
-    },
-)
-
-@Composable
-private fun LyricsBackgroundStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default_detail
-        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.lyrics_background_follow_theme_detail
-        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring_detail
-        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur_detail
-    },
-)
-
-@Composable
-private fun MiniPlayerBackgroundStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted
-        MiniPlayerBackgroundStyle.THEME -> R.string.follow_theme
-        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient
-        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.liquid_glass
-    },
-)
-
-@Composable
-private fun MiniPlayerBackgroundStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted_detail
-        MiniPlayerBackgroundStyle.THEME -> R.string.mini_player_background_theme_detail
-        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient_detail
-        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow_detail
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.mini_player_background_liquid_glass_detail
     },
 )
 
@@ -3349,12 +3176,6 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
     SF_PRO_FONTS(R.string.sf_pro_fonts),
     /** What the player stands on, below the artwork. */
     PLAYER_BACKGROUND(R.string.player_background_style),
-    /** The seek bar's shape, each option with a live preview. */
-    PLAYER_SLIDER(R.string.player_slider_style),
-    /** What stands behind the lyrics. */
-    LYRICS_BACKGROUND(R.string.lyrics_background_style),
-    /** The mini player's surface. */
-    MINI_PLAYER_BACKGROUND(R.string.mini_player_background_style),
     /** The always-on playing screen's own settings. */
     AOD(R.string.aod_customize_title),
     /** The bottom bar's own settings. */
@@ -3513,36 +3334,6 @@ fun SettingsChoicePage(
                     footer = stringResource(R.string.player_background_style_footer),
                 ) { theme ->
                     AppSettings.setPlayerTheme(theme)
-                    onChosen()
-                }
-            }
-
-            SettingsChoiceKind.PLAYER_SLIDER -> PlayerSliderStylePage()
-
-            SettingsChoiceKind.LYRICS_BACKGROUND -> {
-                val selected by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
-                ChoiceGroup(
-                    options = LyricsBackgroundStyle.entries,
-                    selected = selected,
-                    label = { it.localizedLabel() },
-                    detail = { it.localizedDetail() },
-                    footer = stringResource(R.string.lyrics_background_style_footer),
-                ) { style ->
-                    AppSettings.setLyricsBackgroundStyle(style)
-                    onChosen()
-                }
-            }
-
-            SettingsChoiceKind.MINI_PLAYER_BACKGROUND -> {
-                val selected by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
-                ChoiceGroup(
-                    options = MiniPlayerBackgroundStyle.entries,
-                    selected = selected,
-                    label = { it.localizedLabel() },
-                    detail = { it.localizedDetail() },
-                    footer = stringResource(R.string.mini_player_background_style_footer),
-                ) { style ->
-                    AppSettings.setMiniPlayerBackgroundStyle(style)
                     onChosen()
                 }
             }
@@ -4020,61 +3811,6 @@ private fun SfProFontRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
-        }
-    }
-}
-
-/**
- * The player slider style, ported from ArchiveTune: five shapes for the seek
- * bar, each drawn as the live bar it picks rather than described, so the
- * choice is made against the thing itself.
- */
-@Composable
-private fun PlayerSliderStylePage() {
-    val selected by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
-    SettingsGroup(topSpacing = 0.dp) {
-        PlayerSliderStyle.entries.forEachIndexed { index, style ->
-            if (index > 0) RowDivider()
-            var previewValue by remember { mutableFloatStateOf(0.4f) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { AppSettings.setPlayerSliderStyle(style) }
-                    .padding(horizontal = ROW_INSET, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = style.localizedLabel(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = style.localizedDetail(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                    // The bar itself, drawn in the style the row picks. Played
-                    // flat — the wave moves in the player, with the track.
-                    ThinSlider(
-                        value = previewValue,
-                        onValueChange = { previewValue = it },
-                        style = style,
-                        animated = false,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-                if (style == selected) {
-                    Spacer(Modifier.width(12.dp))
-                    Icon(
-                        imageVector = SfIcons.Check,
-                        contentDescription = stringResource(R.string.selected),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
         }
     }
 }

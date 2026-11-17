@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copied from ArchiveTune c0c97f7 for the ported settings pages. -->
 <resources>
-    <string name="hide_player_thumbnail_desc">Remplacer la pochette de l\'album par le logo de l\'application dans le lecteur</string>
     <string name="seek_seconds_addup">Recherche progressive</string>
     <string name="seek_seconds_addup_description">Si cette option est activée, chaque nouvel appui pour avancer ou reculer ajoute 5 secondes de plus que le saut précédent</string>
     <string name="player_background_style">Style de l\'arrière plan du lecteur</string>
@@ -12,9 +11,6 @@
     <string name="coloring">Coloration</string>
     <string name="blur_gradient">Dégradé de flou</string>
     <string name="glow">Brillant</string>
-    <string name="player_buttons_style">Couleurs des boutons du lecteur</string>
-    <string name="default_style">Défaut</string>
-    <string name="secondary_color_style">Secondaire</string>
     <string name="enable_swipe_thumbnail">Activer le glissement pour changer de titre</string>
     <string name="swipe_song_to_add">Faites glisser le titre vers la gauche pour l\'ajouter à la file d\'attente ou vers la droite pour le lire ensuite</string>
     <string name="lyrics_click_change">Changer les paroles avec un clic</string>
@@ -74,7 +70,6 @@
     <string name="aod_customize_title">Personnalisation de l\'AOD</string>
     <string name="player_design_v9">Contenu étendu</string>
     <string name="aod_customize_entry_desc">Personnaliser l\'écran du lecteur toujours actif</string>
-    <string name="mini_player_background_style">Style d\'arrière-plan du mini-lecteur</string>
     <string name="history_duration_desc">Durée minimale d\'écoute pour qu\'un morceau soit considéré comme écouté</string>
     <string name="history_duration_seconds">%1$s s</string>
     <string name="theme_import_failed_title">Impossible d\'importer le thème</string>
@@ -154,11 +149,9 @@
     <string name="dark_theme">Thème sombre</string>
     <string name="dark_theme_on">Activé</string>
     <string name="dark_theme_off">Désactivé</string>
-    <string name="corner_radius">Rayon d\'angle : %1$d</string>
     <string name="adjust_radius">Ajuster le rayon des coins</string>
     <string name="cancel_button">Annuler</string>
     <string name="ok_button">OK</string>
-    <string name="custom_radius">Personnaliser le rayon des coins des vignettes</string>
     <string name="custom">Personnalisation</string>
     <string name="customized_background">Arrière-plan personnalisé</string>
     <string name="customize_background_title">Personnaliser l\'arrière-plan</string>
@@ -171,7 +164,6 @@
     <string name="disable_blur">Désactiver les effets de flou</string>
     <string name="disable_blur_desc">Désactiver les effets de flou dans toute l\'application</string>
     <string name="player">Lecteur</string>
-    <string name="player_slider_style">Style de curseur du lecteur</string>
     <string name="misc">Divers</string>
     <string name="default_open_tab">Onglet ouvert par défaut</string>
     <string name="lyrics_animation_style">Style d\'animation des paroles</string>

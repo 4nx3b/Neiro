@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Etiquetas de lista de reproducción</string>
     <string name="manage_playlist_tags_desc">Crea y administra etiquetas para organizar las listas de reproducción</string>
-    <string name="hide_player_thumbnail_desc">Reemplaza la caratula del álbum con el logo de la app en el reproductor</string>
     <string name="crop_thumbnail_to_square">Cortar miniaturas a 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Mostrar miniaturas de YouTube en formato cuadrado en lugar de 16:9</string>
     <string name="show_tags_in_library">Mostrar etiquetas en la biblioteca</string>
@@ -17,9 +16,6 @@
     <string name="coloring">Colorido</string>
     <string name="blur_gradient">Gradiente desenfocado</string>
     <string name="glow">Brillante</string>
-    <string name="player_buttons_style">Colores de los botones del reproductor</string>
-    <string name="default_style">Por defecto</string>
-    <string name="secondary_color_style">Secundario</string>
     <string name="enable_swipe_thumbnail">Activar deslizar para cambiar de canción</string>
     <string name="swipe_song_to_add">Desliza a la izquierda la canción para añadirla a la cola, o a la derecha para reproducirla a continuación</string>
     <string name="lyrics_click_change">Cambia la letra al presionarla</string>
@@ -73,7 +69,6 @@
     <string name="aod_customize_title">Personalización de la pantalla siempre encendida (Always On Display)</string>
     <string name="aod_customize_entry_desc">Personalizar la pantalla del reproductor que permanece siempre activa</string>
     <string name="settings_lyrics_subtitle">Proveedores de letras, precarga y traducción</string>
-    <string name="mini_player_background_style">Ventana flotante en miniatura</string>
     <string name="player_design_v9">Versión extendida</string>
     <string name="history_duration_desc">Tiempo mínimo de reproducción para que una canción se considere escuchada</string>
     <string name="history_duration_seconds">%1$s s</string>
@@ -82,8 +77,6 @@
     <string name="theme_applied">Tema aplicado</string>
     <string name="theme_export_success">Tema exportado</string>
     <string name="theme_export_failed">La exportación falló</string>
-    <string name="lyrics_background_style">Estilo de fondo de letras</string>
-    <string name="lyrics_background_default">Por defecto</string>
     <string name="appearance">Apariencia</string>
     <string name="theme">Tema</string>
     <string name="random_theme_on_startup">Tema aleatorio al inicio</string>
@@ -158,11 +151,9 @@
     <string name="dark_theme">Tema oscuro</string>
     <string name="dark_theme_on">Encendido</string>
     <string name="dark_theme_off">Apagado</string>
-    <string name="corner_radius">Radio de las esquinas: %1$d</string>
     <string name="adjust_radius">Ajusta el radio de las esquinas</string>
     <string name="cancel_button">Cancelar</string>
     <string name="ok_button">Aceptar</string>
-    <string name="custom_radius">Personaliza el radio de las esquinas de la miniatura</string>
     <string name="custom">Personalizado</string>
     <string name="customized_background">Fondo personalizado</string>
     <string name="customize_background_title">Personalizar fondo</string>
@@ -177,7 +168,6 @@
     <string name="disable_blur">Desactivar efectos de desenfoque</string>
     <string name="disable_blur_desc">Desactivar los efectos de desenfoque en toda la aplicación</string>
     <string name="player">Reproductor</string>
-    <string name="player_slider_style">Estilo de control deslizante del reproductor</string>
     <string name="misc">Varios</string>
     <string name="default_open_tab">Pestaña abierta por defecto</string>
     <string name="lyrics_animation_style">Estilo de animación de las letras</string>

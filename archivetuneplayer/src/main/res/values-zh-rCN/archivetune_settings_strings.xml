@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">播放列表标签</string>
     <string name="manage_playlist_tags_desc">创建并管理标签，整理您的播放列表</string>
-    <string name="hide_player_thumbnail_desc">在播放器中替换专辑封面为应用图标</string>
     <string name="crop_thumbnail_to_square">将缩略图裁剪为1:1</string>
     <string name="crop_thumbnail_to_square_desc">将YouTube缩略图显示为正方形，而不是16:9</string>
     <string name="show_tags_in_library">在库中显示标签</string>
@@ -18,8 +17,6 @@
     <string name="coloring">着色</string>
     <string name="blur_gradient">模糊渐变</string>
     <string name="glow">发光</string>
-    <string name="player_buttons_style">播放器按钮颜色</string>
-    <string name="default_style">默认</string>
     <string name="lyrics_auto_scroll">自动滚动歌词</string>
     <string name="lyrics_text_size">歌词文本大小</string>
     <string name="general">概述</string>
@@ -49,7 +46,6 @@
     <string name="theme_presets_title">预设</string>
     <string name="swipe_song_to_add">向左滑动歌曲加入队列，向右滑动即可播放下一首</string>
     <string name="enable_swipe_thumbnail">启用滑动切换歌曲</string>
-    <string name="secondary_color_style">次要</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <plurals name="seconds">
         <item quantity="other">%d 秒</item>
@@ -141,11 +137,9 @@
     <string name="preview">预览</string>
     <string name="dark_theme">黑暗主题</string>
     <string name="dark_theme_on">开</string>
-    <string name="corner_radius">角半径：%1$d</string>
     <string name="adjust_radius">调整角半径</string>
     <string name="cancel_button">取消</string>
     <string name="ok_button">好的</string>
-    <string name="custom_radius">自定义缩略图角落半径</string>
     <string name="customized_background">定制背景</string>
     <string name="customize_background_title">自定义背景标题</string>
     <string name="add_image">添加图片</string>
@@ -157,7 +151,6 @@
     <string name="dark_theme_follow_system">跟随系统</string>
     <string name="disable_blur">禁用模糊效果</string>
     <string name="disable_blur_desc">在应用中关闭模糊效果</string>
-    <string name="player_slider_style">播放器滑块风格</string>
     <string name="misc">其他</string>
     <string name="default_open_tab">默认打开标签页</string>
     <string name="custom">自定义</string>

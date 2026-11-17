@@ -7,11 +7,7 @@ import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
 import com.music.bitchord.data.settings.LiquidGlassIntensity
-import com.music.bitchord.data.settings.LyricsBackgroundStyle
-import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
-import com.music.bitchord.data.settings.PlayerButtonsStyle
 import com.music.bitchord.data.settings.PlayerDesignStyle
-import com.music.bitchord.data.settings.PlayerSliderStyle
 import com.music.bitchord.data.settings.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -24,7 +20,6 @@ import moe.rukamori.archivetune.constants.DisableBlurKey
 import moe.rukamori.archivetune.constants.FlamingoBackgroundEffectKey
 import moe.rukamori.archivetune.constants.FlamingoHideSlideBarKey
 import moe.rukamori.archivetune.constants.FlamingoShowVolumeBarKey
-import moe.rukamori.archivetune.constants.HidePlayerThumbnailKey
 import moe.rukamori.archivetune.constants.LiquidGlassAdaptiveLuminanceKey
 import moe.rukamori.archivetune.constants.LiquidGlassBackdropVibrancyKey
 import moe.rukamori.archivetune.constants.LiquidGlassBlurRadiusKey
@@ -49,17 +44,12 @@ import moe.rukamori.archivetune.constants.DefaultOpenTabKey
 import moe.rukamori.archivetune.constants.DisableAnimationsKey
 import moe.rukamori.archivetune.constants.FontPreferenceKey
 import moe.rukamori.archivetune.constants.HideStatusBarKey
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyleKey
-import moe.rukamori.archivetune.constants.MiniPlayerBackgroundStyleKey
 import moe.rukamori.archivetune.constants.MinimalHomeModeKey
-import moe.rukamori.archivetune.constants.PlayerButtonsStyleKey
 import moe.rukamori.archivetune.constants.PlayerDesignStyleKey
 import moe.rukamori.archivetune.constants.ShowPlayerVolumeBarKey
 import moe.rukamori.archivetune.constants.SkipSilenceKey
-import moe.rukamori.archivetune.constants.SliderStyleKey
 import moe.rukamori.archivetune.constants.StopMusicOnTaskClearKey
 import moe.rukamori.archivetune.constants.TabletModeEnabledKey
-import moe.rukamori.archivetune.constants.ThumbnailCornerRadiusKey
 import moe.rukamori.archivetune.constants.UiScaleFactorKey
 import moe.rukamori.archivetune.ui.screens.settings.DarkMode
 import moe.rukamori.archivetune.ui.screens.settings.NavigationTab
@@ -69,11 +59,7 @@ import moe.rukamori.archivetune.constants.AppFontPreference as AtFont
 import moe.rukamori.archivetune.constants.AutomixPerformanceMode as AtAutomix
 import moe.rukamori.archivetune.constants.LiquidGlassIntensity as AtGlassIntensity
 import moe.rukamori.archivetune.constants.BackAnimationStyle as AtBackAnimation
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyle as AtLyricsBackground
-import moe.rukamori.archivetune.constants.MiniPlayerBackgroundStyle as AtMiniPlayerBackground
-import moe.rukamori.archivetune.constants.PlayerButtonsStyle as AtButtons
 import moe.rukamori.archivetune.constants.PlayerDesignStyle as AtStyle
-import moe.rukamori.archivetune.constants.SliderStyle as AtSlider
 
 /**
  * One source of truth for every setting Neiro and the ported ArchiveTune
@@ -96,28 +82,14 @@ object ArchiveTunePreferenceBridge {
         installed = true
 
         enumKey<PlayerDesignStyle, AtStyle>(PlayerDesignStyleKey, AppSettings.playerDesignStyle, { toAt(it) }) { AppSettings.setPlayerDesignStyle(fromAt(it)) }
-        enumKey<PlayerSliderStyle, AtSlider>(SliderStyleKey, AppSettings.playerSliderStyle, { toAt(it) }) { AppSettings.setPlayerSliderStyle(fromAt(it)) }
-        enumKey<PlayerButtonsStyle, AtButtons>(PlayerButtonsStyleKey, AppSettings.playerButtonsStyle, { toAt(it) }) { AppSettings.setPlayerButtonsStyle(fromAt(it)) }
         enumKey<ThemeMode, DarkMode>(DarkModeKey, AppSettings.themeMode, { toAt(it) }) { AppSettings.setThemeMode(fromAt(it)) }
         enumKey<AppFont, AtFont>(FontPreferenceKey, AppSettings.appFont, { toAt(it) }) { AppSettings.setAppFont(fromAt(it)) }
         enumKey<BackAnimationStyle, AtBackAnimation>(BackAnimationStyleKey, AppSettings.backAnimationStyle, { toAt(it) }) { AppSettings.setBackAnimationStyle(fromAt(it)) }
-        enumKey<MiniPlayerBackgroundStyle, AtMiniPlayerBackground>(MiniPlayerBackgroundStyleKey, AppSettings.miniPlayerBackgroundStyle, { toAt(it) }) {
-            AppSettings.setMiniPlayerBackgroundStyle(fromAt(it))
-        }
-        enumKey<LyricsBackgroundStyle, AtLyricsBackground>(LyricsBackgroundStyleKey, AppSettings.lyricsBackgroundStyle, { toAt(it) }) {
-            AppSettings.setLyricsBackgroundStyle(fromAt(it))
-        }
         enumKey<AutomixPerformanceMode, AtAutomix>(AutomixPerformanceModeKey, AppSettings.automixPerformanceMode, { toAt(it) }) {
             AppSettings.setAutomixPerformanceMode(fromAt(it))
         }
         enumKey<DefaultOpenTab, NavigationTab>(DefaultOpenTabKey, AppSettings.defaultOpenTab, { toAt(it) }) { AppSettings.setDefaultOpenTab(fromAt(it)) }
 
-        BridgedPreferences.bridge(
-            key = ThumbnailCornerRadiusKey,
-            read = { AppSettings.thumbnailCornerRadius.value },
-            write = AppSettings::setThumbnailCornerRadius,
-            changes = AppSettings.thumbnailCornerRadius.distinct(),
-        )
         BridgedPreferences.bridge(
             key = DisableAnimationsKey,
             read = { AppSettings.reduceAnimation.value },
@@ -209,7 +181,6 @@ object ArchiveTunePreferenceBridge {
         )
 
         // ---- Twins Neiro already has a row for: one setting, Neiro's row. ----
-        boolKey(HidePlayerThumbnailKey, AppSettings.hidePlayerThumbnail, AppSettings::setHidePlayerThumbnail)
         boolKey(TikTokMainLyricsEnabledKey, AppSettings.tikTokMainLyrics, AppSettings::setTikTokMainLyrics)
         boolKey(LyricsLineBlurKey, AppSettings.lyricsBlur, AppSettings::setLyricsBlur)
         // ArchiveTune's own animated canvas ↔ Neiro's "Animated cover art".
@@ -305,40 +276,6 @@ object ArchiveTunePreferenceBridge {
             AtStyle.TIKTOK -> PlayerDesignStyle.TIKTOK
         }
 
-    // ---- Seek bar.
-
-    fun toAt(style: PlayerSliderStyle): AtSlider =
-        when (style) {
-            PlayerSliderStyle.STANDARD -> AtSlider.Standard
-            PlayerSliderStyle.WAVY -> AtSlider.Wavy
-            PlayerSliderStyle.THICK -> AtSlider.Thick
-            PlayerSliderStyle.CIRCULAR -> AtSlider.Circular
-            PlayerSliderStyle.SIMPLE -> AtSlider.Simple
-        }
-
-    fun fromAt(style: AtSlider): PlayerSliderStyle =
-        when (style) {
-            AtSlider.Standard -> PlayerSliderStyle.STANDARD
-            AtSlider.Wavy -> PlayerSliderStyle.WAVY
-            AtSlider.Thick -> PlayerSliderStyle.THICK
-            AtSlider.Circular -> PlayerSliderStyle.CIRCULAR
-            AtSlider.Simple -> PlayerSliderStyle.SIMPLE
-        }
-
-    // ---- Player buttons: same names on both sides.
-
-    fun toAt(style: PlayerButtonsStyle): AtButtons =
-        when (style) {
-            PlayerButtonsStyle.DEFAULT -> AtButtons.DEFAULT
-            PlayerButtonsStyle.SECONDARY -> AtButtons.SECONDARY
-        }
-
-    fun fromAt(style: AtButtons): PlayerButtonsStyle =
-        when (style) {
-            AtButtons.DEFAULT -> PlayerButtonsStyle.DEFAULT
-            AtButtons.SECONDARY -> PlayerButtonsStyle.SECONDARY
-        }
-
     // ---- Dark mode: ArchiveTune ON/OFF/AUTO ↔ Neiro DARK/LIGHT/SYSTEM.
 
     fun toAt(mode: ThemeMode): DarkMode =
@@ -388,45 +325,6 @@ object ArchiveTunePreferenceBridge {
         when (style) {
             AtBackAnimation.DEFAULT -> BackAnimationStyle.DEFAULT
             AtBackAnimation.PREDICTIVE -> BackAnimationStyle.PREDICTIVE
-        }
-
-    // ---- Mini player surface: same names.
-
-    fun toAt(style: MiniPlayerBackgroundStyle): AtMiniPlayerBackground =
-        when (style) {
-            MiniPlayerBackgroundStyle.THEME -> AtMiniPlayerBackground.THEME
-            MiniPlayerBackgroundStyle.GRADIENT -> AtMiniPlayerBackground.GRADIENT
-            MiniPlayerBackgroundStyle.GLOW -> AtMiniPlayerBackground.GLOW
-            MiniPlayerBackgroundStyle.FROSTED -> AtMiniPlayerBackground.FROSTED
-            MiniPlayerBackgroundStyle.LIQUID_GLASS -> AtMiniPlayerBackground.LIQUID_GLASS
-        }
-
-    fun fromAt(style: AtMiniPlayerBackground): MiniPlayerBackgroundStyle =
-        when (style) {
-            AtMiniPlayerBackground.THEME -> MiniPlayerBackgroundStyle.THEME
-            AtMiniPlayerBackground.GRADIENT -> MiniPlayerBackgroundStyle.GRADIENT
-            AtMiniPlayerBackground.GLOW -> MiniPlayerBackgroundStyle.GLOW
-            AtMiniPlayerBackground.FROSTED -> MiniPlayerBackgroundStyle.FROSTED
-            AtMiniPlayerBackground.LIQUID_GLASS -> MiniPlayerBackgroundStyle.LIQUID_GLASS
-        }
-
-    // ---- Lyrics background. ArchiveTune's CUSTOM (a picked image) has no
-    //      Neiro counterpart; it lands on Neiro's DEFAULT.
-
-    fun toAt(style: LyricsBackgroundStyle): AtLyricsBackground =
-        when (style) {
-            LyricsBackgroundStyle.DEFAULT -> AtLyricsBackground.DEFAULT
-            LyricsBackgroundStyle.FOLLOW_THEME -> AtLyricsBackground.FOLLOW_THEME
-            LyricsBackgroundStyle.COLORING -> AtLyricsBackground.COLORING
-            LyricsBackgroundStyle.MOVING_BLUR -> AtLyricsBackground.MOVING_BLUR
-        }
-
-    fun fromAt(style: AtLyricsBackground): LyricsBackgroundStyle =
-        when (style) {
-            AtLyricsBackground.DEFAULT, AtLyricsBackground.CUSTOM -> LyricsBackgroundStyle.DEFAULT
-            AtLyricsBackground.FOLLOW_THEME -> LyricsBackgroundStyle.FOLLOW_THEME
-            AtLyricsBackground.COLORING -> LyricsBackgroundStyle.COLORING
-            AtLyricsBackground.MOVING_BLUR -> LyricsBackgroundStyle.MOVING_BLUR
         }
 
     // ---- AutoMix analysis budget: same names.

@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Теги плейлиста</string>
     <string name="manage_playlist_tags_desc">Создавайте теги и управляйте ими для организации плейлистов</string>
-    <string name="hide_player_thumbnail_desc">Заменить обложку альбома на логотип приложения в плеере</string>
     <string name="seek_seconds_addup">Плавная перемотка</string>
     <string name="seek_seconds_addup_description">Если включено, добавляет 5 секунд при каждом пропуске перемотки</string>
     <string name="player_background_style">Стиль фона плеера</string>
@@ -14,11 +13,8 @@
     <string name="coloring">Раскраска</string>
     <string name="blur_gradient">Размытие градиента</string>
     <string name="glow">Свечение</string>
-    <string name="player_buttons_style">Цвета кнопок плеера</string>
-    <string name="default_style">По умолчанию</string>
     <string name="show_tags_in_library">Показывать теги в библиотеке</string>
     <string name="show_tags_in_library_desc">Показывать теги фильтрации в библиотеке</string>
-    <string name="secondary_color_style">Вторичный</string>
     <string name="enable_swipe_thumbnail">Включить смену песни перелистыванием</string>
     <string name="swipe_song_to_add">Смахните песню влево для добавления в очередь или вправо, чтобы сделать её следующей</string>
     <string name="lyrics_click_change">Изменить текст песни по нажатию</string>
@@ -145,11 +141,9 @@
     <string name="dark_theme">Тёмная тема</string>
     <string name="dark_theme_on">Вкл</string>
     <string name="dark_theme_off">Выкл</string>
-    <string name="corner_radius">Радиус углов: %1$d</string>
     <string name="adjust_radius">Настроить радиус скругления углов</string>
     <string name="cancel_button">Отменить</string>
     <string name="ok_button">Принять</string>
-    <string name="custom_radius">Настроить радиус скругления углов миниатюры</string>
     <string name="custom">Своё</string>
     <string name="customized_background">Пользовательский фон</string>
     <string name="customize_background_title">Настроить фон</string>
@@ -164,7 +158,6 @@
     <string name="disable_blur">Убрать эффекты размытия</string>
     <string name="disable_blur_desc">Убрать эффекты размытия во всем приложении</string>
     <string name="player">Плеер</string>
-    <string name="player_slider_style">Стиль ползунка плеера</string>
     <string name="misc">Разное</string>
     <string name="default_open_tab">Вкладка по умолчанию</string>
     <string name="lyrics_animation_style">Стиль анимации текста песни</string>

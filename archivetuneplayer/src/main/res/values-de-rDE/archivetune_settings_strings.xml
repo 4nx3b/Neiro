@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copied from ArchiveTune c0c97f7 for the ported settings pages. -->
 <resources>
-    <string name="hide_player_thumbnail_desc">Ersetzen Sie das Albumcover durch das App-Logo im Player</string>
     <string name="seek_seconds_addup">Progressive Suche</string>
     <string name="seek_seconds_addup_description">Wenn diese Option aktiviert ist, werden bei jedem Suchsprung schrittweise 5 zusätzliche Sekunden addiert</string>
     <string name="player_background_style">Hintergrundstil des Spielers</string>
@@ -12,9 +11,6 @@
     <string name="blur_gradient">Weichzeichnerverlauf</string>
     <string name="glow">Leuchten</string>
     <string name="player_background_blur">Verwischen</string>
-    <string name="player_buttons_style">Farben der Player-Tasten</string>
-    <string name="default_style">Standard</string>
-    <string name="secondary_color_style">Sekundär</string>
     <string name="enable_swipe_thumbnail">Aktivieren Sie Wischen, um das Lied zu wechseln</string>
     <string name="swipe_song_to_add">Wischen Sie das Lied nach links, um ihn zur Warteschlange hinzuzufügen, oder nach rechts, um ihn als nächstes abzuspielen</string>
     <string name="lyrics_click_change">Liedtext per Klick ändern</string>
@@ -151,11 +147,9 @@
     <string name="dark_theme">Dunkles Thema</string>
     <string name="dark_theme_on">An</string>
     <string name="dark_theme_off">Aus</string>
-    <string name="corner_radius">Eckenradius: %1$d</string>
     <string name="adjust_radius">Eckenradius anpassen</string>
     <string name="cancel_button">Abbrechen</string>
     <string name="ok_button">OK</string>
-    <string name="custom_radius">Passen Sie den Eckenradius der Miniaturansicht an</string>
     <string name="custom">Benutzerdefiniert</string>
     <string name="custom_value">Benutzerdefinierter Wert</string>
     <string name="customized_background">Angepasster Hintergrund</string>
@@ -168,7 +162,6 @@
     <string name="disable_blur">Unschärfeeffekte deaktivieren</string>
     <string name="disable_blur_desc">Deaktivieren Sie Unschärfeeffekte in der gesamten App</string>
     <string name="player">Spieler</string>
-    <string name="player_slider_style">Player-Slider-Stil</string>
     <string name="misc">Sonstiges</string>
     <string name="default_open_tab">Standardmäßig geöffnete Registerkarte</string>
     <string name="lyrics_animation_style">Songtext-Animationsstil</string>

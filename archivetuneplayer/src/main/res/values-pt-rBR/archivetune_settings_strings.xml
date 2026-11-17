@@ -7,7 +7,6 @@
     <string name="show_lyrics_player_controls">Mostrar controles do player</string>
     <string name="manage_playlist_tags">Tags da playlist</string>
     <string name="manage_playlist_tags_desc">Crie e gerencie tags para organizar playlists</string>
-    <string name="hide_player_thumbnail_desc">Substituir a capa do álbum pelo logotipo do app no player</string>
     <string name="crop_thumbnail_to_square">Cortar miniaturas para 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Exibir miniaturas do YouTube em formato quadrado em vez de 16:9</string>
     <string name="show_home_category_chips">Mostrar chips de categoria na tela inicial</string>
@@ -17,7 +16,6 @@
     <string name="seek_seconds_addup">Busca progressiva</string>
     <string name="seek_seconds_addup_description">Se ativado, adiciona 5 segundos extras incrementalmente em cada avanço/retrocesso</string>
     <string name="player_background_style">Estilo de fundo do player</string>
-    <string name="mini_player_background_style">Estilo de fundo do mini player</string>
     <string name="follow_theme">Seguir tema</string>
     <string name="gradient">Gradiente</string>
     <string name="player_design_style">Estilo de design do player</string>
@@ -26,9 +24,6 @@
     <string name="coloring">Coloração</string>
     <string name="blur_gradient">Gradiente desfocado</string>
     <string name="glow">Brilho</string>
-    <string name="player_buttons_style">Cores dos botões do player</string>
-    <string name="default_style">Padrão</string>
-    <string name="secondary_color_style">Secundário</string>
     <string name="enable_swipe_thumbnail">Ativar deslize para trocar música</string>
     <string name="swipe_song_to_add">Deslize a música para a esquerda para adicioná-la à fila ou para a direita para tocá-la a seguir</string>
     <string name="lyrics_click_change">Alterar letras ao tocar</string>
@@ -164,11 +159,9 @@
     <string name="dark_theme">Tema escuro</string>
     <string name="dark_theme_on">Ativado</string>
     <string name="dark_theme_off">Desativado</string>
-    <string name="corner_radius">Raio dos cantos: %1$d</string>
     <string name="adjust_radius">Ajustar raio dos cantos</string>
     <string name="cancel_button">Cancelar</string>
     <string name="ok_button">OK</string>
-    <string name="custom_radius">Personalizar raio dos cantos da miniatura</string>
     <string name="custom">Personalizado</string>
     <string name="customized_background">Fundo personalizado</string>
     <string name="customize_background_title">Personalizar fundo</string>
@@ -192,7 +185,6 @@
     <string name="backdrop_blur_amount">Quantidade de desfoque de fundo</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
     <string name="player">Player</string>
-    <string name="player_slider_style">Estilo do controle deslizante do player</string>
     <string name="misc">Diversos</string>
     <string name="default_open_tab">Aba aberta padrão</string>
     <string name="lyrics_animation_style">Estilo de animação das letras</string>

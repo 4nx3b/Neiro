@@ -100,7 +100,6 @@ import moe.rukamori.archivetune.constants.BackdropEnabledKey
 import moe.rukamori.archivetune.constants.CropThumbnailToSquareKey
 import moe.rukamori.archivetune.constants.DisableBlurKey
 import moe.rukamori.archivetune.constants.EnableHapticFeedbackKey
-import moe.rukamori.archivetune.constants.HidePlayerThumbnailKey
 import moe.rukamori.archivetune.constants.MaxCanvasCacheSizeKey
 import moe.rukamori.archivetune.constants.PlayerBackgroundStyle
 import moe.rukamori.archivetune.constants.PlayerBackgroundStyleKey
@@ -109,7 +108,6 @@ import moe.rukamori.archivetune.constants.PlayerDesignStyleKey
 import moe.rukamori.archivetune.constants.PlayerHorizontalPadding
 import moe.rukamori.archivetune.constants.SeekExtraSeconds
 import moe.rukamori.archivetune.constants.SwipeThumbnailKey
-import moe.rukamori.archivetune.constants.ThumbnailCornerRadiusKey
 import moe.rukamori.archivetune.extensions.metadata
 import moe.rukamori.archivetune.extensions.toMediaItem
 import moe.rukamori.archivetune.ui.utils.highRes
@@ -149,7 +147,6 @@ fun Thumbnail(
     val view = LocalView.current
     val (enableHapticFeedback) = rememberPreference(EnableHapticFeedbackKey, true)
 
-    val hidePlayerThumbnail by rememberPreference(HidePlayerThumbnailKey, false)
     val archiveTuneCanvasEnabled by rememberPreference(ArchiveTuneCanvasKey, false)
     val lowDataModeActive = rememberLowDataModeActive()
     val playerDesignStyle by rememberEnumPreference(
@@ -160,11 +157,6 @@ fun Thumbnail(
         rememberPreference(
             key = MaxCanvasCacheSizeKey,
             defaultValue = 256,
-        )
-    val (thumbnailCornerRadius, _) =
-        rememberPreference(
-            key = ThumbnailCornerRadiusKey,
-            defaultValue = 16f,
         )
     val cropThumbnailToSquare by rememberPreference(CropThumbnailToSquareKey, false)
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
@@ -546,26 +538,10 @@ fun Thumbnail(
                                 modifier =
                                     Modifier
                                         .size(containerMaxWidth - (PlayerHorizontalPadding * 2))
-                                        .driftArtworkSlot(active = item.mediaId == currentMediaItem?.mediaId, cornerDp = thumbnailCornerRadius) // BRIDGE: drift
-                                        .clip(RoundedCornerShape(thumbnailCornerRadius.dp)),
+                                        .driftArtworkSlot(active = item.mediaId == currentMediaItem?.mediaId, cornerDp = 16f) // BRIDGE: drift
+                                        .clip(RoundedCornerShape(16.dp)),
                             ) {
-                                if (hidePlayerThumbnail) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxSize()
-                                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.about_splash),
-                                            contentDescription = stringResource(R.string.hide_player_thumbnail),
-                                            tint = textBackgroundColor.copy(alpha = 0.7f),
-                                            modifier = Modifier.size(120.dp),
-                                        )
-                                    }
-                                } else {
-                                    val primaryCanvasUrl = canvasArtwork?.animated
+                                val primaryCanvasUrl = canvasArtwork?.animated
                                     val fallbackCanvasUrl = canvasArtwork?.videoUrl
 
                                     val shouldCropArtwork = cropThumbnailToSquare
@@ -664,7 +640,6 @@ fun Thumbnail(
                                             modifier = Modifier.fillMaxSize(),
                                         )
                                     }
-                                }
                             }
                         }
                     }

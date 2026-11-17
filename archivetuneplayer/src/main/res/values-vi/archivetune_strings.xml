@@ -22,7 +22,6 @@
   <string name="close">Đóng</string>
   <string name="minimum_volume">Âm lượng tối thiểu</string>
   <string name="maximum_volume">Âm lượng tối đa</string>
-  <string name="hide_player_thumbnail">Ẩn Thumbnail Trình phát</string>
   <plurals name="n_element">
     <item quantity="other">%d phần tử</item>
   </plurals>

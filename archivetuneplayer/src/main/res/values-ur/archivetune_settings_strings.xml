@@ -83,11 +83,9 @@
     <string name="dark_theme">اندھیری بناوٹ</string>
     <string name="dark_theme_on">کھلی ہوئ</string>
     <string name="dark_theme_off">بند</string>
-    <string name="corner_radius">کونے کا نصف قطر: %1$d</string>
     <string name="adjust_radius">کونے کے نصف قطر کو مرتب کریں</string>
     <string name="cancel_button">منسوخ کریں</string>
     <string name="ok_button">ٹھیک ہے</string>
-    <string name="custom_radius">تھنب نیل کے کونے کے نصف قطر کو ترتیب دیں</string>
     <string name="custom">حسب ضرورت</string>
     <string name="customized_background">حسب ضرورت کردہ پس منظر</string>
     <string name="customize_background_title">پس منظر کو حسب ضرورت ترتیب کریں</string>
@@ -111,7 +109,6 @@
     <string name="backdrop_blur_amount">پس منظر کی دھندلاوٹ کی مقدار</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
     <string name="player">پخش کننده</string>
-    <string name="player_slider_style">پخش کننده کے سلاخ کا انداز</string>
     <string name="player_and_audio">پخش کننده اور سمعی</string>
     <string name="misc">متفرق</string>
     <string name="default_open_tab">کھلنے کے بعد کا ڈیفالٹ پنا</string>
