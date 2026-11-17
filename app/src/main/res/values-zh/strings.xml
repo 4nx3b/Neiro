@@ -1666,4 +1666,6 @@
     <string name="permanent_shuffle_subtitle">开始新歌曲时保持随机播放开启</string>
     <string name="auto_skip_on_error">发生错误时自动跳到下一首歌</string>
     <string name="auto_skip_on_error_subtitle">无法播放的曲目在重试耗尽后会被跳过，让播放继续下去</string>
+    <string name="keep_cpu_awake">播放期间保持 CPU 唤醒</string>
+    <string name="keep_cpu_awake_subtitle">播放音乐时持有 CPU 唤醒锁，深度休眠不会切断流</string>
 </resources>

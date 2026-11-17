@@ -1562,4 +1562,6 @@
     <string name="permanent_shuffle_subtitle">Keep shuffle enabled when you start a new song</string>
     <string name="auto_skip_on_error">Auto skip to next song when error occurs</string>
     <string name="auto_skip_on_error_subtitle">A track nobody can play is skipped past once its retries are spent, so playback carries on</string>
+    <string name="keep_cpu_awake">Keep CPU awake during playback</string>
+    <string name="keep_cpu_awake_subtitle">Holds a CPU wake lock while music plays, so deep doze cannot cut the stream</string>
 </resources>

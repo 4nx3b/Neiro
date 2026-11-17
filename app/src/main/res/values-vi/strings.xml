@@ -1606,4 +1606,6 @@
     <string name="permanent_shuffle_subtitle">Giữ phát ngẫu nhiên được bật khi bắt đầu bài hát mới</string>
     <string name="auto_skip_on_error">Tự động chuyển sang bài hát tiếp theo khi có lỗi</string>
     <string name="auto_skip_on_error_subtitle">Bài hát không thể phát sẽ bị bỏ qua sau khi hết số lần thử lại, để việc phát nhạc tiếp tục</string>
+    <string name="keep_cpu_awake">Giữ CPU tỉnh trong khi phát nhạc</string>
+    <string name="keep_cpu_awake_subtitle">Giữ khóa đánh thức CPU khi nhạc đang phát, để chế độ ngủ sâu không cắt luồng</string>
 </resources>

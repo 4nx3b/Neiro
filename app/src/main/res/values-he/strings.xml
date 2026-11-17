@@ -1694,4 +1694,6 @@
     <string name="permanent_shuffle_subtitle">השאר את הערבוב פעיל בהתחלת שיר חדש</string>
     <string name="auto_skip_on_error">דילוג אוטומטי לשיר הבא כשמתרחשת שגיאה</string>
     <string name="auto_skip_on_error_subtitle">רצועה שאי אפשר לנגן תדולג לאחר שניסיונות החזרה מתמו, כדי שההשמעה תימשך</string>
+    <string name="keep_cpu_awake">להחזיק את המעבד ערני בזמן ההשמעה</string>
+    <string name="keep_cpu_awake_subtitle">מחזיק נעילת השכמת מעבד בזמן שמושמע מוזיקה, כדי שמצב שינה עמוק לא יחתוך את ההשמעה</string>
 </resources>

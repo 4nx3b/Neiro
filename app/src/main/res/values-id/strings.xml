@@ -1666,4 +1666,6 @@
     <string name="permanent_shuffle_subtitle">Biarkan pengacakan tetap aktif saat memutar lagu baru</string>
     <string name="auto_skip_on_error">Lompat otomatis ke lagu berikutnya saat terjadi kesalahan</string>
     <string name="auto_skip_on_error_subtitle">Lagu yang tak bisa diputar dilewati setelah percobaannya habis, agar pemutaran tetap berlanjut</string>
+    <string name="keep_cpu_awake">Jaga CPU tetap terjaga selama pemutaran</string>
+    <string name="keep_cpu_awake_subtitle">Menahan wake lock CPU saat musik diputar, agar doze mendalam tidak memutus aliran</string>
 </resources>

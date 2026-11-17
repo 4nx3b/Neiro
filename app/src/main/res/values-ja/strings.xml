@@ -1667,4 +1667,6 @@
     <string name="permanent_shuffle_subtitle">新しい曲を再生し始めてもシャッフルをオンのままにする</string>
     <string name="auto_skip_on_error">エラー発生時に次の曲へ自動的にスキップ</string>
     <string name="auto_skip_on_error_subtitle">再生できない曲は再試行を終えた時点でスキップされ、再生は続行されます</string>
+    <string name="keep_cpu_awake">再生中はCPUをスリープさせない</string>
+    <string name="keep_cpu_awake_subtitle">音楽の再生中はCPUのウェイクロックを保持し、ディープドーズによるストリーム切断を防ぎます</string>
 </resources>

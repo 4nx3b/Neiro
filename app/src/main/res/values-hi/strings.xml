@@ -1689,4 +1689,6 @@
     <string name="permanent_shuffle_subtitle">नया गाना शुरू करते समय शफ़ल चालू रखें</string>
     <string name="auto_skip_on_error">त्रुटि होने पर अगले गाने पर स्वतः छलांग</string>
     <string name="auto_skip_on_error_subtitle">जिस गाने को चलाया न जा सके उसे उसके पुनः प्रयासों के बाद छोड़ दिया जाता है, ताकि चलाना जारी रहे</string>
+    <string name="keep_cpu_awake">प्लेबैक के दौरान CPU जगाए रखें</string>
+    <string name="keep_cpu_awake_subtitle">संगीत बजते समय CPU वेक लॉक थामे रहता है, ताकि गहरी नींद स्ट्रीम काट न सके</string>
 </resources>

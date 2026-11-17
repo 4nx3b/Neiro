@@ -1689,4 +1689,6 @@
     <string name="permanent_shuffle_subtitle">Zufallswiedergabe aktiviert lassen, wenn ein neues Lied beginnt</string>
     <string name="auto_skip_on_error">Bei Fehlern automatisch zum nächsten Lied springen</string>
     <string name="auto_skip_on_error_subtitle">Ein unspielbarer Titel wird übersprungen, sobald seine Versuche aufgebraucht sind, damit die Wiedergabe weiterläuft</string>
+    <string name="keep_cpu_awake">CPU während der Wiedergabe wach halten</string>
+    <string name="keep_cpu_awake_subtitle">Hält während der Wiedergabe ein CPU-Wake-Lock, damit Deep-Doze den Stream nicht unterbricht</string>
 </resources>

@@ -251,6 +251,7 @@ fun SettingsScreen(
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
     val permanentShuffle by AppSettings.permanentShuffle.collectAsStateWithLifecycle()
     val autoSkipOnError by AppSettings.autoSkipOnError.collectAsStateWithLifecycle()
+    val keepCpuAwake by AppSettings.keepCpuAwake.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -893,6 +894,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setAutoSkipOnError(!autoSkipOnError) },
+                )
+            }
+            val keepCpuAwakeTitle = stringResource(R.string.keep_cpu_awake)
+            row(keepCpuAwakeTitle, "cpu", "battery", "doze") {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = keepCpuAwakeTitle,
+                    subtitle = stringResource(R.string.keep_cpu_awake_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = keepCpuAwake,
+                            onCheckedChange = AppSettings::setKeepCpuAwake,
+                        )
+                    },
+                    onClick = { AppSettings.setKeepCpuAwake(!keepCpuAwake) },
                 )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)

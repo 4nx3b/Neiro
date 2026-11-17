@@ -1721,4 +1721,6 @@
     <string name="permanent_shuffle_subtitle">Не выключать перемешивание при запуске новой песни</string>
     <string name="auto_skip_on_error">Автоматически переходить к следующей песне при ошибке</string>
     <string name="auto_skip_on_error_subtitle">Неудобопроигрываемая дорожка пропускается после исчерпания попыток, чтобы воспроизведение продолжалось</string>
+    <string name="keep_cpu_awake">Не давать процессору спать во время воспроизведения</string>
+    <string name="keep_cpu_awake_subtitle">Удерживает блокировку пробуждения CPU, пока играет музыка, чтобы глубокий режим сна не обрывал поток</string>
 </resources>

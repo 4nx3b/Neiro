@@ -1628,4 +1628,6 @@
     <string name="permanent_shuffle_subtitle">Mantieni attiva la riproduzione casuale quando inizi una nuova canzone</string>
     <string name="auto_skip_on_error">Salta automaticamente alla canzone successiva in caso di errore</string>
     <string name="auto_skip_on_error_subtitle">Un brano impossibile da riprodurre viene saltato quando i suoi tentativi sono esauriti, così la riproduzione continua</string>
+    <string name="keep_cpu_awake">Mantieni la CPU attiva durante la riproduzione</string>
+    <string name="keep_cpu_awake_subtitle">Tiene un wake lock della CPU mentre suona la musica, così il doze profondo non interrompe il flusso</string>
 </resources>

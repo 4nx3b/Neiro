@@ -1729,4 +1729,6 @@
     <string name="permanent_shuffle_subtitle">Zachowaj losowe odtwarzanie po rozpoczęciu nowego utworu</string>
     <string name="auto_skip_on_error">Automatycznie przechodź do następnego utworu przy błędzie</string>
     <string name="auto_skip_on_error_subtitle">Utwór, którego nie da się odtworzyć, jest pomijany po wyczerpaniu prób, żeby odtwarzanie szło dalej</string>
+    <string name="keep_cpu_awake">Nie usypiaj procesora podczas odtwarzania</string>
+    <string name="keep_cpu_awake_subtitle">Przytrzymuje blokadę wybudzenia CPU, gdy gra muzyka, żeby głębokie usypianie nie ucięło strumienia</string>
 </resources>

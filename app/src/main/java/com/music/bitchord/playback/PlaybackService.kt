@@ -13,6 +13,7 @@ import android.net.Uri
 import android.widget.Toast
 import android.os.Bundle
 import android.os.Handler
+import android.os.PowerManager
 import android.os.SystemClock
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.TelemetryProvenance
@@ -541,6 +542,26 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private val audioManager by lazy { getSystemService(AudioManager::class.java) }
+
+    /**
+     * The CPU wake lock behind Keep CPU awake during playback. Created once in
+     * [onCreate] and never reference-counted — held while the setting is on and
+     * the session's player is actually playing, released the moment either
+     * stops being true, so a service that is paused or torn down never keeps
+     * the device's CPU standing for it.
+     */
+    private var playbackWakeLock: PowerManager.WakeLock? = null
+
+    private fun updatePlaybackWakeLock() {
+        val lock = playbackWakeLock ?: return
+        val shouldHold = AppSettings.keepCpuAwake.value && player?.isPlaying == true
+        if (shouldHold && !lock.isHeld) {
+            lock.acquire()
+        } else if (!shouldHold && lock.isHeld) {
+            lock.release()
+        }
+    }
+
     private val bluetoothTracker by lazy { BluetoothAudioTracker(this) }
     private var currentAudioInputFormat: Format? = null
     private val outputDeviceCallback = object : AudioDeviceCallback() {
@@ -892,6 +913,9 @@ class PlaybackService : MediaLibraryService() {
                 consecutiveErrorSkips = 0
             }
             if (isPlaying) registerCurrentPlay()
+            // Whether the CPU wake lock is held follows this, and the setting
+            // can change under it — see [updatePlaybackWakeLock].
+            updatePlaybackWakeLock()
             // Nothing to read ahead for while paused, and a pause is often
             // the last thing that happens before the process goes idle.
             if (isPlaying) prefetchAround(exoPlayer) else cancelPrefetch()
@@ -1308,6 +1332,11 @@ class PlaybackService : MediaLibraryService() {
         localBitrateCache.clear()
         measuredBitrateCache.clear()
         QualityUpgrade.forgetLastSession()
+
+        playbackWakeLock =
+            (getSystemService(Context.POWER_SERVICE) as PowerManager)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BitChord:Playback")
+                .also { it.setReferenceCounted(false) }
 
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(this)
@@ -7295,6 +7324,9 @@ class PlaybackService : MediaLibraryService() {
 
     private fun observeSettings() {
         scope.launch {
+            AppSettings.keepCpuAwake.collect { updatePlaybackWakeLock() }
+        }
+        scope.launch {
             AppSettings.skipSilence.collect { on -> eachPlayer { it.skipSilenceEnabled = on } }
         }
         scope.launch {
@@ -7895,6 +7927,7 @@ class PlaybackService : MediaLibraryService() {
 
 
     override fun onDestroy() {
+        if (playbackWakeLock?.isHeld == true) playbackWakeLock?.release()
         WearBridge.attachStreams(null)
         WearBridge.releaseSpeaker()
         // Let go of the receiver's player but leave its session alone: a

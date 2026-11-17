@@ -319,6 +319,15 @@ object AppSettings {
      */
     val autoSkipOnError = MutableStateFlow(true)
 
+    /**
+     * Whether playback holds a partial wake lock. Ported from ArchiveTune's
+     * wake lock setting: the CPU stays awake while the music plays, for
+     * devices whose deep doze cuts the stream mid-track; paused or stopped,
+     * the lock goes with it and the device sleeps exactly as before. Off by
+     * default, as a lock the system cannot take back costs battery.
+     */
+    val keepCpuAwake = MutableStateFlow(false)
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1221,6 +1230,7 @@ object AppSettings {
         skipSilence.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)
         permanentShuffle.value = prefs.getBoolean(KEY_PERMANENT_SHUFFLE, false)
         autoSkipOnError.value = prefs.getBoolean(KEY_AUTO_SKIP_ON_ERROR, true)
+        keepCpuAwake.value = prefs.getBoolean(KEY_KEEP_CPU_AWAKE, false)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1632,6 +1642,11 @@ object AppSettings {
     fun setAutoSkipOnError(value: Boolean) {
         autoSkipOnError.value = value
         prefs.edit().putBoolean(KEY_AUTO_SKIP_ON_ERROR, value).apply()
+    }
+
+    fun setKeepCpuAwake(value: Boolean) {
+        keepCpuAwake.value = value
+        prefs.edit().putBoolean(KEY_KEEP_CPU_AWAKE, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2899,6 +2914,7 @@ object AppSettings {
     private const val KEY_SKIP_SILENCE = "skip_silence"
     private const val KEY_PERMANENT_SHUFFLE = "permanent_shuffle"
     private const val KEY_AUTO_SKIP_ON_ERROR = "auto_skip_on_error"
+    private const val KEY_KEEP_CPU_AWAKE = "keep_cpu_awake"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

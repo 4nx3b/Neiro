@@ -1646,4 +1646,6 @@
     <string name="permanent_shuffle_subtitle">Yeni bir şarkı başlatırken karıştırmayı açık tutun</string>
     <string name="auto_skip_on_error">Hata oluştuğunda otomatik olarak sonraki şarkıya geç</string>
     <string name="auto_skip_on_error_subtitle">Oynatılamayan bir parça, denemeleri tükendiğinde atlanır, böylece oynatma sürer</string>
+    <string name="keep_cpu_awake">Oynatma sırasında CPU\'yu uyanık tut</string>
+    <string name="keep_cpu_awake_subtitle">Müzik çalarken bir CPU uyku kilidi tutar, böylece derin uyku akışı kesemez</string>
 </resources>

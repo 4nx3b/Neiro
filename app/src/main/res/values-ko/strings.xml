@@ -1539,4 +1539,6 @@
     <string name="permanent_shuffle_subtitle">새 곡을 시작할 때도 셔플을 켜 둡니다</string>
     <string name="auto_skip_on_error">오류 발생 시 다음 곡으로 자동 건너뛰기</string>
     <string name="auto_skip_on_error_subtitle">재생할 수 없는 곡은 재시도가 끝나면 건너뛰어 재생이 계속 이어집니다</string>
+    <string name="keep_cpu_awake">재생 중 CPU 절전 방지</string>
+    <string name="keep_cpu_awake_subtitle">음악이 재생되는 동안 CPU 웨이크 락을 유지해 딥두즈가 스트림을 끊지 못하게 합니다</string>
 </resources>
