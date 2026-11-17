@@ -2322,8 +2322,4 @@ private fun SongSourceRow(
 private val OnScreenShareStyles = setOf(PlayerDesignStyle.TIKTOK)
 private val OnScreenAddToPlaylistStyles = setOf(PlayerDesignStyle.TIKTOK)
 private val OnScreenDetailsStyles = setOf(PlayerDesignStyle.APPLE_MUSIC)
-private val OnScreenSleepTimerStyles =
-    setOf(
-        PlayerDesignStyle.V9,
-        PlayerDesignStyle.APPLE_MUSIC,
-    )
+private val OnScreenSleepTimerStyles = setOf(PlayerDesignStyle.APPLE_MUSIC)

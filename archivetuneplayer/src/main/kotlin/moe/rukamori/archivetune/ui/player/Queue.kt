@@ -90,19 +90,14 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.LocalDatabase
 import moe.rukamori.archivetune.LocalPlayerConnection
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.constants.AutoLoadMoreKey
-import moe.rukamori.archivetune.constants.ShowCodecOnPlayerKey
 import moe.rukamori.archivetune.constants.EnableHapticFeedbackKey
 import moe.rukamori.archivetune.constants.ListItemHeight
-import moe.rukamori.archivetune.constants.PlayerDesignStyle
-import moe.rukamori.archivetune.constants.PlayerDesignStyleKey
 import moe.rukamori.archivetune.constants.QueueEditLockKey
 import moe.rukamori.archivetune.db.entities.PlaylistEntity
 import moe.rukamori.archivetune.db.entities.PlaylistSongMap
@@ -121,7 +116,6 @@ import moe.rukamori.archivetune.ui.menu.AddToPlaylistDialog
 import moe.rukamori.archivetune.ui.menu.PlayerMenu
 import moe.rukamori.archivetune.ui.utils.ShowMediaInfo
 import moe.rukamori.archivetune.utils.oem.SystemMediaControlResolver
-import moe.rukamori.archivetune.utils.rememberEnumPreference
 import moe.rukamori.archivetune.utils.rememberPreference
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -161,7 +155,6 @@ fun Queue(
     val currentSong by playerConnection.currentSong.collectAsState(initial = null)
     val currentSongLiked = currentSong?.song?.liked == true
 
-    val currentFormat by playerConnection.currentFormat.collectAsState(initial = null)
     val queueTitle by playerConnection.queueTitle.collectAsState()
 
     val selectedSongs = remember { mutableStateListOf<MediaMetadata>() }
@@ -183,11 +176,6 @@ fun Queue(
     var locked by rememberPreference(QueueEditLockKey, defaultValue = true)
     var infiniteQueueEnabled by rememberPreference(AutoLoadMoreKey, defaultValue = true)
     val infiniteQueueLoading by playerConnection.service.infiniteQueueLoading.collectAsState()
-
-    val playerDesignStyle by rememberEnumPreference(
-        key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.APPLE_MUSIC,
-    )
 
     val snackbarHostState = remember { SnackbarHostState() }
     var dismissJob: Job? by remember { mutableStateOf(null) }
@@ -369,36 +357,6 @@ fun Queue(
         }
     }
 
-    var showSleepTimerDialog by remember { mutableStateOf(false) }
-    var sleepTimerValue by remember { mutableStateOf(30f) }
-    val sleepTimerEnabled =
-        remember(
-            playerConnection.service.sleepTimer.triggerTime,
-            playerConnection.service.sleepTimer.pauseWhenSongEnd,
-        ) {
-            playerConnection.service.sleepTimer.isActive
-        }
-    var sleepTimerTimeLeft by remember { mutableStateOf(0L) }
-
-    val (showCodecOnPlayer) =
-        rememberPreference(
-            key = ShowCodecOnPlayerKey,
-            defaultValue = false,
-        )
-
-    LaunchedEffect(sleepTimerEnabled) {
-        if (sleepTimerEnabled) {
-            while (isActive) {
-                sleepTimerTimeLeft =
-                    if (playerConnection.service.sleepTimer.pauseWhenSongEnd) {
-                        playerConnection.player.duration - playerConnection.player.currentPosition
-                    } else {
-                        playerConnection.service.sleepTimer.triggerTime - System.currentTimeMillis()
-                    }
-                delay(1000L)
-            }
-        }
-    }
     var scrollToCurrentRequested by remember { mutableStateOf(true) }
     val openQueue =
         remember(playerBottomSheetState, state) {
@@ -417,75 +375,9 @@ fun Queue(
         modifier = modifier,
 
         onCollapsedContentClick = {},
-        collapsedContent = {
-            when (playerDesignStyle) {
-                PlayerDesignStyle.V9 -> {
-                    val shuffleModeEnabled by playerConnection.shuffleModeEnabled.collectAsState()
-                    QueueCollapsedContentV9(
-                        showCodecOnPlayer = showCodecOnPlayer,
-                        currentFormat = currentFormat,
-                        textBackgroundColor = TextBackgroundColor,
-                        sleepTimerEnabled = sleepTimerEnabled,
-                        sleepTimerTimeLeft = sleepTimerTimeLeft,
-                        shuffleModeEnabled = shuffleModeEnabled,
-                        repeatMode = repeatMode,
-                        onShuffleClick = {
-                            playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
-                        },
-                        onRepeatModeClick = { playerConnection.player.toggleRepeatMode() },
-                        onMenuClick = {
-                            menuState.showImmersive {
-                                PlayerMenu(
-                                    mediaMetadata = mediaMetadata,
-                                    navController = navController,
-                                    playerBottomSheetState = playerBottomSheetState,
-                                    onShowDetailsDialog = {
-                                        mediaMetadata?.id?.let {
-                                            bottomSheetPageState.show {
-                                                ShowMediaInfo(it)
-                                            }
-                                        }
-                                    },
-                                    onDismiss = menuState::dismiss,
-                                )
-                            }
-                        },
-                        onSleepTimerClick = {
-                            if (sleepTimerEnabled) {
-                                playerConnection.service.sleepTimer.clear()
-                            } else {
-                                showSleepTimerDialog = true
-                            }
-                        },
-                    )
-                }
-
-                PlayerDesignStyle.APPLE_MUSIC -> {
-                }
-
-                PlayerDesignStyle.BITCHORD -> {
-                }
-
-                PlayerDesignStyle.TIKTOK -> {
-                }
-
-            }
-
-            if (showSleepTimerDialog) {
-                SleepTimerDialog(
-                    onDismiss = { showSleepTimerDialog = false },
-                    onConfirm = { minutes ->
-                        showSleepTimerDialog = false
-                        playerConnection.service.sleepTimer.start(minutes)
-                    },
-                    onEndOfSong = {
-                        showSleepTimerDialog = false
-                        playerConnection.service.sleepTimer.start(-1)
-                    },
-                    initialValue = sleepTimerValue,
-                )
-            }
-        },
+        // Only the removed Material Extended style drew a collapsed-content
+        // rail; the remaining styles leave the collapsed sheet blank.
+        collapsedContent = {},
     ) {
         val queueWindows by playerConnection.queueWindows.collectAsState()
         val mutableQueueWindows =

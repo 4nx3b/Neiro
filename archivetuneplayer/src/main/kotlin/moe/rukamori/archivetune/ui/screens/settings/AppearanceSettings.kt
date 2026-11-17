@@ -82,7 +82,6 @@ import moe.rukamori.archivetune.constants.PlayerBackgroundStyleKey
 import moe.rukamori.archivetune.constants.PlayerDesignStyle
 import moe.rukamori.archivetune.constants.PlayerDesignStyleKey
 import moe.rukamori.archivetune.constants.TikTokMainLyricsEnabledKey
-import moe.rukamori.archivetune.constants.RandomThemeOnStartupKey
 import moe.rukamori.archivetune.constants.ShowPlayerVolumeBarKey
 import moe.rukamori.archivetune.constants.UiScaleFactorKey
 import moe.rukamori.archivetune.ui.component.EnumListPreference
@@ -115,11 +114,6 @@ import moe.rukamori.archivetune.ui.component.SettingsPageTopBar
 fun AppearanceSettings(navController: NavController, scrollTo: String? = null) {
     val context = LocalContext.current
     val defaultDisableAnimations = remember(context) { context.isLowRamDevice() }
-    val (randomThemeOnStartup, onRandomThemeOnStartupChange) =
-        rememberPreference(
-            RandomThemeOnStartupKey,
-            defaultValue = false,
-        )
     val (darkMode, onDarkModeChange) =
         rememberEnumPreference(
             DarkModeKey,
@@ -355,29 +349,6 @@ fun AppearanceSettings(navController: NavController, scrollTo: String? = null) {
                 }
 
                 item {
-                    SwitchPreference(
-                        modifier = positions.modifierFor("random_theme_on_startup"),
-                        title = { Text(stringResource(R.string.random_theme_on_startup)) },
-                        description = stringResource(R.string.random_theme_on_startup_desc),
-                        icon = { Icon(painterResource(R.drawable.shuffle), null) },
-                        checked = randomThemeOnStartup,
-                        onCheckedChange = onRandomThemeOnStartupChange,
-                    )
-                }
-
-                item {
-                    Column(modifier = positions.modifierFor("color_palette")) {
-                        PreferenceEntry(
-                            modifier = positions.modifierFor("palette_picker", "theme_creator"),
-                            title = { Text(stringResource(R.string.color_palette)) },
-                            description = stringResource(R.string.customize_theme_colors),
-                            icon = { Icon(painterResource(R.drawable.format_paint), null) },
-                            onClick = { navController.navigate("settings/appearance/palette_picker") },
-                        )
-                    }
-                }
-
-                item {
                     Column(modifier = positions.modifierFor("app_icon")) {
                         PreferenceEntry(
                             title = { Text(stringResource(R.string.app_icon)) },
@@ -588,7 +559,6 @@ fun AppearanceSettings(navController: NavController, scrollTo: String? = null) {
                             },
                             valueText = {
                                 when (it) {
-                                    PlayerDesignStyle.V9 -> stringResource(R.string.player_design_v9)
                                     PlayerDesignStyle.APPLE_MUSIC ->
                                         stringResource(R.string.player_design_apple_music)
                                     PlayerDesignStyle.BITCHORD ->
