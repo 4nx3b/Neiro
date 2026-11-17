@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
 import com.music.bitchord.R
 import com.music.bitchord.data.settings.AppFont
 
@@ -142,14 +143,32 @@ private fun Typography.withFamily(family: FontFamily) = Typography(
 fun BitChordTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     font: AppFont = AppFont.DEFAULT,
+    /**
+     * The loaded custom font, for [AppFont.CUSTOM] — null until it has loaded
+     * (or forever, if it can't be read), in which case the app's own type is
+     * the fallback, exactly as ArchiveTune's CustomFontLoader leaves it.
+     */
+    customFontFamily: FontFamily? = null,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = when (font) {
+    val colorScheme = if (darkTheme) DarkColors else LightColors
+    // Remembered so a custom font that finishes loading mid-composition swaps
+    // the scale once, not one style at a time as each is first read.
+    val typography = remember(font, customFontFamily) {
+        when (font) {
             AppFont.DEFAULT -> BitChordTypography
             AppFont.LEGACY -> LegacyTypography
-        },
+            // The device's own typeface: the system default, whatever the OEM
+            // shipped. Kept on the same type scale as the app's own cut.
+            AppFont.SYSTEM -> BitChordTypography.withFamily(FontFamily.Default)
+            AppFont.CUSTOM -> customFontFamily
+                ?.let(BitChordTypography::withFamily)
+                ?: BitChordTypography
+        }
+    }
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = typography,
         content = content,
     )
 }

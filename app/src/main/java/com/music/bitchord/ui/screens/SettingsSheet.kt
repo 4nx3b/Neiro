@@ -1,6 +1,8 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.components.GlassAlertDialog
 import com.music.bitchord.ui.icons.SfIcons
+import com.music.bitchord.ui.player.ThinSlider
 import com.music.bitchord.wear.WatchInstaller
 import android.content.Context
 import androidx.annotation.StringRes
@@ -16,6 +18,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,6 +61,7 @@ import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Translate
@@ -73,7 +77,6 @@ import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SurroundSound
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.WebAssetOff
@@ -84,7 +87,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import com.music.bitchord.data.lyrics.translationLanguageName
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -98,6 +101,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -119,6 +124,7 @@ import kotlin.math.abs
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -146,6 +152,9 @@ import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.music.bitchord.ui.components.PillSegmentedControl
 import com.music.bitchord.ui.components.isGlassSupported
+import com.music.bitchord.ui.theme.CustomFontLoader
+import com.music.bitchord.ui.theme.SfProFontCatalog
+import com.music.bitchord.ui.theme.SfProFontPreview
 import com.music.bitchord.ui.components.languageDisplayNameRes
 import com.music.bitchord.ui.components.MessageState
 import com.music.bitchord.ui.components.SearchField
@@ -158,8 +167,16 @@ import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.settings.BackAnimationStyle
+import com.music.bitchord.data.settings.DefaultOpenTab
+import com.music.bitchord.data.settings.LyricsBackgroundStyle
+import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
+import com.music.bitchord.data.settings.PlayerButtonsStyle
+import com.music.bitchord.data.settings.PlayerSliderStyle
 import com.music.bitchord.data.settings.OutputPcmMode
 import com.music.bitchord.data.settings.BitPerfectMode
+import com.music.bitchord.data.settings.LiquidGlassIntensity
+import com.music.bitchord.data.settings.MiniPlayerBarBehavior
 import com.music.bitchord.playback.AudioOutputStatus
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
@@ -169,11 +186,14 @@ import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
 import com.music.bitchord.data.settings.AppFont
+import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import java.util.Locale
 
@@ -204,6 +224,8 @@ fun SettingsScreen(
     onSpotifyCanvasAuth: () -> Unit,
     onAppLanguage: () -> Unit,
     onEditSignatureApi: () -> Unit,
+    /** Applies a font file the Custom font row picked — see that row. */
+    onCustomFontPicked: (Uri) -> Unit = {},
     /**
      * Asks before [mode] is turned on: it hands volume to the DAC at full
      * scale. Shown in the app's frosted alert, which needs the app's blur.
@@ -242,13 +264,12 @@ fun SettingsScreen(
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
-    val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
     val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
-    val glassPerformance by AppSettings.glassPerformance.collectAsStateWithLifecycle()
-    val progressiveBlur by AppSettings.progressiveBlur.collectAsStateWithLifecycle()
     val liquidGlassSupported = isGlassSupported()
+    val hideStatusBar by AppSettings.hideStatusBar.collectAsStateWithLifecycle()
+    val uiScale by AppSettings.uiScale.collectAsStateWithLifecycle()
+    val blurIntensity by AppSettings.blurIntensity.collectAsStateWithLifecycle()
     val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
@@ -257,11 +278,28 @@ fun SettingsScreen(
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val fullBleedDetailArtwork by AppSettings.fullBleedDetailArtwork.collectAsStateWithLifecycle()
     val playerTheme by AppSettings.playerTheme.collectAsStateWithLifecycle()
+    val playerDesignStyle by AppSettings.playerDesignStyle.collectAsStateWithLifecycle()
+    val tikTokMainLyrics by AppSettings.tikTokMainLyrics.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
     val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
     val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
+    // The Appearance page's ported rows, collected once here for every section
+    // they appear in below.
+    val customFontName by AppSettings.customFontName.collectAsStateWithLifecycle()
+    val movingBlur by AppSettings.movingBlur.collectAsStateWithLifecycle()
+    val hideSlideBar by AppSettings.hideSlideBar.collectAsStateWithLifecycle()
+    val hidePlayerThumbnail by AppSettings.hidePlayerThumbnail.collectAsStateWithLifecycle()
+    val thumbnailCornerRadius by AppSettings.thumbnailCornerRadius.collectAsStateWithLifecycle()
+    val playerButtonsStyle by AppSettings.playerButtonsStyle.collectAsStateWithLifecycle()
+    val playerSliderStyle by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
+    val lyricsBackgroundStyle by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
+    val miniPlayerBackgroundStyle by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
+    val minimalHomeMode by AppSettings.minimalHomeMode.collectAsStateWithLifecycle()
+    val defaultOpenTab by AppSettings.defaultOpenTab.collectAsStateWithLifecycle()
+    val tabletMode by AppSettings.tabletMode.collectAsStateWithLifecycle()
+    val backAnimationStyle by AppSettings.backAnimationStyle.collectAsStateWithLifecycle()
     val sessionId by AppSettings.audioSessionId.collectAsStateWithLifecycle()
     val outputPcmMode by AppSettings.outputPcmMode.collectAsStateWithLifecycle()
     val preferUsbDac by AppSettings.preferUsbDac.collectAsStateWithLifecycle()
@@ -420,7 +458,11 @@ fun SettingsScreen(
     // A category page shows all of its rows, so it searches for nothing. The
     // main page searches every category at once: typed into, it lays out the
     // rows that answer from all of them, as the single page Settings once was.
-    val search = SettingsSearch(if (section == null) searchQuery else "", inPage = section != null)
+    val search = SettingsSearch(
+        if (section == null) searchQuery else "",
+        inPage = section != null,
+        pageTitle = section?.let { stringResource(it.title) },
+    )
     val searching = section == null && searchQuery.isNotBlank()
     fun shows(category: SettingsCategory) = section == category || searching
     val watchAvailable = remember { WatchInstaller.available(context) }
@@ -673,7 +715,7 @@ fun SettingsScreen(
                     options = OutputPcmMode.entries.map(OutputPcmMode::label),
                     selectedIndex = OutputPcmMode.entries.indexOf(outputPcmMode),
                     onSelect = { AppSettings.setOutputPcmMode(OutputPcmMode.entries[it]) },
-                    modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
+                    modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
                 )
             }
             val preferUsbDacTitle = stringResource(R.string.prefer_usb_dac)
@@ -1006,11 +1048,11 @@ fun SettingsScreen(
                     options = ThemeMode.entries.map { it.localizedLabel() },
                     selectedIndex = ThemeMode.entries.indexOf(theme),
                     onSelect = { AppSettings.setThemeMode(ThemeMode.entries[it]) },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
                 )
             }
             val fontTitle = stringResource(R.string.font)
-            row(fontTitle, "typeface", "sf pro", "legacy") {
+            row(fontTitle, "typeface", "sf pro", "legacy", "system", "custom") {
                 SettingsRow(
                     icon = SfIcons.Font,
                     title = fontTitle,
@@ -1019,53 +1061,55 @@ fun SettingsScreen(
                     onClick = { onOpenChoice(SettingsChoiceKind.FONT) },
                 )
             }
-            val reduceAnimationTitle = stringResource(R.string.reduce_animation)
-            row(reduceAnimationTitle, "motion") {
+            // Ported from ArchiveTune: the file the Custom font choice loads.
+            // Only listed while Custom is the choice — nothing to pick for the
+            // built-in cuts.
+            if (appFont == AppFont.CUSTOM) {
+                val customFontTitle = stringResource(R.string.custom_font)
+                row(customFontTitle, "font", "ttf", "otf", "file", "typeface", divided = false) {
+                    var picking by remember { mutableStateOf(false) }
+                    val pickedFont by rememberUpdatedState(onCustomFontPicked)
+                    val fontPicker = rememberLauncherForActivityResult(
+                        ActivityResultContracts.OpenDocument(),
+                    ) { uri ->
+                        picking = false
+                        if (uri != null) pickedFont(uri)
+                    }
+                    SettingsRow(
+                        icon = SfIcons.FileDownload,
+                        title = customFontTitle,
+                        subtitle = customFontName.ifBlank {
+                            stringResource(R.string.custom_font_none_subtitle)
+                        },
+                        enabled = !picking,
+                        onClick = {
+                            picking = true
+                            fontPicker.launch(arrayOf("*/*"))
+                        },
+                    )
+                }
+            }
+            // Ported from ArchiveTune: the SF Pro browser — sf-pro.kouzu.in's
+            // catalog, previewed in its own type and applied with one tap.
+            val sfProTitle = stringResource(R.string.sf_pro_fonts)
+            row(sfProTitle, "sf pro", "font", "download", "typeface") {
                 SettingsRow(
-                    icon = SfIcons.MotionPhotosOff,
-                    title = reduceAnimationTitle,
-                    subtitle = stringResource(R.string.reduce_animation_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = reduceAnimation,
-                            onCheckedChange = AppSettings::setReduceAnimation,
-                        )
-                    },
-                    onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
+                    icon = SfIcons.Download,
+                    title = sfProTitle,
+                    subtitle = stringResource(R.string.sf_pro_fonts_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.SF_PRO_FONTS) },
                 )
             }
-            val reduceDynamicBlurTitle = stringResource(R.string.reduce_dynamic_blur)
-            row(reduceDynamicBlurTitle, "blur", "performance") {
-                SettingsRow(
-                    icon = SfIcons.BlurOff,
-                    title = reduceDynamicBlurTitle,
-                    subtitle = stringResource(R.string.reduce_dynamic_blur_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = reduceDynamicBlur,
-                            onCheckedChange = AppSettings::setReduceDynamicBlur,
-                        )
-                    },
-                    onClick = { AppSettings.setReduceDynamicBlur(!reduceDynamicBlur) },
-                )
-            }
-            val disableBlendEffectsTitle = stringResource(R.string.disable_blend_effects)
-            row(disableBlendEffectsTitle, "blend", "blending", "colour", "color", "tint", "player", "menu") {
-                SettingsRow(
-                    icon = SfIcons.Gradient,
-                    title = disableBlendEffectsTitle,
-                    subtitle = stringResource(R.string.disable_blend_effects_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = disableBlendEffects,
-                            onCheckedChange = AppSettings::setDisableBlendEffects,
-                        )
-                    },
-                    onClick = { AppSettings.setDisableBlendEffects(!disableBlendEffects) },
-                )
-            }
+            // All of the Liquid Glass options live a page deep now, ported as
+            // the "Liquid Glass" subpage the way ArchiveTune's own settings
+            // page sits beside the switch: the master, the elements each with
+            // a pill of their own, the tuning, and the blur it can draw.
             val liquidGlassTitle = stringResource(R.string.liquid_glass)
-            row(liquidGlassTitle, "glass", "blur") {
+            row(
+                liquidGlassTitle,
+                "glass", "blur", "refraction", "tint", "vibrancy", "lens", "header", "progressive", "elements",
+            ) {
                 SettingsRow(
                     icon = SfIcons.AutoAwesome,
                     title = liquidGlassTitle,
@@ -1076,38 +1120,122 @@ fun SettingsScreen(
                             R.string.liquid_glass_unavailable
                         },
                     ),
-                    enabled = liquidGlassSupported,
-                    trailing = {
-                        IosSwitch(
-                            checked = liquidGlass,
-                            onCheckedChange = AppSettings::setLiquidGlass,
-                            enabled = liquidGlassSupported,
-                        )
-                    },
-                    onClick = { AppSettings.setLiquidGlass(!liquidGlass) },
+                    value = stringResource(
+                        if (liquidGlass) R.string.settings_state_on else R.string.settings_state_off,
+                    ),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.LIQUID_GLASS) },
                 )
             }
-            // One line each, like Direct Source Stream under Sources, and only
-            // while Liquid Glass is on: they qualify the glass rather than standing
-            // on their own. Progressive Blur has its own switch because it costs
-            // frames of its own. Reduce dynamic blur turns it off.
-            if (liquidGlass && liquidGlassSupported) {
-                val glassPerformanceTitle = stringResource(R.string.glass_performance)
-                row(glassPerformanceTitle, "glass", "performance", "refraction", "frosted", "lag", divided = false) {
-                    SettingsSubRow(
-                        title = glassPerformanceTitle,
-                        checked = glassPerformance,
-                        onCheckedChange = AppSettings::setGlassPerformance,
-                    )
+            // The launcher icon belongs with the look of the app rather than
+            // under Miscellaneous — it moved here from that page.
+            val appIconTitle = stringResource(R.string.app_icon)
+            row(appIconTitle, "icon", "launcher", "logo") {
+                var selectedIcon by remember { mutableStateOf(AppIcon.current(context)) }
+                SettingsRow(icon = SfIcons.Apps, title = appIconTitle)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AppIcon.entries.forEach { option ->
+                        val selected = option == selectedIcon
+                        Column(
+                            modifier = Modifier
+                                .width(84.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    selectedIcon = option
+                                    AppIcon.apply(context, option)
+                                }
+                                .padding(vertical = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // A glass foreground holds the finished icon in its own shape on the
+                            // central 72 of 108 dp: scaled 1.5× it fills the tile as designed.
+                            // Only the default goes through an adaptive mask.
+                            val preview = option.previewRes
+                            if (preview == null) {
+                                AndroidView(
+                                    factory = { ctx ->
+                                        android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
+                                    },
+                                    modifier = Modifier
+                                        .size(68.dp)
+                                        .clip(RoundedCornerShape(22.dp)),
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(preview),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .size(68.dp)
+                                        .scale(1.5f),
+                                )
+                            }
+                            Text(
+                                text = stringResource(option.labelRes),
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(top = 6.dp),
+                            )
+                        }
+                    }
                 }
-                val progressiveBlurTitle = stringResource(R.string.progressive_blur)
-                row(progressiveBlurTitle, "blur", "status bar", "top", divided = false) {
-                    SettingsSubRow(
-                        title = progressiveBlurTitle,
-                        checked = progressiveBlur,
-                        onCheckedChange = AppSettings::setProgressiveBlur,
-                    )
-                }
+            }
+            // Ported from ArchiveTune: hides the status bar app-wide — the
+            // player's own hiding composes alongside it (see HideStatusBar's
+            // reference counting), and a swipe from the top edge still reveals it.
+            val hideStatusBarTitle = stringResource(R.string.hide_status_bar)
+            row(hideStatusBarTitle, "status bar", "immersive", "fullscreen", "hide") {
+                SettingsRow(
+                    icon = SfIcons.VisibilityOff,
+                    title = hideStatusBarTitle,
+                    subtitle = stringResource(R.string.hide_status_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = hideStatusBar,
+                            onCheckedChange = AppSettings::setHideStatusBar,
+                        )
+                    },
+                    onClick = { AppSettings.setHideStatusBar(!hideStatusBar) },
+                )
+            }
+            // Ported from ArchiveTune: scales every sp-measured size; the dp
+            // layout — the paddings, the artwork — stays put.
+            val uiScaleTitle = stringResource(R.string.ui_scale)
+            row(uiScaleTitle, "scale", "size", "text", "zoom", "bigger") {
+                SliderRow(
+                    icon = SfIcons.Font,
+                    title = uiScaleTitle,
+                    subtitle = stringResource(R.string.ui_scale_subtitle),
+                    value = stringResource(R.string.ui_scale_value, (uiScale * 100f).roundToInt()),
+                    sliderValue = uiScale,
+                    onSliderValue = { AppSettings.setUiScale((it * 100f).roundToInt() / 100f) },
+                    valueRange = AppSettings.MIN_UI_SCALE..AppSettings.MAX_UI_SCALE,
+                    steps = 44,
+                )
+            }
+            // Ported from ArchiveTune: how soft the full-cover blur behind the
+            // player, lyrics and queue is. 48 dp is what the app has always drawn.
+            val blurIntensityTitle = stringResource(R.string.blur_intensity)
+            row(blurIntensityTitle, "blur", "softness", "backdrop", "intensity") {
+                SliderRow(
+                    icon = SfIcons.BlurOn,
+                    title = blurIntensityTitle,
+                    value = stringResource(R.string.blur_intensity_value, blurIntensity.roundToInt()),
+                    sliderValue = blurIntensity,
+                    onSliderValue = { AppSettings.setBlurIntensity(it.roundToInt().toFloat()) },
+                    valueRange = 0f..AppSettings.MAX_BLUR_INTENSITY,
+                    steps = 63,
+                )
             }
             // Left out where the player won't honour it: a window too wide for
             // the player to fill and too narrow to stand a page beside it keeps
@@ -1148,18 +1276,38 @@ fun SettingsScreen(
                     onClick = { AppSettings.setFullBleedDetailArtwork(!fullBleedDetailArtwork) },
                 )
             }
-            val playerThemeTitle = stringResource(R.string.player_theme)
-            row(playerThemeTitle, "background", "player", "mesh", "gradient", "legacy", "simple", "blur") {
+            // The player's own design, ported from ArchiveTune's PlayerDesignStyle
+            // picker: a whole layout of the now-playing screen, eleven of them,
+            // this app's own the default and first.
+            val playerDesignTitle = stringResource(R.string.player_design_style)
+            row(
+                playerDesignTitle,
+                "player", "design", "style", "layout", "cinematic", "little", "immersive", "editorial",
+                "apple", "tiktok", "simpmusic", "spatialflow", "looper", "material",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Appearance,
+                    title = playerDesignTitle,
+                    subtitle = playerDesignStyle.localizedDetail(),
+                    value = playerDesignStyle.localizedLabel(),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_DESIGN) },
+                )
+            }
+            // Ported from ArchiveTune's player background style, as a page: the
+            // five backgrounds no longer fit the two-or-three-option pill the
+            // segmented control is for. Only the styles that stand on a picked
+            // background answer it, as ArchiveTune gates its own customization.
+            val playerThemeTitle = stringResource(R.string.player_background_style)
+            row(playerThemeTitle, "background", "player", "mesh", "gradient", "legacy", "simple", "flat", "glow") {
                 SettingsRow(
                     icon = SfIcons.Gradient,
                     title = playerThemeTitle,
                     subtitle = playerTheme.description(),
-                )
-                SegmentedControl(
-                    options = PlayerTheme.entries.map { it.localizedLabel() },
-                    selectedIndex = PlayerTheme.entries.indexOf(playerTheme),
-                    onSelect = { AppSettings.setPlayerTheme(PlayerTheme.entries[it]) },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                    value = playerTheme.localizedLabel(),
+                    enabled = playerDesignStyle.customizesBackground(),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_BACKGROUND) },
                 )
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
@@ -1323,6 +1471,251 @@ fun SettingsScreen(
             }
         }
 
+        // ---- The ported Player group, as ArchiveTune's Appearance page has it ----
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.player)) {
+            // Ported from ArchiveTune's moving blur: the blurred cover behind
+            // the player drifts on its own, screen-saver slow.
+            val movingBlurTitle = stringResource(R.string.moving_blur)
+            row(movingBlurTitle, "blur", "drift", "backdrop", "player") {
+                SettingsRow(
+                    icon = SfIcons.Waves,
+                    title = movingBlurTitle,
+                    subtitle = stringResource(R.string.moving_blur_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = movingBlur,
+                            onCheckedChange = AppSettings::setMovingBlur,
+                            enabled = !reduceDynamicBlur,
+                        )
+                    },
+                    enabled = !reduceDynamicBlur,
+                    onClick = { AppSettings.setMovingBlur(!movingBlur) },
+                )
+            }
+            // Ported from ArchiveTune: the seek bar goes, leaving the transport.
+            val hideSlideBarTitle = stringResource(R.string.hide_slide_bar)
+            row(hideSlideBarTitle, "seek", "slider", "progress", "player") {
+                SettingsRow(
+                    icon = SfIcons.Tune,
+                    title = hideSlideBarTitle,
+                    subtitle = stringResource(R.string.hide_slide_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = hideSlideBar,
+                            onCheckedChange = AppSettings::setHideSlideBar,
+                        )
+                    },
+                    onClick = { AppSettings.setHideSlideBar(!hideSlideBar) },
+                )
+            }
+            // Ported from ArchiveTune's player buttons style.
+            val buttonsStyleTitle = stringResource(R.string.player_buttons_style)
+            row(buttonsStyleTitle, "buttons", "color", "transport", "player") {
+                SettingsRow(
+                    icon = SfIcons.Tune,
+                    title = buttonsStyleTitle,
+                    enabled = playerDesignStyle.customizesControls(),
+                )
+                SegmentedControl(
+                    options = PlayerButtonsStyle.entries.map { it.localizedLabel() },
+                    selectedIndex = PlayerButtonsStyle.entries.indexOf(playerButtonsStyle),
+                    onSelect = { AppSettings.setPlayerButtonsStyle(PlayerButtonsStyle.entries[it]) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
+                )
+            }
+            // Ported from ArchiveTune's slider style, as a page: each option
+            // carries a live preview of the bar it picks.
+            val sliderStyleTitle = stringResource(R.string.player_slider_style)
+            row(sliderStyleTitle, "seek", "slider", "wavy", "circular", "thick", "player") {
+                SettingsRow(
+                    icon = SfIcons.GraphicEq,
+                    title = sliderStyleTitle,
+                    value = playerSliderStyle.localizedLabel(),
+                    enabled = playerDesignStyle.customizesControls(),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_SLIDER) },
+                )
+            }
+            // Ported from ArchiveTune's lyrics background style.
+            val lyricsBackgroundTitle = stringResource(R.string.lyrics_background_style)
+            row(lyricsBackgroundTitle, "lyrics", "background", "coloring") {
+                SettingsRow(
+                    icon = SfIcons.Notes,
+                    title = lyricsBackgroundTitle,
+                    value = lyricsBackgroundStyle.localizedLabel(),
+                    enabled = playerDesignStyle.customizesLyricsBackground(),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.LYRICS_BACKGROUND) },
+                )
+            }
+            // Ported from ArchiveTune's mini player background style.
+            val miniPlayerBackgroundTitle = stringResource(R.string.mini_player_background_style)
+            row(miniPlayerBackgroundTitle, "mini player", "background", "frosted", "gradient", "glow") {
+                SettingsRow(
+                    icon = SfIcons.Gradient,
+                    title = miniPlayerBackgroundTitle,
+                    value = miniPlayerBackgroundStyle.localizedLabel(),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.MINI_PLAYER_BACKGROUND) },
+                )
+            }
+            // Ported from ArchiveTune: the sleeve goes, leaving the backdrop
+            // and the controls.
+            val hideThumbnailTitle = stringResource(R.string.hide_player_thumbnail)
+            row(hideThumbnailTitle, "artwork", "sleeve", "cover", "player") {
+                SettingsRow(
+                    icon = SfIcons.VisibilityOff,
+                    title = hideThumbnailTitle,
+                    subtitle = stringResource(R.string.hide_player_thumbnail_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = hidePlayerThumbnail,
+                            onCheckedChange = AppSettings::setHidePlayerThumbnail,
+                        )
+                    },
+                    onClick = { AppSettings.setHidePlayerThumbnail(!hidePlayerThumbnail) },
+                )
+            }
+            // Ported from ArchiveTune's thumbnail corner radius: 8 is the
+            // corner the app has always drawn.
+            val cornerRadiusTitle = stringResource(R.string.thumbnail_corner_radius)
+            row(cornerRadiusTitle, "corner", "radius", "artwork", "sleeve") {
+                SliderRow(
+                    icon = SfIcons.Tune,
+                    title = cornerRadiusTitle,
+                    subtitle = stringResource(R.string.thumbnail_corner_radius_subtitle),
+                    value = stringResource(R.string.thumbnail_corner_radius_value, thumbnailCornerRadius.roundToInt()),
+                    sliderValue = thumbnailCornerRadius,
+                    onSliderValue = { AppSettings.setThumbnailCornerRadius(it.roundToInt().toFloat()) },
+                    valueRange = 0f..AppSettings.MAX_THUMBNAIL_CORNER_RADIUS,
+                    steps = 27,
+                )
+            }
+        }
+
+        // ---- The ported AOD group ----
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.aod_group_title)) {
+            val aodTitle = stringResource(R.string.aod_customize_title)
+            row(aodTitle, "aod", "always on", "screen saver", "dream", "clock") {
+                SettingsRow(
+                    icon = SfIcons.Clock,
+                    title = aodTitle,
+                    subtitle = stringResource(R.string.aod_customize_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.AOD) },
+                )
+            }
+        }
+
+        // ---- The ported Home group ----
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.home)) {
+            // Ported from ArchiveTune's minimal home mode: the feed keeps only
+            // its lead shelf.
+            val minimalModeTitle = stringResource(R.string.minimal_home_mode)
+            row(minimalModeTitle, "minimal", "home", "feed", "recents") {
+                SettingsRow(
+                    icon = Icons.Rounded.Home,
+                    title = minimalModeTitle,
+                    subtitle = stringResource(R.string.minimal_home_mode_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = minimalHomeMode,
+                            onCheckedChange = AppSettings::setMinimalHomeMode,
+                        )
+                    },
+                    onClick = { AppSettings.setMinimalHomeMode(!minimalHomeMode) },
+                )
+            }
+            // Ported from ArchiveTune's default open tab.
+            val defaultTabTitle = stringResource(R.string.default_open_tab)
+            row(defaultTabTitle, "open", "tab", "startup", "launch") {
+                SettingsRow(icon = SfIcons.Apps, title = defaultTabTitle)
+                SegmentedControl(
+                    options = DefaultOpenTab.entries.map { it.localizedLabel() },
+                    selectedIndex = DefaultOpenTab.entries.indexOf(defaultOpenTab),
+                    onSelect = { AppSettings.setDefaultOpenTab(DefaultOpenTab.entries[it]) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
+                )
+            }
+        }
+
+        // ---- The ported Misc group ----
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.misc)) {
+            // Ported from ArchiveTune's tablet mode: the player drawn as a
+            // tablet-sized window gets it, whatever this window is.
+            val tabletModeTitle = stringResource(R.string.tablet_mode)
+            row(tabletModeTitle, "tablet", "dual", "layout", "player") {
+                SettingsRow(
+                    icon = SfIcons.Fullscreen,
+                    title = tabletModeTitle,
+                    subtitle = stringResource(R.string.tablet_mode_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = tabletMode,
+                            onCheckedChange = AppSettings::setTabletMode,
+                        )
+                    },
+                    onClick = { AppSettings.setTabletMode(!tabletMode) },
+                )
+            }
+            // Ported from ArchiveTune's navigation bar settings.
+            val navBarTitle = stringResource(R.string.navigation_bar_settings_title)
+            row(navBarTitle, "navigation", "bar", "labels", "tabs") {
+                SettingsRow(
+                    icon = SfIcons.Apps,
+                    title = navBarTitle,
+                    subtitle = stringResource(R.string.navigation_bar_settings_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.NAVIGATION_BAR) },
+                )
+            }
+            // Ported from ArchiveTune's back animation style.
+            val backAnimationTitle = stringResource(R.string.back_animation_style)
+            row(backAnimationTitle, "back", "gesture", "animation", "predictive") {
+                SettingsRow(icon = SfIcons.ArrowBack, title = backAnimationTitle)
+                SegmentedControl(
+                    options = BackAnimationStyle.entries.map { it.localizedLabel() },
+                    selectedIndex = BackAnimationStyle.entries.indexOf(backAnimationStyle),
+                    onSelect = { AppSettings.setBackAnimationStyle(BackAnimationStyle.entries[it]) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
+                )
+            }
+        }
+
+        // ---- The ported Extras group ----
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.extras)) {
+            val extrasTitle = stringResource(R.string.extras)
+            row(extrasTitle, "extras", "home tab", "library tab") {
+                SettingsRow(
+                    icon = SfIcons.Miscellaneous,
+                    title = extrasTitle,
+                    subtitle = stringResource(R.string.extras_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.APPEARANCE_EXTRAS) },
+                )
+            }
+        }
+
+        // ---- Behavior: how the app moves and responds, rather than how it looks ----
+        if (shows(SettingsCategory.BEHAVIOR)) SearchableSettingsGroup(search, header = stringResource(R.string.behavior)) {
+            // The three reduce switches live a page deep, as one Performance
+            // group: they are the app's concessions to a slow device, read
+            // together rather than beside a theme or a font.
+            val performanceTitle = stringResource(R.string.performance)
+            row(
+                performanceTitle,
+                "performance", "reduce", "animation", "blur", "blend", "effects", "motion", "lag",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = performanceTitle,
+                    subtitle = stringResource(R.string.behavior_performance_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.BEHAVIOR_PERFORMANCE) },
+                )
+            }
+        }
+
         if (shows(SettingsCategory.PERFORMANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
             val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
             row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
@@ -1371,6 +1764,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(
                             start = TEXT_INSET,
                             end = ROW_INSET,
+                            top = 10.dp,
                             bottom = 14.dp,
                         ),
                     )
@@ -1702,67 +2096,8 @@ fun SettingsScreen(
                     onClick = { AppSettings.setShowNerdStats(!nerdStats) },
                 )
             }
-            val appIconTitle = stringResource(R.string.app_icon)
-            row(appIconTitle, "icon", "launcher", "logo") {
-                var selectedIcon by remember { mutableStateOf(AppIcon.current(context)) }
-                SettingsRow(icon = SfIcons.Apps, title = appIconTitle)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    AppIcon.entries.forEach { option ->
-                        val selected = option == selectedIcon
-                        Column(
-                            modifier = Modifier
-                                .width(84.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable {
-                                    selectedIcon = option
-                                    AppIcon.apply(context, option)
-                                }
-                                .padding(vertical = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            // A glass foreground holds the finished icon in its own shape on the
-                            // central 72 of 108 dp: scaled 1.5× it fills the tile as designed.
-                            // Only the default goes through an adaptive mask.
-                            val preview = option.previewRes
-                            if (preview == null) {
-                                AndroidView(
-                                    factory = { ctx ->
-                                        android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
-                                    },
-                                    modifier = Modifier
-                                        .size(68.dp)
-                                        .clip(RoundedCornerShape(22.dp)),
-                                )
-                            } else {
-                                Image(
-                                    painter = painterResource(preview),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier
-                                        .size(68.dp)
-                                        .scale(1.5f),
-                                )
-                            }
-                            Text(
-                                text = stringResource(option.labelRes),
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
-                        }
-                    }
-                }
-            }
+            // The App icon row lives under Appearance now, beside the theme it
+            // belongs to — it moved there with the rest of the look settings.
         }
 
         if (shows(SettingsCategory.LANGUAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
@@ -1826,7 +2161,7 @@ fun SettingsScreen(
 
     // Everything in the Cached songs folder goes with it, so say so first.
     if (confirmClearSongCache) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { confirmClearSongCache = false },
             title = { Text(stringResource(R.string.clear_song_cache_title)) },
             text = { Text(stringResource(R.string.clear_song_cache_warning)) },
@@ -1852,7 +2187,7 @@ fun SettingsScreen(
     // thing being confirmed is that this device's own history is about to be
     // thrown away, and that is true whichever file gets picked.
     if (confirmImport) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { confirmImport = false },
             title = { Text(stringResource(R.string.import_backup_title)) },
             text = {
@@ -1875,7 +2210,7 @@ fun SettingsScreen(
     }
 
     if (showPerformanceWarning) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showPerformanceWarning = false },
             title = { Text(stringResource(R.string.high_performance_before_enabling)) },
             text = { Text(stringResource(R.string.high_performance_battery_warning)) },
@@ -1904,7 +2239,7 @@ fun SettingsScreen(
     }
 
     if (showPerformanceConfirmation) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showPerformanceConfirmation = false },
             title = { Text(stringResource(R.string.enable_high_performance_title)) },
             text = { Text(stringResource(R.string.enable_high_performance_confirmation)) },
@@ -1928,7 +2263,7 @@ fun SettingsScreen(
 
     if (showListenBrainzTokenDialog) {
         var tokenInput by remember { mutableStateOf(listenBrainzToken) }
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showListenBrainzTokenDialog = false },
             title = { Text(stringResource(R.string.listenbrainz_token)) },
             text = {
@@ -1961,7 +2296,7 @@ fun SettingsScreen(
         var passwordInput by remember { mutableStateOf("") }
         var lastfmError by remember { mutableStateOf<String?>(null) }
         var lastfmLoading by remember { mutableStateOf(false) }
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { if (!lastfmLoading) showLastfmLoginDialog = false },
             title = { Text(stringResource(R.string.lastfm_login)) },
             text = {
@@ -2076,6 +2411,63 @@ private fun PlayerTheme.localizedLabel(): String = stringResource(
         PlayerTheme.DEFAULT -> R.string.player_theme_default
         PlayerTheme.LEGACY -> R.string.player_theme_legacy
         PlayerTheme.SIMPLE -> R.string.player_theme_simple
+        PlayerTheme.FLAT -> R.string.player_theme_flat
+        PlayerTheme.GLOW -> R.string.player_theme_glow
+    },
+)
+
+/**
+ * The design styles that stand on a picked background, ported from
+ * ArchiveTune's isPlayerStyleCustomizationEnabled: V4 and V5 there, which here
+ * are the app's own player, Cinematic and Little.
+ */
+private fun PlayerDesignStyle.customizesBackground(): Boolean =
+    this == PlayerDesignStyle.BITCHORD ||
+        this == PlayerDesignStyle.CINEMATIC ||
+        this == PlayerDesignStyle.LITTLE
+
+/** The same styles take the picked buttons and slider, as ArchiveTune gates them. */
+private fun PlayerDesignStyle.customizesControls(): Boolean = customizesBackground()
+
+/** The styles whose lyrics run on the shared background, rather than their own. */
+private fun PlayerDesignStyle.customizesLyricsBackground(): Boolean =
+    !(this == PlayerDesignStyle.APPLE_MUSIC || this == PlayerDesignStyle.TIKTOK ||
+        this == PlayerDesignStyle.SPATIALFLOW || this == PlayerDesignStyle.SIMPMUSIC)
+
+@Composable
+private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes())
+
+/** The style's name string, for places outside composition (a toast). */
+@StringRes
+internal fun PlayerDesignStyle.labelRes(): Int =
+    when (this) {
+        PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord
+        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic
+        PlayerDesignStyle.LITTLE -> R.string.player_design_little
+        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive
+        PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended
+        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial
+        PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music
+        PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok
+        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic
+        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow
+        PlayerDesignStyle.LOOPER -> R.string.player_design_looper
+    }
+
+@Composable
+private fun PlayerDesignStyle.localizedDetail(): String = stringResource(
+    when (this) {
+        PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord_detail
+        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic_detail
+        PlayerDesignStyle.LITTLE -> R.string.player_design_little_detail
+        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive_detail
+        PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended_detail
+        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial_detail
+        PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music_detail
+        PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok_detail
+        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic_detail
+        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow_detail
+        PlayerDesignStyle.LOOPER -> R.string.player_design_looper_detail
     },
 )
 
@@ -2085,6 +2477,8 @@ private fun PlayerTheme.description(): String = stringResource(
         PlayerTheme.DEFAULT -> R.string.player_theme_default_subtitle
         PlayerTheme.LEGACY -> R.string.player_theme_legacy_subtitle
         PlayerTheme.SIMPLE -> R.string.player_theme_simple_subtitle
+        PlayerTheme.FLAT -> R.string.player_theme_flat_subtitle
+        PlayerTheme.GLOW -> R.string.player_theme_glow_subtitle
     },
 )
 
@@ -2093,6 +2487,8 @@ private fun AppFont.localizedLabel(): String = stringResource(
     when (this) {
         AppFont.DEFAULT -> R.string.font_default
         AppFont.LEGACY -> R.string.font_legacy
+        AppFont.SYSTEM -> R.string.font_system
+        AppFont.CUSTOM -> R.string.font_custom
     },
 )
 
@@ -2102,6 +2498,97 @@ private fun AppFont.description(): String = stringResource(
     when (this) {
         AppFont.DEFAULT -> R.string.font_default_subtitle
         AppFont.LEGACY -> R.string.font_legacy_subtitle
+        AppFont.SYSTEM -> R.string.font_system_subtitle
+        AppFont.CUSTOM -> R.string.font_custom_subtitle
+    },
+)
+
+@Composable
+private fun PlayerButtonsStyle.localizedLabel(): String = stringResource(
+    when (this) {
+        PlayerButtonsStyle.DEFAULT -> R.string.player_buttons_style_default
+        PlayerButtonsStyle.SECONDARY -> R.string.player_buttons_style_secondary
+    },
+)
+
+@Composable
+private fun PlayerSliderStyle.localizedLabel(): String = stringResource(
+    when (this) {
+        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard
+        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy
+        PlayerSliderStyle.THICK -> R.string.slider_style_thick
+        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular
+        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple
+    },
+)
+
+@Composable
+private fun PlayerSliderStyle.localizedDetail(): String = stringResource(
+    when (this) {
+        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard_detail
+        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy_detail
+        PlayerSliderStyle.THICK -> R.string.slider_style_thick_detail
+        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular_detail
+        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple_detail
+    },
+)
+
+@Composable
+private fun LyricsBackgroundStyle.localizedLabel(): String = stringResource(
+    when (this) {
+        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default
+        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.follow_theme
+        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring
+        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur
+    },
+)
+
+@Composable
+private fun LyricsBackgroundStyle.localizedDetail(): String = stringResource(
+    when (this) {
+        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default_detail
+        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.lyrics_background_follow_theme_detail
+        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring_detail
+        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur_detail
+    },
+)
+
+@Composable
+private fun MiniPlayerBackgroundStyle.localizedLabel(): String = stringResource(
+    when (this) {
+        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted
+        MiniPlayerBackgroundStyle.THEME -> R.string.follow_theme
+        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient
+        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow
+        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.liquid_glass
+    },
+)
+
+@Composable
+private fun MiniPlayerBackgroundStyle.localizedDetail(): String = stringResource(
+    when (this) {
+        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted_detail
+        MiniPlayerBackgroundStyle.THEME -> R.string.mini_player_background_theme_detail
+        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient_detail
+        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow_detail
+        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.mini_player_background_liquid_glass_detail
+    },
+)
+
+@Composable
+private fun DefaultOpenTab.localizedLabel(): String = stringResource(
+    when (this) {
+        DefaultOpenTab.HOME -> R.string.home
+        DefaultOpenTab.SEARCH -> R.string.search
+        DefaultOpenTab.LIBRARY -> R.string.library
+    },
+)
+
+@Composable
+private fun BackAnimationStyle.localizedLabel(): String = stringResource(
+    when (this) {
+        BackAnimationStyle.DEFAULT -> R.string.back_animation_style_default
+        BackAnimationStyle.PREDICTIVE -> R.string.back_animation_style_predictive
     },
 )
 
@@ -2366,7 +2853,12 @@ private class SettingsSearch(
     query: String,
     /** Drawing one category's page rather than the main one: its top bar names it. */
     val inPage: Boolean = false,
+    /** That page's title, so a card header that only repeats it can be dropped. */
+    val pageTitle: String? = null,
 ) {
+    /** Cards drawn so far this composition; the first may sit flush under the title. */
+    var groupsDrawn = 0
+
     // Trimmed, because a trailing space is a typo rather than a search for
     // something ending in one — and on a phone keyboard it is one keystroke
     // away from every word typed.
@@ -2439,11 +2931,19 @@ private inline fun SearchableSettingsGroup(
     // A category's page is titled by its large heading; the header over its
     // first card would only say the same word again. The card takes the
     // header's place, straight under the heading, as on Account's page.
-    val inPageHeader = header != null && search.inPage
+    // Only the first card, and only when its header would just repeat the
+    // page's title: every later card keeps its header and its gap, as on
+    // the main page (see settingsGroupChrome).
+    val chrome = settingsGroupChrome(
+        inPage = search.inPage,
+        first = search.groupsDrawn++ == 0,
+        header = header,
+        pageTitle = search.pageTitle,
+    )
     SettingsGroup(
-        header = header.takeUnless { inPageHeader },
+        header = header.takeIf { chrome.showHeader },
         footer = footer,
-        topSpacing = if (inPageHeader) 0.dp else topSpacing,
+        topSpacing = if (chrome.flush) 0.dp else topSpacing,
     ) {
         scope.entries.forEachIndexed { index, entry ->
             when {
@@ -2716,13 +3216,18 @@ internal fun SliderRow(
     valueRange: ClosedFloatingPointRange<Float>,
     steps: Int,
     subtitle: String? = null,
+    enabled: Boolean = true,
 ) {
     val colors = SliderDefaults.colors(
         thumbColor = MaterialTheme.colorScheme.primary,
         activeTrackColor = MaterialTheme.colorScheme.primary,
         inactiveTrackColor = MaterialTheme.colorScheme.outline,
     )
-    Column(Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 12.dp, bottom = 4.dp)) {
+    Column(
+        Modifier
+            .alpha(if (enabled) 1f else 0.45f)
+            .padding(start = ROW_INSET, end = ROW_INSET, top = 12.dp, bottom = 4.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
@@ -2755,6 +3260,7 @@ internal fun SliderRow(
         Slider(
             value = sliderValue,
             onValueChange = onSliderValue,
+            enabled = enabled,
             valueRange = valueRange,
             steps = steps,
             colors = colors,
@@ -2822,6 +3328,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     PLAYBACK(R.string.playback),
     CONTENT_PREFERENCES(R.string.content_preferences),
     APPEARANCE(R.string.appearance),
+    BEHAVIOR(R.string.behavior),
     PERFORMANCE(R.string.performance),
     LOCAL_MUSIC(R.string.local_music),
     STORAGE(R.string.storage),
@@ -2836,6 +3343,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             PLAYBACK -> SfIcons.PlayCircle
             CONTENT_PREFERENCES -> SfIcons.Video
             APPEARANCE -> SfIcons.Appearance
+            BEHAVIOR -> SfIcons.SmartButton
             PERFORMANCE -> SfIcons.Performance
             LOCAL_MUSIC -> SfIcons.LibraryMusic
             STORAGE -> SfIcons.Storage
@@ -2853,6 +3361,28 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
     AUTOMIX_PERFORMANCE(R.string.automix_performance),
     BIT_PERFECT(R.string.bit_perfect_output),
     FONT(R.string.font),
+    /** The Liquid Glass tuning — refraction, blur, tint and optical quality. */
+    LIQUID_GLASS(R.string.liquid_glass),
+    /** The SF Pro browser — sf-pro.kouzu.in's catalog, applied with one tap. */
+    SF_PRO_FONTS(R.string.sf_pro_fonts),
+    /** What the player stands on, below the artwork. */
+    PLAYER_BACKGROUND(R.string.player_background_style),
+    /** The seek bar's shape, each option with a live preview. */
+    PLAYER_SLIDER(R.string.player_slider_style),
+    /** What stands behind the lyrics. */
+    LYRICS_BACKGROUND(R.string.lyrics_background_style),
+    /** The mini player's surface. */
+    MINI_PLAYER_BACKGROUND(R.string.mini_player_background_style),
+    /** The always-on playing screen's own settings. */
+    AOD(R.string.aod_customize_title),
+    /** The bottom bar's own settings. */
+    NAVIGATION_BAR(R.string.navigation_bar_settings_title),
+    /** The home and library tabs' extra switches. */
+    APPEARANCE_EXTRAS(R.string.extras),
+    /** The three reduce switches, under Behavior. */
+    BEHAVIOR_PERFORMANCE(R.string.performance),
+    /** The player's own design — the whole layout of the now-playing screen. */
+    PLAYER_DESIGN(R.string.player_design_style),
 }
 
 /** The main page's list of categories: a glyph and a name each, and a chevron into it. */
@@ -2982,13 +3512,1118 @@ fun SettingsChoicePage(
                     footer = stringResource(R.string.font_footer),
                 ) { font ->
                     AppSettings.setAppFont(font)
+                }
+            }
+
+            // The SF Pro browser: the catalog fetched from sf-pro.kouzu.in,
+            // grouped by family, each row previewed in its own type and applied
+            // with one tap — the font lands as the Custom font choice, exactly
+            // as a file from the picker would.
+            SettingsChoiceKind.SF_PRO_FONTS -> SfProFontsPage()
+
+            SettingsChoiceKind.PLAYER_BACKGROUND -> {
+                val selected by AppSettings.playerTheme.collectAsStateWithLifecycle()
+                ChoiceGroup(
+                    options = PlayerTheme.entries,
+                    selected = selected,
+                    label = { it.localizedLabel() },
+                    detail = { it.description() },
+                    footer = stringResource(R.string.player_background_style_footer),
+                ) { theme ->
+                    AppSettings.setPlayerTheme(theme)
                     onChosen()
                 }
             }
+
+            SettingsChoiceKind.PLAYER_SLIDER -> PlayerSliderStylePage()
+
+            SettingsChoiceKind.LYRICS_BACKGROUND -> {
+                val selected by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
+                ChoiceGroup(
+                    options = LyricsBackgroundStyle.entries,
+                    selected = selected,
+                    label = { it.localizedLabel() },
+                    detail = { it.localizedDetail() },
+                    footer = stringResource(R.string.lyrics_background_style_footer),
+                ) { style ->
+                    AppSettings.setLyricsBackgroundStyle(style)
+                    onChosen()
+                }
+            }
+
+            SettingsChoiceKind.MINI_PLAYER_BACKGROUND -> {
+                val selected by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
+                ChoiceGroup(
+                    options = MiniPlayerBackgroundStyle.entries,
+                    selected = selected,
+                    label = { it.localizedLabel() },
+                    detail = { it.localizedDetail() },
+                    footer = stringResource(R.string.mini_player_background_style_footer),
+                ) { style ->
+                    AppSettings.setMiniPlayerBackgroundStyle(style)
+                    onChosen()
+                }
+            }
+
+            SettingsChoiceKind.AOD -> AodSettingsPage()
+
+            SettingsChoiceKind.NAVIGATION_BAR -> NavigationBarSettingsPage()
+
+            SettingsChoiceKind.APPEARANCE_EXTRAS -> AppearanceExtrasPage()
+
+            SettingsChoiceKind.BEHAVIOR_PERFORMANCE -> BehaviorPerformancePage()
+
+            SettingsChoiceKind.PLAYER_DESIGN -> PlayerDesignStylePage()
+
+            SettingsChoiceKind.LIQUID_GLASS -> LiquidGlassTuningPage()
         }
         Spacer(Modifier.height(32.dp))
     }
 }
+
+/**
+ * The Liquid Glass page, ported from ArchiveTune's Liquid Glass settings page
+ * and holding everything the glass is: the master switch — which brings the
+ * adaptive bar along with it — the elements, each with a pill of their own, the
+ * two cost-saving switches, the tuning's intensity tier, optics sliders and
+ * optical-quality switches, and a reset. Every default is the glass the app has
+ * always drawn, so the page opens on the stock look.
+ */
+@Composable
+private fun LiquidGlassTuningPage() {
+    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
+    val glassSupported = isGlassSupported()
+    val glassPerformance by AppSettings.glassPerformance.collectAsStateWithLifecycle()
+    val progressiveBlur by AppSettings.progressiveBlur.collectAsStateWithLifecycle()
+    val glassHeaderPills by AppSettings.glassHeaderPills.collectAsStateWithLifecycle()
+    val glassNavBar by AppSettings.glassNavBar.collectAsStateWithLifecycle()
+    val glassMiniPlayer by AppSettings.glassMiniPlayer.collectAsStateWithLifecycle()
+    val glassMenus by AppSettings.glassMenus.collectAsStateWithLifecycle()
+    val intensity by AppSettings.liquidGlassIntensity.collectAsStateWithLifecycle()
+    val refractionHeight by AppSettings.liquidGlassRefractionHeight.collectAsStateWithLifecycle()
+    val refractionAmount by AppSettings.liquidGlassRefractionAmount.collectAsStateWithLifecycle()
+    val blurRadius by AppSettings.liquidGlassBlurRadius.collectAsStateWithLifecycle()
+    val tintOpacity by AppSettings.liquidGlassTintOpacity.collectAsStateWithLifecycle()
+    val shadowDepth by AppSettings.liquidGlassShadowDepth.collectAsStateWithLifecycle()
+    val depth3D by AppSettings.liquidGlassDepth3D.collectAsStateWithLifecycle()
+    val chromaticAberration by AppSettings.liquidGlassChromaticAberration.collectAsStateWithLifecycle()
+    val backdropVibrancy by AppSettings.liquidGlassBackdropVibrancy.collectAsStateWithLifecycle()
+    val adaptiveLuminance by AppSettings.liquidGlassAdaptiveLuminance.collectAsStateWithLifecycle()
+
+    SettingsGroup(
+        topSpacing = 0.dp,
+        footer = stringResource(R.string.liquid_glass_master_footer),
+    ) {
+        val masterTitle = stringResource(R.string.liquid_glass_effects)
+        SettingsRow(
+            icon = SfIcons.AutoAwesome,
+            title = masterTitle,
+            subtitle = stringResource(
+                if (glassSupported) R.string.liquid_glass_effects_desc else R.string.liquid_glass_unavailable,
+            ),
+            enabled = glassSupported,
+            trailing = {
+                IosSwitch(
+                    checked = liquidGlass,
+                    onCheckedChange = AppSettings::setLiquidGlass,
+                    enabled = glassSupported,
+                )
+            },
+            onClick = { AppSettings.setLiquidGlass(!liquidGlass) },
+        )
+    }
+
+    // The elements, each with its own pill: the glass can be taken piecemeal
+    // rather than all at once, the surfaces each named as the thing it is.
+    SettingsGroup(
+        header = stringResource(R.string.liquid_glass_elements),
+        footer = stringResource(R.string.liquid_glass_elements_footer),
+    ) {
+        SettingsRow(
+            title = stringResource(R.string.glass_header_pills),
+            subtitle = stringResource(R.string.glass_header_pills_desc),
+            enabled = liquidGlass && glassSupported,
+            trailing = {
+                IosSwitch(
+                    checked = glassHeaderPills,
+                    onCheckedChange = AppSettings::setGlassHeaderPills,
+                    enabled = liquidGlass && glassSupported,
+                )
+            },
+            onClick = { AppSettings.setGlassHeaderPills(!glassHeaderPills) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.glass_nav_bar_element),
+            subtitle = stringResource(R.string.glass_nav_bar_element_desc),
+            enabled = liquidGlass && glassSupported,
+            trailing = {
+                IosSwitch(
+                    checked = glassNavBar,
+                    onCheckedChange = AppSettings::setGlassNavBar,
+                    enabled = liquidGlass && glassSupported,
+                )
+            },
+            onClick = { AppSettings.setGlassNavBar(!glassNavBar) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.glass_mini_player_element),
+            subtitle = stringResource(R.string.glass_mini_player_element_desc),
+            enabled = liquidGlass && glassSupported,
+            trailing = {
+                IosSwitch(
+                    checked = glassMiniPlayer,
+                    onCheckedChange = AppSettings::setGlassMiniPlayer,
+                    enabled = liquidGlass && glassSupported,
+                )
+            },
+            onClick = { AppSettings.setGlassMiniPlayer(!glassMiniPlayer) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.glass_menus_element),
+            subtitle = stringResource(R.string.glass_menus_element_desc),
+            enabled = liquidGlass && glassSupported,
+            trailing = {
+                IosSwitch(
+                    checked = glassMenus,
+                    onCheckedChange = AppSettings::setGlassMenus,
+                    enabled = liquidGlass && glassSupported,
+                )
+            },
+            onClick = { AppSettings.setGlassMenus(!glassMenus) },
+        )
+    }
+
+    // Only while the glass is on: they qualify it rather than standing on their
+    // own. Glass performance trades the lens for a frost; Progressive blur
+    // costs frames of its own. Reduce dynamic blur overrides both.
+    SettingsGroup(header = stringResource(R.string.glass_performance_group)) {
+        SettingsRow(
+            title = stringResource(R.string.glass_performance),
+            subtitle = stringResource(R.string.glass_performance_desc),
+            enabled = liquidGlass && glassSupported,
+            trailing = {
+                IosSwitch(
+                    checked = glassPerformance,
+                    onCheckedChange = AppSettings::setGlassPerformance,
+                    enabled = liquidGlass && glassSupported,
+                )
+            },
+            onClick = { AppSettings.setGlassPerformance(!glassPerformance) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.progressive_blur),
+            subtitle = stringResource(R.string.progressive_blur_desc),
+            enabled = liquidGlass && glassSupported,
+            trailing = {
+                IosSwitch(
+                    checked = progressiveBlur,
+                    onCheckedChange = AppSettings::setProgressiveBlur,
+                    enabled = liquidGlass && glassSupported,
+                )
+            },
+            onClick = { AppSettings.setProgressiveBlur(!progressiveBlur) },
+        )
+    }
+
+    SettingsGroup(header = stringResource(R.string.liquid_glass_intensity)) {
+        SegmentedControl(
+            options = LiquidGlassIntensity.entries.map { it.localizedLabel() },
+            selectedIndex = LiquidGlassIntensity.entries.indexOf(intensity),
+            onSelect = { AppSettings.setLiquidGlassIntensity(LiquidGlassIntensity.entries[it]) },
+            modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 12.dp, bottom = 14.dp),
+        )
+    }
+
+    SettingsGroup(
+        header = stringResource(R.string.liquid_glass_optics),
+        footer = stringResource(R.string.liquid_glass_optics_footer),
+    ) {
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.liquid_glass_refraction_height),
+            subtitle = stringResource(R.string.liquid_glass_refraction_height_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (refractionHeight * 100f).roundToInt()),
+            sliderValue = refractionHeight,
+            onSliderValue = { AppSettings.setLiquidGlassRefractionHeight((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.liquid_glass_refraction_amount),
+            subtitle = stringResource(R.string.liquid_glass_refraction_amount_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (refractionAmount * 100f).roundToInt()),
+            sliderValue = refractionAmount,
+            onSliderValue = { AppSettings.setLiquidGlassRefractionAmount((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.BlurOn,
+            title = stringResource(R.string.liquid_glass_blur_radius),
+            subtitle = stringResource(R.string.liquid_glass_blur_radius_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (blurRadius * 100f).roundToInt()),
+            sliderValue = blurRadius,
+            onSliderValue = { AppSettings.setLiquidGlassBlurRadius((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Gradient,
+            title = stringResource(R.string.liquid_glass_tint_opacity),
+            subtitle = stringResource(R.string.liquid_glass_tint_opacity_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (tintOpacity * 100f).roundToInt()),
+            sliderValue = tintOpacity,
+            onSliderValue = { AppSettings.setLiquidGlassTintOpacity((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..2f,
+            steps = 39,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Waves,
+            title = stringResource(R.string.liquid_glass_shadow_depth),
+            subtitle = stringResource(R.string.liquid_glass_shadow_depth_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (shadowDepth * 100f).roundToInt()),
+            sliderValue = shadowDepth,
+            onSliderValue = { AppSettings.setLiquidGlassShadowDepth((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+    }
+
+    SettingsGroup(
+        header = stringResource(R.string.liquid_glass_quality),
+        footer = stringResource(R.string.liquid_glass_quality_footer),
+    ) {
+        SettingsRow(
+            title = stringResource(R.string.liquid_glass_depth_3d),
+            subtitle = stringResource(R.string.liquid_glass_depth_3d_desc),
+            trailing = { IosSwitch(checked = depth3D, onCheckedChange = AppSettings::setLiquidGlassDepth3D) },
+            onClick = { AppSettings.setLiquidGlassDepth3D(!depth3D) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.liquid_glass_chromatic_aberration),
+            subtitle = stringResource(R.string.liquid_glass_chromatic_aberration_desc),
+            trailing = { IosSwitch(checked = chromaticAberration, onCheckedChange = AppSettings::setLiquidGlassChromaticAberration) },
+            onClick = { AppSettings.setLiquidGlassChromaticAberration(!chromaticAberration) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.liquid_glass_backdrop_vibrancy),
+            subtitle = stringResource(R.string.liquid_glass_backdrop_vibrancy_desc),
+            trailing = { IosSwitch(checked = backdropVibrancy, onCheckedChange = AppSettings::setLiquidGlassBackdropVibrancy) },
+            onClick = { AppSettings.setLiquidGlassBackdropVibrancy(!backdropVibrancy) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.liquid_glass_adaptive_luminance),
+            subtitle = stringResource(R.string.liquid_glass_adaptive_luminance_desc),
+            trailing = { IosSwitch(checked = adaptiveLuminance, onCheckedChange = AppSettings::setLiquidGlassAdaptiveLuminance) },
+            onClick = { AppSettings.setLiquidGlassAdaptiveLuminance(!adaptiveLuminance) },
+        )
+    }
+
+    SettingsGroup(header = stringResource(R.string.liquid_glass_reset)) {
+        SettingsRow(
+            icon = SfIcons.Revert,
+            title = stringResource(R.string.liquid_glass_reset),
+            subtitle = stringResource(R.string.liquid_glass_reset_desc),
+            onClick = { AppSettings.resetLiquidGlassTuning() },
+        )
+    }
+}
+
+/**
+ * The SF Pro browser, ported from ArchiveTune's SfProFontPickerDialog as a
+ * page: the catalog from sf-pro.kouzu.in, grouped by family, every row
+ * previewed in its own type and applied with one tap. A tap lands the font as
+ * the Custom choice — the same place a picked file lands — and leaves the page
+ * open to try another.
+ */
+@Composable
+private fun SfProFontsPage() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
+    val appliedName by AppSettings.customFontName.collectAsStateWithLifecycle()
+
+    var catalog by remember { mutableStateOf<List<SfProFontCatalog.FontEntry>?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var failed by remember { mutableStateOf(false) }
+    var downloading by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        loading = true
+        failed = false
+        catalog = SfProFontCatalog.fetchCatalog()
+        loading = false
+        if (catalog == null) failed = true
+    }
+
+    when {
+        loading -> SettingsGroup(topSpacing = 0.dp) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 160.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        failed -> SettingsGroup(
+            topSpacing = 0.dp,
+            footer = stringResource(R.string.sf_pro_error_footer),
+        ) {
+            SettingsRow(
+                title = stringResource(R.string.sf_pro_error),
+                subtitle = stringResource(R.string.sf_pro_error_subtitle),
+            )
+            RowDivider()
+            SettingsRow(
+                icon = SfIcons.Cached,
+                title = stringResource(R.string.sf_pro_retry),
+                onClick = {
+                    loading = true
+                    failed = false
+                    scope.launch {
+                        catalog = SfProFontCatalog.fetchCatalog()
+                        loading = false
+                        if (catalog == null) failed = true
+                    }
+                },
+            )
+        }
+        else -> {
+            val entries = catalog.orEmpty()
+            val grouped = entries
+                .groupBy { it.family ?: "" }
+                .entries
+                .sortedBy { (family, _) -> family }
+            grouped.forEach { (family, fonts) ->
+                SettingsGroup(
+                    header = family.ifBlank { stringResource(R.string.sf_pro_fonts) },
+                    topSpacing = if (family == grouped.firstOrNull()?.key) 0.dp else 26.dp,
+                ) {
+                    fonts.forEachIndexed { index, entry ->
+                        if (index > 0) RowDivider()
+                        SfProFontRow(
+                            entry = entry,
+                            downloading = downloading != null,
+                            applied = entry.name == appliedName && appFont == AppFont.CUSTOM,
+                            onClick = {
+                                if (downloading != null) return@SfProFontRow
+                                downloading = entry.name
+                                scope.launch {
+                                    val bytes = SfProFontCatalog.downloadFont(entry)
+                                    val uri = if (bytes != null) {
+                                        CustomFontLoader.applyDownloadedFont(
+                                            context.applicationContext,
+                                            bytes,
+                                            entry.fileName ?: entry.url.substringAfterLast('/'),
+                                        )
+                                    } else {
+                                        null
+                                    }
+                                    downloading = null
+                                    if (uri != null) {
+                                        AppSettings.setCustomFont(entry.name, uri)
+                                        AppSettings.setAppFont(AppFont.CUSTOM)
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** One catalog row: the font's own name, a specimen line in the font, and its cut. */
+@Composable
+private fun SfProFontRow(
+    entry: SfProFontCatalog.FontEntry,
+    downloading: Boolean,
+    applied: Boolean,
+    onClick: () -> Unit,
+) {
+    val context = LocalContext.current
+    var previewReady by remember(entry.url) {
+        mutableStateOf(SfProFontPreview.isCached(context, entry))
+    }
+    // The specimen downloads itself, one row at a time as it shows; a failed
+    // fetch just leaves the specimen in the app's own type.
+    LaunchedEffect(entry.url, previewReady) {
+        if (previewReady) return@LaunchedEffect
+        previewReady = runCatching { SfProFontPreview.ensureDownloaded(context, entry) }
+            .getOrDefault(false)
+    }
+    val previewFamily = if (previewReady) {
+        remember(entry.url) { SfProFontPreview.fontFamilyFor(context, entry) }
+    } else {
+        null
+    }
+    val previewSpec = remember(entry.url) { SfProFontPreview.previewSpec(entry) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick, enabled = !downloading)
+            .heightIn(min = 52.dp)
+            .padding(horizontal = ROW_INSET, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = entry.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (applied) FontWeight.Bold else null,
+                color = if (applied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "AaBbCcDd 0123456789",
+                fontFamily = previewFamily,
+                fontWeight = previewSpec.fontWeight,
+                fontStyle = previewSpec.fontStyle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            val details = buildList {
+                entry.type?.let { add(it.replaceFirstChar { it.uppercase() }) }
+                entry.weight?.let { add(it) }
+                if (entry.style == "italic") add("italic")
+                entry.format?.let { add(it.uppercase()) }
+            }.joinToString("  ")
+            if (details.isNotBlank()) {
+                Text(
+                    text = details,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        if (downloading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+            )
+        } else if (applied) {
+            Icon(
+                imageVector = SfIcons.Check,
+                contentDescription = stringResource(R.string.selected),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        } else {
+            Icon(
+                imageVector = SfIcons.Download,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+/**
+ * The player slider style, ported from ArchiveTune: five shapes for the seek
+ * bar, each drawn as the live bar it picks rather than described, so the
+ * choice is made against the thing itself.
+ */
+@Composable
+private fun PlayerSliderStylePage() {
+    val selected by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
+    SettingsGroup(topSpacing = 0.dp) {
+        PlayerSliderStyle.entries.forEachIndexed { index, style ->
+            if (index > 0) RowDivider()
+            var previewValue by remember { mutableFloatStateOf(0.4f) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { AppSettings.setPlayerSliderStyle(style) }
+                    .padding(horizontal = ROW_INSET, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = style.localizedLabel(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Text(
+                        text = style.localizedDetail(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                    // The bar itself, drawn in the style the row picks. Played
+                    // flat — the wave moves in the player, with the track.
+                    ThinSlider(
+                        value = previewValue,
+                        onValueChange = { previewValue = it },
+                        style = style,
+                        animated = false,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                if (style == selected) {
+                    Spacer(Modifier.width(12.dp))
+                    Icon(
+                        imageVector = SfIcons.Check,
+                        contentDescription = stringResource(R.string.selected),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The always-on playing screen's own settings, ported from ArchiveTune's AOD
+ * customized page: the master switch, what appears on the screen, and how the
+ * screen itself behaves.
+ */
+@Composable
+private fun AodSettingsPage() {
+    val aodEnabled by AppSettings.aodEnabled.collectAsStateWithLifecycle()
+    val showThumbnail by AppSettings.aodShowThumbnail.collectAsStateWithLifecycle()
+    val showArtist by AppSettings.aodShowArtist.collectAsStateWithLifecycle()
+    val showAlbum by AppSettings.aodShowAlbum.collectAsStateWithLifecycle()
+    val showProgress by AppSettings.aodShowProgress.collectAsStateWithLifecycle()
+    val showTimeLabels by AppSettings.aodShowTimeLabels.collectAsStateWithLifecycle()
+    val showControls by AppSettings.aodShowControls.collectAsStateWithLifecycle()
+    val showClock by AppSettings.aodShowClock.collectAsStateWithLifecycle()
+    val showBattery by AppSettings.aodShowBattery.collectAsStateWithLifecycle()
+    val aodBrightness by AppSettings.aodBrightness.collectAsStateWithLifecycle()
+    val autoDimming by AppSettings.aodAutoDimming.collectAsStateWithLifecycle()
+    val autoTimerSeconds by AppSettings.aodAutoTimerSeconds.collectAsStateWithLifecycle()
+    val touchLock by AppSettings.aodTouchLock.collectAsStateWithLifecycle()
+    val pixelShift by AppSettings.aodPixelShift.collectAsStateWithLifecycle()
+
+    SettingsGroup(
+        topSpacing = 0.dp,
+        footer = stringResource(R.string.aod_footer),
+    ) {
+        SettingsRow(
+            icon = SfIcons.Clock,
+            title = stringResource(R.string.aod_enabled),
+            subtitle = stringResource(R.string.aod_enabled_subtitle),
+            trailing = { IosSwitch(checked = aodEnabled, onCheckedChange = AppSettings::setAodEnabled) },
+            onClick = { AppSettings.setAodEnabled(!aodEnabled) },
+        )
+    }
+    SettingsGroup(header = stringResource(R.string.aod_content)) {
+        SettingsRow(
+            title = stringResource(R.string.aod_show_thumbnail),
+            trailing = { IosSwitch(checked = showThumbnail, onCheckedChange = AppSettings::setAodShowThumbnail) },
+            onClick = { AppSettings.setAodShowThumbnail(!showThumbnail) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_show_artist),
+            trailing = { IosSwitch(checked = showArtist, onCheckedChange = AppSettings::setAodShowArtist) },
+            onClick = { AppSettings.setAodShowArtist(!showArtist) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_show_album),
+            trailing = { IosSwitch(checked = showAlbum, onCheckedChange = AppSettings::setAodShowAlbum) },
+            onClick = { AppSettings.setAodShowAlbum(!showAlbum) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_show_progress),
+            trailing = { IosSwitch(checked = showProgress, onCheckedChange = AppSettings::setAodShowProgress) },
+            onClick = { AppSettings.setAodShowProgress(!showProgress) },
+        )
+        if (showProgress) {
+            SettingsSubRow(
+                title = stringResource(R.string.aod_show_time_labels),
+                checked = showTimeLabels,
+                onCheckedChange = AppSettings::setAodShowTimeLabels,
+            )
+        }
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_show_controls),
+            trailing = { IosSwitch(checked = showControls, onCheckedChange = AppSettings::setAodShowControls) },
+            onClick = { AppSettings.setAodShowControls(!showControls) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_show_clock),
+            trailing = { IosSwitch(checked = showClock, onCheckedChange = AppSettings::setAodShowClock) },
+            onClick = { AppSettings.setAodShowClock(!showClock) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_show_battery),
+            trailing = { IosSwitch(checked = showBattery, onCheckedChange = AppSettings::setAodShowBattery) },
+            onClick = { AppSettings.setAodShowBattery(!showBattery) },
+        )
+    }
+    SettingsGroup(header = stringResource(R.string.aod_screen)) {
+        SliderRow(
+            icon = SfIcons.Brightness,
+            title = stringResource(R.string.aod_brightness),
+            value = stringResource(R.string.aod_brightness_value, (aodBrightness * 100f).roundToInt()),
+            sliderValue = aodBrightness,
+            onSliderValue = { AppSettings.setAodBrightness((it * 100f).roundToInt() / 100f) },
+            valueRange = 0.02f..1f,
+            steps = 48,
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_auto_dimming),
+            subtitle = stringResource(R.string.aod_auto_dimming_subtitle),
+            trailing = { IosSwitch(checked = autoDimming, onCheckedChange = AppSettings::setAodAutoDimming) },
+            onClick = { AppSettings.setAodAutoDimming(!autoDimming) },
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.SleepTimer,
+            title = stringResource(R.string.aod_auto_timer),
+            subtitle = stringResource(R.string.aod_auto_timer_subtitle),
+            value = if (autoTimerSeconds == 0) {
+                stringResource(R.string.aod_auto_timer_off)
+            } else {
+                stringResource(R.string.aod_auto_timer_minutes, autoTimerSeconds / 60)
+            },
+            sliderValue = (autoTimerSeconds / 60f),
+            onSliderValue = { AppSettings.setAodAutoTimerSeconds(((it * 60f).roundToInt())) },
+            valueRange = 0f..6f,
+            steps = 11,
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_touch_lock),
+            subtitle = stringResource(R.string.aod_touch_lock_subtitle),
+            trailing = { IosSwitch(checked = touchLock, onCheckedChange = AppSettings::setAodTouchLock) },
+            onClick = { AppSettings.setAodTouchLock(!touchLock) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.aod_pixel_shift),
+            subtitle = stringResource(R.string.aod_pixel_shift_subtitle),
+            trailing = { IosSwitch(checked = pixelShift, onCheckedChange = AppSettings::setAodPixelShift) },
+            onClick = { AppSettings.setAodPixelShift(!pixelShift) },
+        )
+    }
+}
+
+/**
+ * The bottom bar's own settings, ported from ArchiveTune's navigation bar
+ * page: what the mini player and bar do on scroll, the three surfaces the
+ * standard bar can wear — frosted, tint, Liquid Glass, one at a time — the
+ * glass glow with its strength, the labels, and the six dimension dials with
+ * their reset. The BitChord and SukiSU bars of ArchiveTune's page stay
+ * unported, as asked.
+ */
+@Composable
+private fun NavigationBarSettingsPage() {
+    val showLabels by AppSettings.navBarShowLabels.collectAsStateWithLifecycle()
+    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
+    val glassSupported = isGlassSupported()
+    val behavior by AppSettings.miniPlayerBarBehavior.collectAsStateWithLifecycle()
+    val navBarFrosted by AppSettings.navBarFrosted.collectAsStateWithLifecycle()
+    val navBarTint by AppSettings.navBarTint.collectAsStateWithLifecycle()
+    val liquidGlassNavBar by AppSettings.liquidGlassNavBar.collectAsStateWithLifecycle()
+    val navBarGlassGlow by AppSettings.navBarGlassGlow.collectAsStateWithLifecycle()
+    val navBarGlassGlowIntensity by AppSettings.navBarGlassGlowIntensity.collectAsStateWithLifecycle()
+    val navBarWidth by AppSettings.navBarWidth.collectAsStateWithLifecycle()
+    val navBarHeight by AppSettings.navBarHeight.collectAsStateWithLifecycle()
+    val navBarOpacity by AppSettings.navBarOpacity.collectAsStateWithLifecycle()
+    val navBarTransparency by AppSettings.navBarTransparency.collectAsStateWithLifecycle()
+    val navBarLabelSpacing by AppSettings.navBarLabelSpacing.collectAsStateWithLifecycle()
+    val navBarCornerRadius by AppSettings.navBarCornerRadius.collectAsStateWithLifecycle()
+    val dimensionsAtDefault = navBarWidth == 1.0f && navBarHeight == 1.0f && navBarOpacity == 1.0f &&
+        navBarTransparency == 0f && navBarLabelSpacing == 1f && navBarCornerRadius == 28f
+
+    // The glass bar claims the standard bar's geometry as its own, so the
+    // dials stand down while it is in force — ported from ArchiveTune.
+    val dimensionsEnabled = !liquidGlassNavBar
+
+    SettingsGroup(
+        header = stringResource(R.string.navigation_bar_compact_behavior),
+        topSpacing = 0.dp,
+        footer = stringResource(R.string.navigation_bar_compact_behavior_desc),
+    ) {
+        SegmentedControl(
+            options = listOf(
+                stringResource(R.string.navigation_bar_compact_adaptive),
+                stringResource(R.string.navigation_bar_compact_always_expanded),
+                stringResource(R.string.navigation_bar_compact_always_compact),
+            ),
+            selectedIndex = MiniPlayerBarBehavior.entries.indexOf(behavior),
+            onSelect = { AppSettings.setMiniPlayerBarBehavior(MiniPlayerBarBehavior.entries[it]) },
+            modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 12.dp, bottom = 14.dp),
+        )
+    }
+
+    SettingsGroup(
+        header = stringResource(R.string.general),
+        footer = stringResource(R.string.navigation_bar_footer),
+    ) {
+        val frostedTitle = stringResource(R.string.navigation_bar_frosted_blur)
+        SettingsRow(
+            title = frostedTitle,
+            subtitle = stringResource(R.string.navigation_bar_frosted_blur_desc),
+            trailing = { IosSwitch(checked = navBarFrosted, onCheckedChange = AppSettings::setNavBarFrosted) },
+            onClick = { AppSettings.setNavBarFrosted(!navBarFrosted) },
+        )
+        RowDivider()
+        val tintTitle = stringResource(R.string.navigation_bar_tint_frosted_blur)
+        SettingsRow(
+            title = tintTitle,
+            subtitle = stringResource(R.string.navigation_bar_tint_frosted_blur_desc),
+            trailing = { IosSwitch(checked = navBarTint, onCheckedChange = AppSettings::setNavBarTint) },
+            onClick = { AppSettings.setNavBarTint(!navBarTint) },
+        )
+        RowDivider()
+        val glassNavBarTitle = stringResource(R.string.liquid_glass_nav_bar)
+        SettingsRow(
+            title = glassNavBarTitle,
+            subtitle = stringResource(
+                when {
+                    !glassSupported -> R.string.liquid_glass_unavailable
+                    !liquidGlass -> R.string.liquid_glass_nav_bar_disabled
+                    else -> R.string.liquid_glass_nav_bar_desc
+                },
+            ),
+            enabled = glassSupported && liquidGlass,
+            trailing = {
+                IosSwitch(
+                    checked = liquidGlassNavBar,
+                    onCheckedChange = AppSettings::setLiquidGlassNavBar,
+                    enabled = glassSupported && liquidGlass,
+                )
+            },
+            onClick = { AppSettings.setLiquidGlassNavBar(!liquidGlassNavBar) },
+        )
+        RowDivider()
+        val glassGlowTitle = stringResource(R.string.navigation_bar_glass_glow)
+        SettingsRow(
+            title = glassGlowTitle,
+            subtitle = stringResource(R.string.navigation_bar_glass_glow_desc),
+            trailing = { IosSwitch(checked = navBarGlassGlow, onCheckedChange = AppSettings::setNavBarGlassGlow) },
+            onClick = { AppSettings.setNavBarGlassGlow(!navBarGlassGlow) },
+        )
+        RowDivider()
+        val labelsTitle = stringResource(R.string.navigation_bar_labels)
+        SettingsRow(
+            title = labelsTitle,
+            subtitle = stringResource(R.string.navigation_bar_labels_subtitle),
+            trailing = { IosSwitch(checked = showLabels, onCheckedChange = AppSettings::setNavBarShowLabels) },
+            onClick = { AppSettings.setNavBarShowLabels(!showLabels) },
+        )
+    }
+
+    // The glow intensity is a slider of its own, listed directly under the
+    // glow switch's group as ArchiveTune lists it.
+    if (navBarGlassGlow) {
+        SettingsGroup(topSpacing = 12.dp) {
+            SliderRow(
+                icon = SfIcons.Brightness,
+                title = stringResource(R.string.navigation_bar_glass_glow_intensity),
+                subtitle = stringResource(R.string.navigation_bar_glass_glow_intensity_desc),
+                value = stringResource(R.string.liquid_glass_percent_value, (navBarGlassGlowIntensity * 100f).roundToInt()),
+                sliderValue = navBarGlassGlowIntensity,
+                onSliderValue = { AppSettings.setNavBarGlassGlowIntensity((it * 100f).roundToInt() / 100f) },
+                valueRange = 0.2f..2f,
+                steps = 35,
+            )
+        }
+    }
+
+    SettingsGroup(
+        header = stringResource(R.string.navigation_bar_dimensions),
+        footer = stringResource(R.string.navigation_bar_dimensions_footer),
+    ) {
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.navigation_bar_width),
+            value = stringResource(R.string.liquid_glass_percent_value, (navBarWidth * 100f).roundToInt()),
+            sliderValue = navBarWidth,
+            onSliderValue = { AppSettings.setNavBarWidth((it * 100f).roundToInt() / 100f) },
+            valueRange = 0.5f..1f,
+            steps = 9,
+            enabled = dimensionsEnabled,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.navigation_bar_height),
+            value = stringResource(R.string.liquid_glass_percent_value, (navBarHeight * 100f).roundToInt()),
+            sliderValue = navBarHeight,
+            onSliderValue = { AppSettings.setNavBarHeight((it * 100f).roundToInt() / 100f) },
+            valueRange = 0.8f..1.4f,
+            steps = 11,
+            enabled = dimensionsEnabled,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.navigation_bar_opacity),
+            value = stringResource(R.string.liquid_glass_percent_value, (navBarOpacity * 100f).roundToInt()),
+            sliderValue = navBarOpacity,
+            onSliderValue = { AppSettings.setNavBarOpacity((it * 100f).roundToInt() / 100f) },
+            valueRange = 0.2f..1f,
+            steps = 15,
+            enabled = dimensionsEnabled,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.navigation_bar_transparency),
+            value = stringResource(R.string.liquid_glass_percent_value, (navBarTransparency * 100f).roundToInt()),
+            sliderValue = navBarTransparency,
+            onSliderValue = { AppSettings.setNavBarTransparency((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..0.95f,
+            steps = 18,
+            enabled = dimensionsEnabled,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.navigation_bar_label_spacing),
+            value = stringResource(R.string.navigation_bar_dp_value, navBarLabelSpacing.roundToInt()),
+            sliderValue = navBarLabelSpacing / 16f,
+            onSliderValue = { AppSettings.setNavBarLabelSpacing((it * 16f).roundToInt().toFloat()) },
+            valueRange = 0f..1f,
+            steps = 15,
+            enabled = dimensionsEnabled,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Tune,
+            title = stringResource(R.string.navigation_bar_corner_radius),
+            value = stringResource(R.string.navigation_bar_dp_value, navBarCornerRadius.roundToInt()),
+            sliderValue = navBarCornerRadius / 48f,
+            onSliderValue = { AppSettings.setNavBarCornerRadius((it * 48f).roundToInt().toFloat()) },
+            valueRange = 0f..1f,
+            steps = 47,
+            enabled = dimensionsEnabled,
+        )
+        RowDivider()
+        SettingsRow(
+            icon = SfIcons.Revert,
+            title = stringResource(R.string.navigation_bar_reset_dimensions),
+            enabled = dimensionsEnabled && !dimensionsAtDefault,
+            onClick = { AppSettings.resetNavBarDimensions() },
+        )
+    }
+
+    // The one thing worth saying while the glass bar is the bar in force: its
+    // shape is the glass's own and not the dials' to take.
+    if (liquidGlassNavBar) {
+        SettingsGroup {
+            Text(
+                text = stringResource(R.string.navigation_bar_glass_note),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = GROUP_INSET + 4.dp, vertical = 12.dp),
+            )
+        }
+    }
+}
+
+/**
+ * The player design page, ported from ArchiveTune's picker: eleven whole
+ * layouts of the now-playing screen, this app's own the default and first.
+ * Whichever is in force, the extra switches it carries sit under the list —
+ * the ones each style owns, as ArchiveTune's Appearance page hangs them off
+ * the same choice.
+ */
+@Composable
+private fun PlayerDesignStylePage() {
+    val selected by AppSettings.playerDesignStyle.collectAsStateWithLifecycle()
+    val hideVolumeBar by AppSettings.hideVolumeBar.collectAsStateWithLifecycle()
+    val hideSlideBar by AppSettings.hideSlideBar.collectAsStateWithLifecycle()
+    val movingBlur by AppSettings.movingBlur.collectAsStateWithLifecycle()
+    val tikTokMainLyrics by AppSettings.tikTokMainLyrics.collectAsStateWithLifecycle()
+
+    ChoiceGroup(
+        options = PlayerDesignStyle.entries,
+        selected = selected,
+        label = { it.localizedLabel() },
+        detail = { it.localizedDetail() },
+        footer = stringResource(R.string.player_design_style_footer),
+    ) { style ->
+        AppSettings.setPlayerDesignStyle(style)
+    }
+
+    // The Apple Music player's own three, ported from ArchiveTune's
+    // FlamingoShowVolumeBarKey / FlamingoHideSlideBarKey /
+    // FlamingoBackgroundEffectKey — held by the shared player settings of the
+    // same meanings.
+    if (selected == PlayerDesignStyle.APPLE_MUSIC) {
+        SettingsGroup(header = stringResource(R.string.player_design_apple_music_extras)) {
+            SettingsRow(
+                title = stringResource(R.string.player_design_show_volume_bar),
+                subtitle = stringResource(R.string.player_design_show_volume_bar_subtitle),
+                trailing = {
+                    IosSwitch(checked = !hideVolumeBar, onCheckedChange = { AppSettings.setHideVolumeBar(!it) })
+                },
+                onClick = { AppSettings.setHideVolumeBar(hideVolumeBar) },
+            )
+            RowDivider()
+            SettingsRow(
+                title = stringResource(R.string.player_design_hide_slide_bar),
+                subtitle = stringResource(R.string.player_design_hide_slide_bar_subtitle),
+                trailing = {
+                    IosSwitch(checked = hideSlideBar, onCheckedChange = AppSettings::setHideSlideBar)
+                },
+                onClick = { AppSettings.setHideSlideBar(!hideSlideBar) },
+            )
+            RowDivider()
+            SettingsRow(
+                title = stringResource(R.string.player_design_moving_blur),
+                subtitle = stringResource(R.string.player_design_moving_blur_subtitle),
+                trailing = {
+                    IosSwitch(checked = movingBlur, onCheckedChange = AppSettings::setMovingBlur)
+                },
+                onClick = { AppSettings.setMovingBlur(!movingBlur) },
+            )
+        }
+    }
+
+    // The TikTok player's karaoke strip, ported from ArchiveTune's
+    // TikTokMainLyricsEnabledKey.
+    if (selected == PlayerDesignStyle.TIKTOK) {
+        SettingsGroup(header = stringResource(R.string.player_design_tiktok_extras)) {
+            SettingsRow(
+                title = stringResource(R.string.player_design_tiktok_main_lyrics),
+                subtitle = stringResource(R.string.player_design_tiktok_main_lyrics_subtitle),
+                trailing = {
+                    IosSwitch(checked = tikTokMainLyrics, onCheckedChange = AppSettings::setTikTokMainLyrics)
+                },
+                onClick = { AppSettings.setTikTokMainLyrics(!tikTokMainLyrics) },
+            )
+        }
+    }
+
+    // The Immersive player is the one style with a volume bar of its own, as
+    // V7's is — the same shared switch, offered where it applies.
+    if (selected == PlayerDesignStyle.IMMERSIVE) {
+        SettingsGroup(header = stringResource(R.string.player_design_immersive_extras)) {
+            SettingsRow(
+                title = stringResource(R.string.player_design_show_volume_bar),
+                subtitle = stringResource(R.string.player_design_immersive_volume_subtitle),
+                trailing = {
+                    IosSwitch(checked = !hideVolumeBar, onCheckedChange = { AppSettings.setHideVolumeBar(!it) })
+                },
+                onClick = { AppSettings.setHideVolumeBar(hideVolumeBar) },
+            )
+        }
+    }
+}
+
+/**
+ * The Performance page under Behavior: the three switches that trade the app's
+ * richer drawing for speed — fewer animations, no dynamic blur, no blend
+ * effects. They moved here from Appearance, where they sat among the looks they
+ * mute rather than with the behavior they change.
+ */
+@Composable
+private fun BehaviorPerformancePage() {
+    val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
+
+    SettingsGroup(topSpacing = 0.dp, footer = stringResource(R.string.behavior_performance_footer)) {
+        val reduceAnimationTitle = stringResource(R.string.reduce_animation)
+        SettingsRow(
+            icon = SfIcons.MotionPhotosOff,
+            title = reduceAnimationTitle,
+            subtitle = stringResource(R.string.reduce_animation_subtitle),
+            trailing = { IosSwitch(checked = reduceAnimation, onCheckedChange = AppSettings::setReduceAnimation) },
+            onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
+        )
+        RowDivider()
+        val reduceDynamicBlurTitle = stringResource(R.string.reduce_dynamic_blur)
+        SettingsRow(
+            icon = SfIcons.BlurOff,
+            title = reduceDynamicBlurTitle,
+            subtitle = stringResource(R.string.reduce_dynamic_blur_subtitle),
+            trailing = { IosSwitch(checked = reduceDynamicBlur, onCheckedChange = AppSettings::setReduceDynamicBlur) },
+            onClick = { AppSettings.setReduceDynamicBlur(!reduceDynamicBlur) },
+        )
+        RowDivider()
+        val disableBlendEffectsTitle = stringResource(R.string.disable_blend_effects)
+        SettingsRow(
+            icon = SfIcons.Gradient,
+            title = disableBlendEffectsTitle,
+            subtitle = stringResource(R.string.disable_blend_effects_subtitle),
+            trailing = { IosSwitch(checked = disableBlendEffects, onCheckedChange = AppSettings::setDisableBlendEffects) },
+            onClick = { AppSettings.setDisableBlendEffects(!disableBlendEffects) },
+        )
+    }
+}
+
+/**
+ * The home and library tabs' extra switches, ported from ArchiveTune's Extras
+ * page: the switches that belong to the tabs' own look rather than to the
+ * content they list (those live under Content Preferences).
+ */
+@Composable
+private fun AppearanceExtrasPage() {
+    val hideSignInBanner by AppSettings.hideSignInBanner.collectAsStateWithLifecycle()
+    val hideReplayCard by AppSettings.hideLibraryReplayCard.collectAsStateWithLifecycle()
+    val hideOnDeviceShelf by AppSettings.hideLibraryOnDeviceShelf.collectAsStateWithLifecycle()
+
+    SettingsGroup(header = stringResource(R.string.home), topSpacing = 0.dp) {
+        SettingsRow(
+            icon = Icons.Rounded.Home,
+            title = stringResource(R.string.hide_sign_in_banner),
+            subtitle = stringResource(R.string.hide_sign_in_banner_subtitle),
+            trailing = { IosSwitch(checked = hideSignInBanner, onCheckedChange = AppSettings::setHideSignInBanner) },
+            onClick = { AppSettings.setHideSignInBanner(!hideSignInBanner) },
+        )
+    }
+    SettingsGroup(header = stringResource(R.string.library)) {
+        SettingsRow(
+            title = stringResource(R.string.hide_library_replay_card),
+            subtitle = stringResource(R.string.hide_library_replay_card_subtitle),
+            trailing = { IosSwitch(checked = hideReplayCard, onCheckedChange = AppSettings::setHideLibraryReplayCard) },
+            onClick = { AppSettings.setHideLibraryReplayCard(!hideReplayCard) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = stringResource(R.string.hide_library_on_device_shelf),
+            subtitle = stringResource(R.string.hide_library_on_device_shelf_subtitle),
+            trailing = { IosSwitch(checked = hideOnDeviceShelf, onCheckedChange = AppSettings::setHideLibraryOnDeviceShelf) },
+            onClick = { AppSettings.setHideLibraryOnDeviceShelf(!hideOnDeviceShelf) },
+        )
+    }
+}
+
+@Composable
+private fun LiquidGlassIntensity.localizedLabel(): String = stringResource(
+    when (this) {
+        LiquidGlassIntensity.SUBTLE -> R.string.liquid_glass_intensity_subtle
+        LiquidGlassIntensity.STANDARD -> R.string.liquid_glass_intensity_standard
+        LiquidGlassIntensity.VIVID -> R.string.liquid_glass_intensity_vivid
+    },
+)
 
 /**
  * A card of options, one of them ticked: the body of every choice page. A

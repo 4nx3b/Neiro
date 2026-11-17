@@ -1,0 +1,190 @@
+/*
+ * BRIDGE (replaces ArchiveTune's playback/DownloadUtil.kt).
+ *
+ * The download manager surface the copied menus read: an inert manager over
+ * real (empty) media3 caches, so the states the UI switches on all exist.
+ * Downloads themselves are the host's business — the host bridge's download
+ * hook decides what actually happens when a song is sent to it.
+ *
+ * media3 1.11 notes: DownloadManager takes the DatabaseProvider directly
+ * (its download index lives inside), and DownloadService's abstract
+ * surface is getDownloadManager / getScheduler / getForegroundNotification
+ * with the notification channel described by string resources.
+ */
+
+package moe.rukamori.archivetune.playback
+
+import android.app.Notification
+import android.content.Context
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.cache.Cache
+import androidx.media3.datasource.cache.NoOpCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.exoplayer.offline.Download
+import androidx.media3.exoplayer.offline.DownloadManager
+import androidx.media3.exoplayer.offline.DownloadService
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import moe.rukamori.archivetune.R
+import moe.rukamori.archivetune.constants.DownloadSource
+
+class DownloadUtil private constructor(
+    private val appContext: Context,
+) {
+    /** Real but always-empty: this port's downloads are the host's own. A
+     *  StateFlow, as the copied UI collects it without an initial value. */
+    val downloads: StateFlow<Map<String, Download>> = MutableStateFlow(emptyMap())
+
+    private val databaseProvider by lazy { StandaloneDatabaseProvider(appContext) }
+
+    /*
+     * One per process. A SimpleCache locks its folder, and media3 throws
+     * "Another SimpleCache instance uses the folder" for a second one, which
+     * is what a style switch did: every remount of ArchiveTunePlayerHost
+     * built a new DownloadUtil, so a new cache on at_download_bridge.
+     * Built lazily on first use (not during composition), and never
+     * released: the process owns it.
+     */
+    val downloadCache: Cache by lazy {
+        SimpleCache(
+            java.io.File(appContext.cacheDir, "at_download_bridge"),
+            NoOpCacheEvictor(),
+            databaseProvider,
+        )
+    }
+
+    private val dataSourceFactory by lazy { DefaultDataSource.Factory(appContext) }
+
+    val downloadManager: DownloadManager by lazy {
+        DownloadManager(
+            appContext,
+            databaseProvider,
+            downloadCache,
+            dataSourceFactory,
+            java.util.concurrent.Executors.newFixedThreadPool(3),
+        )
+    }
+
+    companion object {
+        @Volatile
+        private var instance: DownloadUtil? = null
+
+        /** The process's one DownloadUtil. */
+        fun get(context: Context): DownloadUtil =
+            instance ?: synchronized(this) {
+                instance ?: DownloadUtil(context.applicationContext).also { instance = it }
+            }
+    }
+
+    fun getDownload(songId: String): kotlinx.coroutines.flow.Flow<Download?> = downloads.map { it[songId] }
+
+    fun currentSourceDownloadTarget(mediaId: String): DownloadTarget =
+        DownloadTarget(
+            source = DownloadSource.YOUTUBE_MUSIC,
+            key = mediaId,
+            legacyIds = listOf(mediaId),
+        )
+
+    fun currentSourceDownloadIds(mediaId: String): List<String> = listOf(mediaId)
+
+    fun clearCurrentTargetCacheSpans(mediaId: String) {}
+
+    suspend fun prewarmSongForDownload(mediaId: String): String? = null
+
+    data class DownloadTarget(
+        val source: DownloadSource,
+        val key: String,
+        val legacyIds: List<String>,
+    )
+}
+
+/**
+ * BRIDGE (replaces the object inside ArchiveTune's
+ * playback/PRDownloaderDataSource.kt).
+ *
+ * ArchiveTune's PRDownloader data source publishes per-key byte progress
+ * while it fetches a stream for download; SpatialFlow's download pill reads
+ * it and takes the max against media3's own percentDownloaded. The host
+ * downloads through its own pipeline, so this map simply stays empty and
+ * the pill tracks media3's number alone.
+ */
+internal object DownloadFetchProgress {
+    data class Fetch(
+        val bytes: Long,
+        val total: Long,
+        val updatedAtMs: Long,
+    ) {
+        val percent: Int? get() = if (total > 0) ((bytes * 100) / total).coerceIn(0, 100).toInt() else null
+    }
+
+    private val _flow = MutableStateFlow<Map<String, Fetch>>(emptyMap())
+    val flow: StateFlow<Map<String, Fetch>> = _flow.asStateFlow()
+
+    fun update(
+        key: String,
+        bytes: Long,
+        total: Long,
+    ) {
+        _flow.value = _flow.value + (key to Fetch(bytes, total, android.os.SystemClock.elapsedRealtime()))
+    }
+
+    fun clear(key: String) {
+        if (_flow.value.containsKey(key)) {
+            _flow.value = _flow.value - key
+        }
+    }
+
+    fun get(key: String): Fetch? = _flow.value[key]
+}
+
+/**
+ * BRIDGE — the service the menus address download commands at. Inert: its
+ * manager is the bridge one above, so the commands land on empty state and
+ * the host's own downloads are what a user actually gets.
+ */
+class ExoDownloadService : DownloadService(
+    FOREGROUND_NOTIFICATION_ID,
+    0L,
+    CHANNEL_ID,
+    R.string.download_channel_name,
+    R.string.download_channel_description,
+) {
+    override fun getDownloadManager(): DownloadManager = BridgeManagerHolder.get(this)
+
+    override fun getScheduler(): androidx.media3.exoplayer.scheduler.Scheduler? = null
+
+    override fun getForegroundNotification(
+        downloads: List<Download>,
+        notMetRequirements: Int,
+    ): Notification =
+        BridgeManagerHolder
+            .notificationHelper(this)
+            .buildProgressNotification(
+                this,
+                android.R.drawable.stat_sys_download,
+                null,
+                null,
+                downloads,
+                notMetRequirements,
+            )
+
+    companion object {
+        private const val FOREGROUND_NOTIFICATION_ID = 40_960
+        private const val CHANNEL_ID = "archivetune_downloads"
+    }
+}
+
+internal object BridgeManagerHolder {
+    private var helper: androidx.media3.exoplayer.offline.DownloadNotificationHelper? = null
+
+    fun get(context: Context): DownloadManager = DownloadUtil.get(context).downloadManager
+
+    fun notificationHelper(context: Context): androidx.media3.exoplayer.offline.DownloadNotificationHelper =
+        helper ?: androidx.media3.exoplayer.offline.DownloadNotificationHelper(
+            context.applicationContext,
+            "archivetune_downloads",
+        ).also { helper = it }
+}

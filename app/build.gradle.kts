@@ -105,6 +105,11 @@ android {
 
     splits {
         abi {
+            // The ABI matrix answers one property: unset, the full split
+            // matrix every store listing wants; `bitchord.abis` (comma
+            // separated) narrows it for the arm64-v8a-only nightly pipeline
+            // without touching the wear module's outputs (never use
+            // android.injected.build.abi — see AGENTS.md).
             isEnable = true
             reset()
             val restrictedAbis = providers.gradleProperty("bitchord.abis").orNull
@@ -226,11 +231,21 @@ android {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
             // The three BouncyCastle jars (bcprov, bcutil, bcpkix) ship one licence between them.
             pickFirsts += setOf("META-INF/LICENSE.md", "META-INF/LICENSE.txt", "META-INF/NOTICE.md")
+            // The ported player's Japanese tokenizer downloads its dictionary
+            // on demand; the one inside the kuromoji jar (tens of MB) stays out
+            // of the APK — the same cut ArchiveTune makes.
+            excludes += "com/atilika/kuromoji/ipadic/*.bin"
+            // kuromoji's two jars (core and ipadic) ship one contributor list
+            // between them.
+            excludes += "META-INF/CONTRIBUTORS.md"
         }
     }
     buildFeatures {
         compose = true
         buildConfig = true
+        // AGP 9 disables custom resource values by default; the flavors below
+        // set app_name with resValue().
+        resValues = true
     }
     testOptions {
         unitTests {
@@ -265,6 +280,20 @@ kotlin {
  * the transitive dependencies it would otherwise have carried are declared by
  * hand in the dependencies block below, since dropping the module drops them too.
  */
+// The vendored ArchiveTune core compiles against BravePipe (under
+// org.schabi.newpipe, as ArchiveTune does), while this app's stream
+// resolution ships TeamNewPipe's v0.26.3 under the same package — one
+// namespace, two jars, and D8 refuses the duplicates. This app keeps its
+// own: every org.schabi call the vendored core makes — Response's 5-arg
+// constructor, YoutubeJavaScriptPlayerManager's signature / n-param entry
+// points, StreamInfo.getInfo, AudioStream's bitrates — exists in v0.26.3
+// with the same shape, and the core treats extractor failure as a
+// fallback, never an error. BravePipe stays on the core's own compile
+// classpath; only this app's resolution drops it.
+configurations.all {
+    exclude(group = "com.github.maxrave-dev", module = "BravePipeExtractor")
+}
+
 val newPipeExtractorRaw: Configuration by configurations.creating {
     isTransitive = false
     isCanBeConsumed = false
@@ -288,6 +317,8 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 dependencies {
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
+    // The ported ArchiveTune player stack (only the phone app mounts it).
+    implementation(project(":archivetuneplayer"))
 
     // ---- Compose (Material 3) ----
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
@@ -298,11 +329,25 @@ dependencies {
     // foundation depends on ui, not the reverse — and this exact pairing was
     // already in effect (foundation was reaching 1.10.0 transitively through
     // the liquid-glass library before that dependency was removed).
-    implementation("androidx.compose.foundation:foundation:1.10.0")
+    // 1.11.0-beta02 / material3 1.5.0-alpha18: the line the vendored
+    // ArchiveTune player stack (:archivetuneplayer) rides — its expressive
+    // widgets exist only in the 1.5 alphas, and those pull this foundation.
+    // The app shares the module's classpath, so it declares the same line
+    // outright rather than resolving it behind its back. The one flag the
+    // app read that this line retired (ComposeUiFlags.isAdaptiveRefreshRateEnabled) is now set through reflection in BitChordApplication.
+    implementation("androidx.compose.foundation:foundation:1.11.0-beta02")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material3:material3:1.5.0-alpha18")
+    // The bridge preferences the ported player's settings adapters carry in
+    // their signatures (Preferences.Key), which the app's sources construct
+    // and read.
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
+    // Timber: the ported ArchiveTune player stack logs through it, and the app
+    // plants the tree that feeds those lines to the crash report (CrashLogTree).
+    // Same coordinate :archivetuneplayer uses.
+    implementation("com.jakewharton.timber:timber:5.0.1")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.navigation:navigation-compose:2.8.5")
@@ -310,6 +355,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     // ProcessLifecycleOwner: whether the app is on screen, for the open-app count.
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    // Janky frames into the crash ring buffer (JankLog).
+    implementation("androidx.metrics:metrics-performance:1.0.0")
     // The scheduled check behind "Keep playlists updated"; see PlaylistSync.
     implementation("androidx.work:work-runtime-ktx:2.10.1")
     implementation("androidx.core:core-ktx:1.15.0")
@@ -357,6 +404,11 @@ dependencies {
         isTransitive = false
     }
     implementation("androidx.palette:palette-ktx:1.0.0")
+
+    // ---- Seed-grown Material 3 schemes (the Color Palette setting) ----
+    // The 2.1.x line is the last built against Compose 1.7, which is what the
+    // BOM here resolves; the 5.x line this fork's sibling app uses needs
+    // Compose 1.11 and Kotlin 2.4.
 
     // ---- Frosted glass / progressive blur (Telegram-style bars) ----
     implementation("dev.chrisbanes.haze:haze:1.3.1")

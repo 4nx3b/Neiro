@@ -1,0 +1,288 @@
+/*
+ * BRIDGE — the hosting entry point.
+ *
+ * What the app mounts when a ported player style is active. It installs the
+ * host bridge, builds the PlayerConnection over the app's controller,
+ * provides every composition local ArchiveTune's stack reads, and lays out
+ * ArchiveTune's own BottomSheetPlayer — the mini player and the full player
+ * as one sheet, exactly as ArchiveTune's activity hosted it. When the
+ * style is BITCHORD none of this is mounted and the app's own player runs
+ * untouched.
+ */
+
+package moe.rukamori.archivetune.bridge
+
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavGraphNavigator
+import androidx.navigation.createGraph
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.compose.DialogNavigator
+import androidx.navigation.compose.composable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import moe.rukamori.archivetune.LocalDatabase
+import moe.rukamori.archivetune.LocalDownloadUtil
+import moe.rukamori.archivetune.LocalPlayerConnection
+import moe.rukamori.archivetune.LocalStableSystemBarsTopPadding
+import moe.rukamori.archivetune.LocalSyncUtils
+import moe.rukamori.archivetune.constants.MiniPlayerBottomSpacing
+import moe.rukamori.archivetune.constants.MiniPlayerHeight
+import moe.rukamori.archivetune.db.MusicDatabase
+import moe.rukamori.archivetune.di.BridgeEntryPoints
+import moe.rukamori.archivetune.playback.DownloadUtil
+import moe.rukamori.archivetune.playback.PlayerConnection
+import moe.rukamori.archivetune.ui.component.BottomSheetPageState
+import moe.rukamori.archivetune.ui.component.BottomSheetState
+import moe.rukamori.archivetune.ui.component.COLLAPSED_ANCHOR
+import moe.rukamori.archivetune.ui.component.DISMISSED_ANCHOR
+import moe.rukamori.archivetune.ui.component.LocalBottomSheetPageState
+import moe.rukamori.archivetune.ui.component.LocalMenuState
+import moe.rukamori.archivetune.ui.component.MenuState
+import moe.rukamori.archivetune.ui.component.rememberBottomSheetState
+import moe.rukamori.archivetune.ui.player.BottomSheetPlayer
+import moe.rukamori.archivetune.ui.player.ProvideVideoFullscreenState
+import moe.rukamori.archivetune.utils.PreferenceStore
+import moe.rukamori.archivetune.utils.SyncUtils
+import timber.log.Timber
+
+/**
+ * Mounts ArchiveTune's whole player stack over the app.
+ *
+ * @param hostBridge the app's answers (controller, likes, lyrics, playlists)
+ * @param onOpenArtist the app's artist page for a browse id
+ * @param onOpenAlbum the app's album page for a browse id
+ * @param onOpenSearch the app's search
+ * @param pureBlack the theme's pure-black dark mode, for the player's
+ *   blackest background
+ * @param bottomBarHeight how tall the app's own floating bottom bar is; the
+ *   mini player rests on top of it
+ */
+@Composable
+fun ArchiveTunePlayerHost(
+    hostBridge: ArchiveTuneHostBridge,
+    onOpenArtist: (String) -> Unit = {},
+    onOpenAlbum: (String) -> Unit = {},
+    onOpenSearch: () -> Unit = {},
+    pureBlack: Boolean = false,
+    bottomBarHeight: Dp = 0.dp,
+    /**
+     * The host's own mini player drives this sheet, and its cover is where
+     * the artwork drifts to. With it, the ported stack draws no mini player
+     * of its own and the sheet rests fully down; without it (null) the old
+     * ArchiveTune mini player is used.
+     */
+    sheetHandle: ArchiveTuneSheetHandle? = null,
+    externalMiniArt: ExternalMiniArt? = null,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Everything the stack below reads during its very first composition has
+    // to be in place before that composition starts — so this is a remember,
+    // which runs inline, ahead of the PlayerConnection and BottomSheetPlayer
+    // below, and not a DisposableEffect, which only runs after the first
+    // composition has been applied. With it as an effect the first frame of
+    // a ported style composed against an empty bridge: PlayerConnection bound
+    // to the placeholder player, every hiltViewModel() hit an empty view-model
+    // registry ("No bridge view-model registered for …") and the cache entry
+    // points had no context ("no context registered with BridgeEntryPoints").
+    // That was the crash on switching to a ported style. All four calls are
+    // idempotent, so a re-mount (or an abandoned composition) is harmless.
+    remember(hostBridge) {
+        ArchiveTuneBridge.install(hostBridge)
+        BridgeEntryPoints.context = context.applicationContext
+        BridgeViewModels.init(context)
+        PreferenceStore.start(context.applicationContext)
+        hostBridge
+    }
+    DisposableEffect(hostBridge) {
+        onDispose {
+            // Only clear what is still ours: a newer host mounted under a new
+            // controller key installs before this older one is disposed.
+            if (ArchiveTuneBridge.get() === hostBridge) BridgeEntryPoints.context = null
+            ArchiveTuneBridge.uninstall(hostBridge)
+        }
+    }
+    // SimpleCache opens and scans its folder on construction — disk I/O that
+    // must not run on the main thread mid-composition. Built once per process
+    // (ArchiveTuneCaches guards that; a folder can only ever have one), never
+    // torn down on dispose, and the entry points still build it lazily if a
+    // component asks before this has finished.
+    val appContext = context.applicationContext
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            runCatching { ArchiveTuneCaches.ensure(appContext) }
+                .onFailure { Timber.tag("ArchiveTuneBridge").w(it, "media caches unavailable") }
+        }
+    }
+
+    val playerConnection = remember(scope, hostBridge) { PlayerConnection(scope) }
+    DisposableEffect(playerConnection) {
+        onDispose { playerConnection.dispose() }
+    }
+
+    val database = remember { MusicDatabase() }
+    val downloadUtil = remember { DownloadUtil.get(context) }
+    val syncUtils = remember { SyncUtils() }
+    val menuState = remember { MenuState() }
+    val bottomSheetPageState = remember { BottomSheetPageState() }
+
+    val navController =
+        remember(onOpenArtist, onOpenAlbum, onOpenSearch) {
+            BridgeNavController(context, onOpenArtist, onOpenAlbum, onOpenSearch)
+        }
+
+    BoxWithConstraints(modifier = modifier) {
+        val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val collapsedBound = bottomInset + bottomBarHeight + MiniPlayerBottomSpacing + MiniPlayerHeight
+        val externalMini = externalMiniArt != null
+        val state: BottomSheetState =
+            rememberBottomSheetState(
+                dismissedBound = 0.dp,
+                // One mini player in the app, the host's: the sheet then has
+                // no collapsed stop of its own and rests fully down.
+                collapsedBound = if (externalMini) 0.dp else collapsedBound,
+                expandedBound = maxHeight,
+                initialAnchor =
+                    if (!externalMini && playerConnection.player.currentMediaItem != null) COLLAPSED_ANCHOR else DISMISSED_ANCHOR,
+            )
+        if (sheetHandle != null) {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.SideEffect {
+                sheetHandle.state = state
+                sheetHandle.density = density
+            }
+            DisposableEffect(sheetHandle, state) {
+                onDispose { if (sheetHandle.state === state) sheetHandle.state = null }
+            }
+        }
+        // Without the host's mini player, the ported one comes up when a song
+        // starts. Only from the dismissed state, so a drag, an open player or
+        // the drift is never fought.
+        if (!externalMini) {
+            LaunchedEffect(state, playerConnection) {
+                playerConnection.mediaMetadata
+                    .map { it != null }
+                    .distinctUntilChanged()
+                    .collect { hasMedia -> if (hasMedia && state.isDismissed) state.collapseSoft() }
+            }
+        }
+
+        CompositionLocalProvider(
+            LocalPlayerConnection provides playerConnection,
+            LocalDatabase provides database,
+            LocalDownloadUtil provides downloadUtil,
+            LocalSyncUtils provides syncUtils,
+            // The stable top inset: the status bar's height even while it is
+            // hidden, never less than the display cutout. Player.kt reads it
+            // as its top padding; 0 put controls under the notch with
+            // "hide status bar" on.
+            LocalStableSystemBarsTopPadding provides stableTopInset(),
+            LocalMenuState provides menuState,
+            LocalBottomSheetPageState provides bottomSheetPageState,
+            moe.rukamori.archivetune.LocalExternalMiniArt provides externalMiniArt,
+        ) {
+            ProvideVideoFullscreenState {
+                BottomSheetPlayer(
+                    state = state,
+                    navController = navController,
+                    pureBlack = pureBlack,
+                    isMiniPlayerPairedWithNavigation = false,
+                    navbarHiddenOffset = { 0f },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A NavController whose graph carries the routes the player stack
+ * navigates to — artist/{id}, album/{id} and search, each a composable that
+ * immediately hands the id to the host app's own page, plus the stack's
+ * internal-only ones (home, the TikTok feed's library tab, the login and
+ * po-token routes) as inert composables so navigating them changes back-stack
+ * state without crashing. Routes beyond those (ArchiveTune's settings
+ * sub-pages, its login flows) have no graph entry and are logged and dropped
+ * by the listener below, so nothing the ported player can do takes the app
+ * anywhere unexpected.
+ *
+ * A bare NavController ships with no navigators at all — the graph, composable
+ * and dialog lookups createGraph performs all die with "Could not find
+ * Navigator with name …" without them, the moment a ported style mounts. So
+ * the navigators navigation-compose's own createNavController() registers on
+ * every controller it hands out are installed here, before the graph is
+ * built.
+ */
+private class BridgeNavController(
+    context: android.content.Context,
+    private val onOpenArtist: (String) -> Unit,
+    private val onOpenAlbum: (String) -> Unit,
+    private val onOpenSearch: () -> Unit,
+) : NavController(context) {
+
+    init {
+        // What createNavController() puts on every rememberNavController()
+        // controller; without them the graph below cannot even be built.
+        // ComposeNavGraphNavigator carries the same "navigation" name but is
+        // internal in navigation-compose — this public twin is what
+        // non-compose hosts have always used, and the graph is never composed
+        // in a NavHost here, so its compose extras are unneeded.
+        navigatorProvider.apply {
+            addNavigator(NavGraphNavigator(this))
+            addNavigator(ComposeNavigator())
+            addNavigator(DialogNavigator())
+        }
+        addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.route) {
+                "artist/{id}" -> onOpenArtist(currentBackStackEntry?.arguments?.getString("id").orEmpty())
+                "album/{id}" -> onOpenAlbum(currentBackStackEntry?.arguments?.getString("id").orEmpty())
+                "search" -> onOpenSearch()
+                else -> Timber.tag("ArchiveTuneBridge").d("route %s has no bridge — dropped", destination.route)
+            }
+        }
+        // A root graph carries no route of its own — same as every NavHost's.
+        // NavGraph.addDestination throws "Destination … cannot have the same
+        // route as graph …" the moment a destination's route equals its
+        // graph's, and a graph routed "home" holding the destination "home"
+        // (the TikTok feed's start destination) did exactly that: every
+        // composition of a ported style died building this controller, and
+        // with the style persisted the app could no longer start at all.
+        // The routes this stack navigates are all destinations below; nothing
+        // reads a graph route (the TikTok tabs' popUpTo uses
+        // graph.startDestinationId, resolved from startDestination alone).
+        graph =
+            createGraph(startDestination = "home") {
+                composable("home") {}
+                composable("artist/{id}") {}
+                composable("album/{id}") {}
+                composable("search") {}
+                // The stack's own navigations that lead nowhere in this host:
+                // the TikTok feed's library tab, and Player's login/po-token
+                // prompts (built by LoginRouteBridge — with and without the
+                // recovery-url argument). Graphed so navigate() resolves them
+                // instead of throwing; the listener above drops them.
+                composable("library") {}
+                composable("login") {}
+                composable("login?url={url}") {}
+                composable("settings/po_token") {}
+            }
+    }
+}

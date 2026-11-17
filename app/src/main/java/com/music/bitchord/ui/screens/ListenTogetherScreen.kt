@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.components.GlassAlertDialog
 import com.music.bitchord.ui.icons.SfIcons
 import android.content.Intent
 import android.text.format.DateFormat
@@ -43,7 +44,6 @@ import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -277,7 +277,7 @@ fun ListenTogetherScreen(
 
     pendingServerSwitchInvite?.let { (codeToJoin, serverToSet) ->
         val isSwitchToOfficial = serverToSet.isBlank()
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = {
                 pendingServerSwitchInvite = null
                 onInviteHandled()
@@ -338,7 +338,6 @@ fun ListenTogetherScreen(
                     Text(stringResource(R.string.cancel))
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
         )
     }
 

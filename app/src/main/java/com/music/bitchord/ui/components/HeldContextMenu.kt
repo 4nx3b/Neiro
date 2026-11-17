@@ -116,15 +116,15 @@ fun <T : Any> HeldContextMenu(
                 if (reduceMotion) {
                     tween(durationMillis = 140, easing = LinearEasing)
                 } else {
-                    // Under-damped on purpose: the small overshoot is the "pop"
-                    // of the item coming off the page.
-                    spring(dampingRatio = 0.72f, stiffness = 420f)
+                    // The app's one popup spring (GlassMorph.kt): ≈300 ms with
+                    // the small settle the iOS 26 reference clips show.
+                    spring(dampingRatio = MORPH_DAMPING, stiffness = MORPH_STIFFNESS)
                 },
             )
         } else {
             progress.animateTo(
                 0f,
-                tween(durationMillis = if (reduceMotion) 110 else 230, easing = FastOutSlowInEasing),
+                tween(durationMillis = if (reduceMotion) 110 else MORPH_CLOSE_MS, easing = FastOutSlowInEasing),
             )
             last = null
         }
@@ -230,7 +230,11 @@ fun <T : Any> HeldContextMenu(
                     .padding(vertical = 8.dp),
             ) {
                 // Added onto the plate, on a dark one only: see [IosMenuPopover].
-                Column(Modifier.additiveChrome(dark && !plain)) {
+                Column(
+                    Modifier
+                        .morphContent(progress::value, reduceMotion)
+                        .additiveChrome(dark && !plain),
+                ) {
                     actions(menuItem)
                 }
             }
@@ -324,21 +328,22 @@ fun <T : Any> HeldContextMenu(
                     alpha = (p * 3f).coerceIn(0f, 1f)
                 }
             }
+            // The menu's glass morphs out of the held item itself (morphFrame),
+            // keeping the edge it shares with it, as every popup in the app does.
+            val itemBox = MorphBox(itemBounds.left, itemBounds.top, itemBounds.width, itemBounds.height)
+            val menuBox = MorphBox(menuX.toFloat(), menuY.toFloat(), menu.width.toFloat(), menu.height.toFloat())
             menu.placeWithLayer(menuX, menuY) {
                 val p = progress.value
-                alpha = ((p - 0.1f) / 0.9f).coerceIn(0f, 1f)
-                if (!reduceMotion) {
-                    // Grows out of the corner nearest the item, and travels
-                    // with it.
-                    transformOrigin = TransformOrigin(
-                        pivotFractionX = if (alignEnd) 1f else 0f,
-                        pivotFractionY = if (menuBelow) 0f else 1f,
-                    )
-                    val scale = lerp(0.55f, 1f, p)
-                    scaleX = scale
-                    scaleY = scale
-                    translationX = lerp(fromDx, 0f, p)
-                    translationY = lerp(fromDy, 0f, p)
+                if (reduceMotion) {
+                    alpha = p.coerceIn(0f, 1f)
+                } else {
+                    val frame = morphFrame(p, itemBox, menuBox)
+                    alpha = (p * 6f).coerceIn(0f, 1f)
+                    transformOrigin = TransformOrigin(0f, 0f)
+                    scaleX = frame.scaleX
+                    scaleY = frame.scaleY
+                    translationX = frame.translationX
+                    translationY = frame.translationY
                 }
             }
         }

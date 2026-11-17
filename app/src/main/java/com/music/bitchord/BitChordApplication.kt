@@ -2,7 +2,6 @@ package com.music.bitchord
 
 import android.app.Application
 import androidx.annotation.OptIn
-import androidx.compose.ui.ComposeUiFlags
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.media3.common.util.UnstableApi
 import coil3.ImageLoader
@@ -17,7 +16,11 @@ import coil3.svg.SvgDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import okhttp3.OkHttpClient
 import com.music.bitchord.auth.AuthStore
+import com.music.bitchord.data.CrashLog
+import com.music.bitchord.data.CrashLogTree
+import com.music.bitchord.data.CrashReporter
 import com.music.bitchord.data.DebugLog
+import moe.rukamori.archivetune.utils.PreferenceStore
 import com.music.bitchord.data.lyrics.LyricsTranslation
 import androidx.appcompat.app.AppCompatDelegate
 import com.music.bitchord.ui.player.AndroidPlayerHost
@@ -47,6 +50,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.concurrent.thread
+import timber.log.Timber
 
 class BitChordApplication : Application(), SingletonImageLoader.Factory, Configuration.Provider {
 
@@ -58,6 +62,15 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
     @kotlin.OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate() {
         super.onCreate()
+        // First, before anything else can throw: the crash reporter (ported
+        // from ArchiveTune) writes the exception, the buffered app log and this
+        // process's logcat tail to Android/data/<package>/files/crash and, on
+        // Android 10+, Download/Neiro — then hands the crash on to the system.
+        CrashReporter.install(this)
+        // The ported ArchiveTune player stack logs through Timber. Its lines
+        // go to the crash ring buffer in every build, and to logcat on debug.
+        Timber.plant(CrashLogTree())
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
         // The player is drawn by the shared UI module; this is what it reads
         // underneath — settings, the Canvas decoder, outputs, the party.
         AndroidStreamHooks.installEarly()
@@ -73,8 +86,19 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
                     'W' -> android.util.Log.w(tag, message, error)
                     else -> android.util.Log.e(tag, message, error)
                 }
+                // Same lines go to the crash ring buffer: logcat is gone the
+                // moment the process dies, and the ported ArchiveTune player
+                // stack is only ever mounted when a style is switched to —
+                // exactly when it crashes. This is what survives.
+                CrashLog.record(level, tag, message, error)
             }
         } else {
+            // Nothing reaches logcat on a release build, but the lines still go
+            // to the crash ring buffer (memory only) — what a crash report
+            // from a user's phone is made of.
+            DebugLog.sink = DebugLog.Sink { level, tag, message, error ->
+                CrashLog.record(level, tag, message, error)
+            }
             // R8 strips android.util.Log from a release build (proguard-rules.pro);
             // this stops Media3 composing the lines it would have handed it.
             androidx.media3.common.util.Log.setLogLevel(androidx.media3.common.util.Log.LOG_LEVEL_OFF)
@@ -84,13 +108,36 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             java.util.logging.LogManager.getLogManager().reset()
             java.util.logging.Logger.getLogger("").level = java.util.logging.Level.OFF
         }
+        // Warm the ported ArchiveTune player stack's preference snapshot early,
+        // so its first composition usually reads real values rather than the
+        // defaults. Not a crash fix — PreferenceStore.get never blocks, and
+        // ArchiveTunePlayerHost starts the store itself before its stack
+        // composes; this just gives the read a head start.
+        PreferenceStore.start(this)
         // Compose re-votes the window's frame rate from dispatchDraw on every
         // frame (API 35+), and Samsung's View logs each vote together with a
         // stack walk of its caller: measured on an S22, 8,000 lines in two
         // minutes, two stack traces built on the main thread per frame. The app
         // asks for its refresh rate itself (MainActivity.applyPerformanceMode),
         // so those votes buy nothing — and they kept resetting that request.
-        ComposeUiFlags.isAdaptiveRefreshRateEnabled = false
+        // The switch was retired in Compose ui 1.11 (the line the ported
+        // ArchiveTune player stack rides, and now this app with it): where the
+        // flag still exists it is turned off, where it doesn't the voting went
+        // with it. Reflection, so this neither compiles against nor crashes on
+        // a version that lacks it.
+        runCatching {
+            val flags = Class.forName("androidx.compose.ui.ComposeUiFlags")
+            val instance = runCatching { flags.getDeclaredField("INSTANCE").get(null) }.getOrNull()
+            runCatching {
+                val field = flags.getDeclaredField("isAdaptiveRefreshRateEnabled")
+                field.isAccessible = true
+                field.set(instance, false)
+            }.onFailure {
+                flags
+                    .getMethod("setIsAdaptiveRefreshRateEnabled", java.lang.Boolean.TYPE)
+                    .invoke(instance, false)
+            }
+        }
         // The Spotify library and import live in the shared module; the tokens are the WebView's.
         SpotifyLibrary.auth = SpotifyLibrary.Auth {
             SpotifyToken.accessToken()?.let { SpotifyLibrary.Tokens(it, SpotifyToken.clientToken()) }
@@ -150,6 +197,14 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             CoroutineScope(Dispatchers.IO).launch { Innertube.ensureSessionScope() }
         }
         AppSettings.init(this, authStore)
+        // A ported player style that crashed the last two launches within
+        // seconds of starting is switched back to the app's own player before
+        // any screen mounts it again (MainActivity says so).
+        com.music.bitchord.data.CrashLoopGuard.checkOnLaunch(this)
+        // The settings Neiro shares with the ported ArchiveTune stack read and
+        // write Neiro's own AppSettings, whichever player style is active —
+        // after AppSettings is open and the preference store is started.
+        com.music.bitchord.ui.player.ArchiveTunePreferenceBridge.install(this)
         // Restores the addon token, so the first search after a process restart
         // doesn't have to attest the device again.
         com.music.bitchord.data.sources.addon.AddonAuth.init(this)

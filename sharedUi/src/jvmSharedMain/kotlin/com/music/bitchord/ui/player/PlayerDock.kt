@@ -57,6 +57,40 @@ class PlayerDock {
     var attached by mutableStateOf(false)
         internal set
 
+    /**
+     * For a player drawn by someone else (the ported ArchiveTune styles): its
+     * sheet's offset below fully open and its travel, so the mini player's
+     * cover stands aside exactly as it does for the app's own player, and
+     * that player can fly its artwork to [miniArtScreenRect].
+     */
+    fun attachExternal(offset: () -> Float, travelPx: () -> Float) {
+        externalTravel = travelPx
+        externalOffset = offset
+        sheetOffset = offset
+        attached = true
+    }
+
+    /**
+     * The external player went away. Clears only what [attachExternal]
+     * installed: if the app's own player has attached since (a switch back
+     * to BITCHORD while it opens), its live dock is left alone.
+     */
+    fun detachExternal() {
+        val installed = externalOffset ?: return
+        externalOffset = null
+        externalTravel = null
+        if (sheetOffset === installed) {
+            sheetOffset = null
+            attached = false
+        }
+    }
+
+    private var externalOffset: (() -> Float)? = null
+    private var externalTravel: (() -> Float)? = null
+
+    /** The mini player's cover on screen, for an external player's drift. */
+    fun miniArtScreenRect(): Rect? = miniArtOnScreen()
+
     /** Reported by the mini player's cover whenever it is placed. */
     fun reportMiniArt(coordinates: LayoutCoordinates, corner: Dp) {
         miniArt = coordinates
@@ -94,7 +128,7 @@ class PlayerDock {
      * there is no sheet yet, which is where an opening player starts.
      */
     fun openFraction(): Float {
-        val travel = sheetTravel
+        val travel = externalTravel?.invoke() ?: sheetTravel
         val offset = offset() ?: return 0f
         if (travel <= 0f) return 0f
         return (1f - offset / travel).coerceIn(0f, 1f)

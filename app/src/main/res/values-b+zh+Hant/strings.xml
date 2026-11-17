@@ -1489,4 +1489,6 @@
     <string name="scrobble_service">Scrobbling 服務</string>
     <string name="scrobble_service_choice_message">Scrobble 的傳送目標。Libre.fm 使用內建金鑰登入；切換服務會登出目前的工作階段。</string>
     <string name="libre_fm">Libre.fm</string>
+    <string name="crash_log_saved">Neiro 上次當機了 — 記錄已儲存至 %1$s</string>
+    <string name="player_style_reset">%1$s 播放器反覆當機，Neiro 已切換回內建播放器。當機記錄位於 Downloads/Neiro。</string>
 </resources>

@@ -150,6 +150,7 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.ui.components.ExplicitBadge
 import com.music.bitchord.ui.components.VideoThumbnails
 import com.music.bitchord.ui.components.menuAnchor
+import com.music.bitchord.ui.theme.rememberArtworkPalette
 import com.music.bitchord.ui.theme.HideStatusBar
 import com.music.bitchord.ui.theme.rememberScreenOrientation
 import com.music.bitchord.ui.theme.StatusBarIcons
@@ -165,6 +166,8 @@ import com.music.bitchord.data.canvas.CanvasSource
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.LastPlayerScreen
+import com.music.bitchord.data.settings.LyricsBackgroundStyle
+import com.music.bitchord.data.settings.PlayerButtonsStyle
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.PlaybackSourceType
@@ -867,6 +870,12 @@ fun NowPlayingScreen(
      * rather than a still of it.
      */
     onLiveCanvasChanged: (Boolean) -> Unit = {},
+    /**
+     * The ported design styles' collapse buttons: the host's own way down —
+     * the sheet's close, exactly as the swipe and the system back ask for it.
+     * The birchord player needs none of it; it closes on the swipe alone.
+     */
+    onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -996,6 +1005,8 @@ fun NowPlayingScreen(
     val canvasCover = remember(canvas?.url) { mutableFloatStateOf(0f) }
     // What the main player stands on — see [PlayerTheme].
     val playerTheme by PlayerSettings.playerTheme.collectAsStateWithLifecycle()
+    // How soft the full-cover blur is — see AppSettings.blurIntensity.
+    val blurIntensity by PlayerSettings.blurIntensity.collectAsStateWithLifecycle()
     // Both meshes follow a playing clip's colours. The blurred still cover has
     // nothing to re-tint, and each read is a GPU readback.
     val tintsOffClip = playerTheme != PlayerTheme.SIMPLE
@@ -1380,6 +1391,13 @@ fun NowPlayingScreen(
         }
     }
     val fullBleedArt by PlayerSettings.fullBleedArtwork.collectAsStateWithLifecycle()
+    // The sleeve's own appearance, ported from ArchiveTune's Appearance page:
+    // the corner radius row, the switch that takes the sleeve away, the
+    // moving blur behind the player, and what stands behind the lyrics.
+    val thumbnailCorner by PlayerSettings.thumbnailCornerRadius.collectAsStateWithLifecycle()
+    val hideThumbnail by PlayerSettings.hidePlayerThumbnail.collectAsStateWithLifecycle()
+    val movingBlur by PlayerSettings.movingBlur.collectAsStateWithLifecycle()
+    val lyricsBackgroundStyle by PlayerSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
     // Full-bleed is a phone idiom. What the width has to rule out is a player
     // running a foot wider than the column of controls under it — edge to edge
     // meaning "a picture, and separately some controls" rather than "the
@@ -1766,8 +1784,10 @@ fun NowPlayingScreen(
     // sleeve never has to get out of anything's way.
     val landscape = sideways
     // Tablet-sized players use the full-cover blur in all three states, and so
-    // does the phone under the simple theme — see the backdrop.
-    val tabletArtworkBackdrop = tabletSizedPlayer(windowWidth)
+    // does the phone under the simple theme — see the backdrop. "Tablet mode",
+    // ported from ArchiveTune, asks for that treatment at any width.
+    val tabletModeSetting by PlayerSettings.tabletMode.collectAsStateWithLifecycle()
+    val tabletArtworkBackdrop = tabletSizedPlayer(windowWidth) || tabletModeSetting
     // Owned by the song-level player composition, not by any one screen state.
     // Opening lyrics/queue, and rotating into or out of landscape, therefore
     // reuse the same tiny pre-blurred bitmap instead of running a screen-sized
@@ -1780,15 +1800,24 @@ fun NowPlayingScreen(
         // on screen until this one is ready.
         prepare = playerTheme == PlayerTheme.SIMPLE || landscape || tabletArtworkBackdrop ||
             lyricsOpen || queueOpen || playerPrewarmStage >= 1,
+        blurIntensityDp = blurIntensity,
     )
     // One movable Image node, not two backdrop call sites. Compose carries it
     // between the portrait and landscape players; only the cached bitmap
     // changes when the artwork preparation above completes for another song.
     val currentFullArtworkBlurImage = rememberUpdatedState(fullArtworkBlurImage)
+    // Read through delegates below, so the movable reads the current values
+    // without the lambda having to capture them anew each change.
+    val currentMovingBlur by rememberUpdatedState(movingBlur)
+    val currentLyricsStyle by rememberUpdatedState(lyricsBackgroundStyle)
     val fullArtworkBlurContent = remember {
         movableContentOf<Modifier> { backdropModifier ->
             FullArtworkBlurBackdrop(
                 image = currentFullArtworkBlurImage.value,
+                // The moving blur, ported from ArchiveTune: the cover drifts
+                // behind the player on its own, and the lyrics' moving-blur
+                // background asks for the same drift while they are open.
+                drift = currentMovingBlur || currentLyricsStyle == LyricsBackgroundStyle.MOVING_BLUR,
                 modifier = backdropModifier,
             )
         }
@@ -1958,6 +1987,17 @@ fun NowPlayingScreen(
     DisposableEffect(Unit) { onDispose { reportLiveCanvas(false) } }
     val frostOff by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val frost = if (frostOff) null else PlayerPlatform.host.rememberPlayerFrost()
+    // The transport's tint, ported from ArchiveTune's PlayerButtonsStyle: the
+    // theme's secondary colour in place of the white chrome, or white as it
+    // always was. Provided around the whole player and its overlays, so a
+    // panel's glyphs follow the same tint as the deck's.
+    val buttonsStyle by PlayerSettings.playerButtonsStyle.collectAsStateWithLifecycle()
+    val chromeTint = if (buttonsStyle == PlayerButtonsStyle.SECONDARY) {
+        MaterialTheme.colorScheme.secondary
+    } else {
+        Color.White
+    }
+    CompositionLocalProvider(LocalPlayerChromeTint provides chromeTint) {
     FrostedPlayerFrame(
         modifier = modifier,
         // Off where a music video is the backdrop: it can go bright under the
@@ -1971,6 +2011,11 @@ fun NowPlayingScreen(
         overlayOpen = { overlayOpen.value && !currentMenuOpen() },
         overlays = playerOverlays,
     ) {
+        // Full-screen sideways video keeps priority — a turned screen is
+        // the whole window whatever the player looks like. The ported
+        // ArchiveTune styles never come through here: they mount their own
+        // player (see MainActivity's ArchiveTunePlayerHost), and this screen
+        // only composes at all while the style is BITCHORD.
         if (landscape && videoMode) {
             val versionAligning by PlayerSettings.versionAlignmentInProgress.collectAsStateWithLifecycle()
             val transitionWindow by PlayerSettings.smartTransitionWindow.collectAsStateWithLifecycle()
@@ -1994,6 +2039,7 @@ fun NowPlayingScreen(
                                 ?.let { it.start..it.end },
                             onScrub = onScrub,
                             onScrubFinished = onScrubFinished,
+                            isPlaying = isPlaying,
                         ) {
                             PlaybackQualityLabel(
                                 song = song,
@@ -2216,6 +2262,7 @@ fun NowPlayingScreen(
                                         ?.let { it.start..it.end },
                                     onScrub = onScrub,
                                     onScrubFinished = onScrubFinished,
+                                    isPlaying = isPlaying,
                                 ) {
                                     PlaybackQualityLabel(
                                         song = song,
@@ -2365,9 +2412,16 @@ fun NowPlayingScreen(
                 val legacyMeshBackdrop = !tabletArtworkBackdrop && !spotifyCanvasPresentation &&
                     playerTheme == PlayerTheme.LEGACY
                 val artworkMeshBackdrop = !tabletArtworkBackdrop && playerTheme == PlayerTheme.DEFAULT
+                // The two ported background styles, drawn as the mesh's peers:
+                // Flat is the theme's own background, and Glow a radial wash of
+                // the artwork's palette behind where the sleeve sits.
+                val flatBackdrop = !tabletArtworkBackdrop && !spotifyCanvasPresentation &&
+                    playerTheme == PlayerTheme.FLAT
+                val glowBackdrop = !tabletArtworkBackdrop && !spotifyCanvasPresentation &&
+                    playerTheme == PlayerTheme.GLOW
                 val fullArtworkBackdropAlpha by animateFloatAsState(
                     targetValue = if (
-                        !legacyMeshBackdrop &&
+                        !legacyMeshBackdrop && !flatBackdrop && !glowBackdrop &&
                         (tabletArtworkBackdrop || fullArtworkBlurImage != null) &&
                         (!spotifyCanvasPresentation || lyricsOpen || queueOpen) &&
                         (!artworkMeshBackdrop || lyricsOpen || queueOpen)
@@ -2384,6 +2438,24 @@ fun NowPlayingScreen(
                         imageUrl = remoteArt,
                         canvasFrame = { canvasFrame },
                         trackKey = song.videoId,
+                        modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
+                    )
+                }
+                if (flatBackdrop) {
+                    // The theme's own background, flat — the "follow theme"
+                    // background ported from ArchiveTune. The blurred cover
+                    // still takes over for the lyrics and queue, as it does
+                    // over the mesh.
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
+                    )
+                }
+                if (glowBackdrop) {
+                    PlayerGlowBackdrop(
+                        imageUrl = remoteArt,
                         modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
                     )
                 }
@@ -2421,6 +2493,45 @@ fun NowPlayingScreen(
                 fullArtworkBlurContent(
                     Modifier.graphicsLayer { alpha = fullArtworkBackdropAlpha },
                 )
+                // What stands behind the lyrics, ported from ArchiveTune's
+                // lyrics background style: Follow theme paints the theme's own
+                // background over whatever the player stands on, and Coloring a
+                // wash of the artwork's colours. Default and Moving blur are
+                // the blurred cover itself, above.
+                val lyricsBackdropAlpha by animateFloatAsState(
+                    targetValue = if (
+                        (lyricsOpen || queueOpen) && (
+                            lyricsBackgroundStyle == LyricsBackgroundStyle.FOLLOW_THEME ||
+                                lyricsBackgroundStyle == LyricsBackgroundStyle.COLORING
+                            )
+                    ) 1f else 0f,
+                    animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+                    label = "lyricsBackgroundCrossfade",
+                )
+                if (lyricsBackdropAlpha > 0f) {
+                    when (lyricsBackgroundStyle) {
+                        LyricsBackgroundStyle.FOLLOW_THEME -> Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background)
+                                .graphicsLayer { alpha = lyricsBackdropAlpha },
+                        )
+                        LyricsBackgroundStyle.COLORING -> {
+                            val palette = rememberArtworkPalette(remoteArt)
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(palette.background, MaterialTheme.colorScheme.background),
+                                        ),
+                                    )
+                                    .graphicsLayer { alpha = lyricsBackdropAlpha },
+                            )
+                        }
+                        else -> {}
+                    }
+                }
 
                 // Mount once, behind the controls. A known portrait aspect changes the
                 // invisible view to full-player bounds before its first frame is shown.
@@ -3163,8 +3274,11 @@ fun NowPlayingScreen(
                         // The banner's dissolve, firmed up into the cover's hard edge as
                         // it docks.
                         fun sleeveShown(): Float = bannerShown() * dockT()
+                        // The sleeve's corner, ported from ArchiveTune's thumbnail
+                        // corner radius: the stock 8dp unless the row has moved
+                        // it, dissolving to nothing as the sleeve becomes a banner.
                         fun sleeveCorner(): Dp {
-                            val corner = 8.dp * (1f - sleeveShown())
+                            val corner = thumbnailCorner.dp * (1f - sleeveShown())
                             val t = dockT()
                             return if (dock == null || t >= 1f) corner else lerp(dock.miniArtCorner(), corner, t)
                         }
@@ -3247,6 +3361,11 @@ fun NowPlayingScreen(
                                         else if (heroClip != null) 1f - canvasCover.floatValue
                                         else 1f
                                         ) *
+                                        // "Hide player thumbnail", ported from
+                                        // ArchiveTune: the layout keeps its place —
+                                        // the gestures, the stats line, the dock —
+                                        // and only the picture goes.
+                                        (if (hideThumbnail) 0f else 1f) *
                                         // A music video has no square sleeve: its
                                         // picture box stands in, still frame first.
                                         // The sleeve is only the collapsed header's
@@ -4112,6 +4231,7 @@ fun NowPlayingScreen(
                             ?.let { it.start..it.end },
                         onScrub = onScrub,
                         onScrubFinished = onScrubFinished,
+                        isPlaying = isPlaying,
                     ) {
                         PlaybackQualityLabel(
                             song = song,
@@ -4176,6 +4296,7 @@ fun NowPlayingScreen(
                 }
             }
         }
+    }
     }
 }
 

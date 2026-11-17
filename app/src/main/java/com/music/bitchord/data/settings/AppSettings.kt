@@ -132,8 +132,29 @@ enum class ThemeMode(val label: String) {
  * How the app's SF Pro Display is set. [DEFAULT] draws each weight one cut
  * lighter and spaces it to Apple Music's own screens; [LEGACY] is the cut the
  * app shipped with before that, every weight its own and spaced tight.
+ * [SYSTEM] and [CUSTOM] are ported from ArchiveTune's AppFontPreference: the
+ * device's own typeface, or a font file of the user's.
  */
-enum class AppFont { DEFAULT, LEGACY }
+enum class AppFont { DEFAULT, LEGACY, SYSTEM, CUSTOM }
+
+/**
+ * The preset tiers the Liquid Glass tuning is built from, ported from
+ * ArchiveTune: Subtle and Vivid scale the refraction and blur around Standard,
+ * which is the glass the app has always drawn.
+ */
+enum class LiquidGlassIntensity { SUBTLE, STANDARD, VIVID }
+
+/**
+ * What the mini player and the bottom bar do when a list is scrolled, ported
+ * from ArchiveTune's NavigationBarCompactBehavior. [ADAPTIVE] folds the stack
+ * on the way down and brings it back on the way up; the other two hold one
+ * shape whatever the scroll does.
+ */
+enum class MiniPlayerBarBehavior {
+    ADAPTIVE,
+    ALWAYS_EXPANDED,
+    ALWAYS_COMPACT,
+}
 
 /**
  * Which of the equaliser's two tabs is driving the sound.
@@ -497,8 +518,12 @@ object AppSettings {
      */
     val disableBlendEffects = MutableStateFlow(false)
 
-    /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
-    val liquidGlass = MutableStateFlow(false)
+    /**
+     * Real backdrop-sampled glass (blur, lens refraction) on the floating nav
+     * bar, Android 12+ only. On by default, and switched on once for an
+     * upgrade too (see [GlassDefault]).
+     */
+    val liquidGlass = MutableStateFlow(GlassDefault.DEFAULT_ON)
 
     /**
      * Frosts the glass instead of refracting it, for phones the lens shader is too
@@ -514,6 +539,210 @@ object AppSettings {
      * frames. Reduce dynamic blur overrides it.
      */
     val progressiveBlur = MutableStateFlow(false)
+
+    // ---- Liquid Glass tuning, ported from ArchiveTune's LiquidGlassTuning. ----
+
+    /** The preset tier the tuning's factors are built around. */
+    val liquidGlassIntensity = MutableStateFlow(LiquidGlassIntensity.STANDARD)
+
+    /** How far the lens bends light at the glass edge, as a 0..1 fraction of the default 0.30. */
+    val liquidGlassRefractionHeight = MutableStateFlow(DEFAULT_LIQUID_GLASS_REFRACTION_HEIGHT)
+
+    /** Strength of the edge displacement, as a 0..1 fraction of the default 0.75. */
+    val liquidGlassRefractionAmount = MutableStateFlow(DEFAULT_LIQUID_GLASS_REFRACTION_AMOUNT)
+
+    /** Backdrop softness behind the glass, as a 0..1 fraction of the default 0.65. */
+    val liquidGlassBlurRadius = MutableStateFlow(DEFAULT_LIQUID_GLASS_BLUR_RADIUS)
+
+    /** Surface tint and dimming, as a 0..2 multiple of the default 1.40. */
+    val liquidGlassTintOpacity = MutableStateFlow(DEFAULT_LIQUID_GLASS_TINT_OPACITY)
+
+    /** Drop shadow underneath glass surfaces, as a 0..1 fraction of the default 0.45. */
+    val liquidGlassShadowDepth = MutableStateFlow(DEFAULT_LIQUID_GLASS_SHADOW_DEPTH)
+
+    /** Multi-layer spatial depth refraction on thick glass. */
+    val liquidGlassDepth3D = MutableStateFlow(true)
+
+    /** Prismatic color fringing on lens edges. */
+    val liquidGlassChromaticAberration = MutableStateFlow(true)
+
+    /** Color saturation enhancement behind glass materials. */
+    val liquidGlassBackdropVibrancy = MutableStateFlow(true)
+
+    /** Dynamically balances the glass's tint between bright and dark backdrops. */
+    val liquidGlassAdaptiveLuminance = MutableStateFlow(true)
+
+    // ---- Liquid Glass elements, ported from ArchiveTune's glass surfaces ----
+    // ArchiveTune hangs its glass on the master switch alone; here each surface
+    // keeps a pill of its own, so glass can be taken piecemeal.
+
+    /** Glass on the floating header pills and the artwork-page round buttons. */
+    val glassHeaderPills = MutableStateFlow(true)
+
+    /** Glass on the bottom navigation bar — the all-in-one glass bar. */
+    val glassNavBar = MutableStateFlow(true)
+
+    /** Glass on the mini player's own Liquid Glass background style. */
+    val glassMiniPlayer = MutableStateFlow(true)
+
+    /** Glass frost on the menus and popovers. */
+    val glassMenus = MutableStateFlow(true)
+
+    // ---- Navigation bar settings, ported from ArchiveTune's page ----
+
+    /**
+     * What the mini player and bar do on scroll. Adaptively folding is what the
+     * glass bar has always done here, so it is the default — and turning Liquid
+     * Glass on puts it back, as the bar's glass shape assumes it.
+     */
+    val miniPlayerBarBehavior = MutableStateFlow(MiniPlayerBarBehavior.ADAPTIVE)
+
+    /**
+     * The standard bar's frosted surface — the haze it has always drawn. One of
+     * the three bar styles with [navBarTint] and [liquidGlassNavBar].
+     */
+    val navBarFrosted = MutableStateFlow(true)
+
+    /** The standard bar's accent-tinted surface, one of the three bar styles. */
+    val navBarTint = MutableStateFlow(false)
+
+    /**
+     * The standard bar drawn as Liquid Glass with its own fixed geometry, one of
+     * the three bar styles — the dimensions are the glass's own while it is on.
+     */
+    val liquidGlassNavBar = MutableStateFlow(false)
+
+    /** The Nuvio-style rim light and soft sheen on the bar and compact circles. */
+    val navBarGlassGlow = MutableStateFlow(true)
+
+    /** How strong the glass glow is, 0.2x..2x around the drawn-by-default 1x. */
+    val navBarGlassGlowIntensity = MutableStateFlow(1f)
+
+    /** The bar's width as a fraction of the room it has, 0.5..1.0. */
+    val navBarWidth = MutableStateFlow(1.0f)
+
+    /** The bar's height as a multiplier of its natural height, 0.8..1.4. */
+    val navBarHeight = MutableStateFlow(1.0f)
+
+    /** The bar surface's opacity, 0.2..1.0. */
+    val navBarOpacity = MutableStateFlow(1.0f)
+
+    /** How much of the bar's fill is dropped to see the page through, 0..0.95. */
+    val navBarTransparency = MutableStateFlow(0f)
+
+    /** The gap between a tab's glyph and its label, in dp. */
+    val navBarLabelSpacing = MutableStateFlow(1f)
+
+    /**
+     * The bar's corner radius in dp. The shipped 28 is drawn as the bar's own
+     * half-height pill, which is the shape the app has always had.
+     */
+    val navBarCornerRadius = MutableStateFlow(28f)
+
+    /** Hides the status bar everywhere, not just in the player. Swipe from the top edge still reveals it. */
+    val hideStatusBar = MutableStateFlow(false)
+
+    /** Scales every sp-measured size, 0.85..1.30; dp layout is untouched, as in ArchiveTune. */
+    val uiScale = MutableStateFlow(1.0f)
+    /**
+     * The full-cover blur's strength in dp, 0..64 and 48 by default — the
+     * strength the player has always drawn. Feeds the Simple player theme's
+     * backdrop and the lyrics and queue covers.
+     */
+    val blurIntensity = MutableStateFlow(DEFAULT_BLUR_INTENSITY)
+
+    // ---- The Appearance page's player group, ported from ArchiveTune ----
+
+    /** The custom font's display name, shown on the Custom font row. */
+    val customFontName = MutableStateFlow("")
+
+    /** The custom font's file uri, inside the app's own storage. */
+    val customFontUri = MutableStateFlow("")
+
+    /**
+     * The blurred cover behind the player drifts slowly, as a screen saver
+     * does. Ported from ArchiveTune's moving blur (the Apple Music design's
+     * background effect); off keeps the backdrop perfectly still.
+     */
+    val movingBlur = MutableStateFlow(false)
+
+    /** Hides the player's seek bar, leaving the transport and the times off. */
+    val hideSlideBar = MutableStateFlow(false)
+
+    /** Hides the sleeve in the player, leaving the backdrop and the controls. */
+    val hidePlayerThumbnail = MutableStateFlow(false)
+
+    /**
+     * The sleeve's corner radius in dp. 8 is the corner the app has always
+     * drawn, so that is the default — the stock look until it is moved.
+     */
+    val thumbnailCornerRadius = MutableStateFlow(DEFAULT_THUMBNAIL_CORNER_RADIUS)
+
+    val playerButtonsStyle = MutableStateFlow(PlayerButtonsStyle.DEFAULT)
+
+    val playerSliderStyle = MutableStateFlow(PlayerSliderStyle.STANDARD)
+
+    val lyricsBackgroundStyle = MutableStateFlow(LyricsBackgroundStyle.DEFAULT)
+
+    val miniPlayerBackgroundStyle = MutableStateFlow(MiniPlayerBackgroundStyle.FROSTED)
+
+    // ---- The Appearance page's home, misc and extras groups ----
+
+    /** The home feed keeps only the lead shelf, as a screen saver keeps a clock. */
+    val minimalHomeMode = MutableStateFlow(false)
+
+    val defaultOpenTab = MutableStateFlow(DefaultOpenTab.HOME)
+
+    /**
+     * Draws the player the way a tablet-sized window gets it — the full-cover
+     * blur standing behind everything — at any width. Ported from ArchiveTune's
+     * tablet mode; the window's own width still decides on its own until this
+     * is switched on.
+     */
+    val tabletMode = MutableStateFlow(false)
+
+    val backAnimationStyle = MutableStateFlow(BackAnimationStyle.DEFAULT)
+
+    /** Tab labels under the bottom bar's glyphs. */
+    val navBarShowLabels = MutableStateFlow(true)
+
+    /** The sign-in banner at the top of Home, for the signed-out listener. */
+    val hideSignInBanner = MutableStateFlow(false)
+
+    /** The Replay card at the top of the Library tab. */
+    val hideLibraryReplayCard = MutableStateFlow(false)
+
+    /** The On-device shelf on the Library tab. */
+    val hideLibraryOnDeviceShelf = MutableStateFlow(false)
+
+    // ---- The always-on playing screen, ported from ArchiveTune's AOD ----
+
+    /** The master switch: off, the screen saver the system picks plays instead. */
+    val aodEnabled = MutableStateFlow(false)
+
+    val aodShowThumbnail = MutableStateFlow(true)
+    val aodShowArtist = MutableStateFlow(true)
+    val aodShowAlbum = MutableStateFlow(false)
+    val aodShowProgress = MutableStateFlow(true)
+    val aodShowTimeLabels = MutableStateFlow(true)
+    val aodShowControls = MutableStateFlow(true)
+    val aodShowClock = MutableStateFlow(true)
+    val aodShowBattery = MutableStateFlow(true)
+
+    /** The screen's brightness while the AOD is up, as a share of full. */
+    val aodBrightness = MutableStateFlow(0.15f)
+
+    /** Eases the brightness down the longer the screen stays on. */
+    val aodAutoDimming = MutableStateFlow(true)
+
+    /** Seconds after which the AOD gives the screen back; 0 keeps it on. */
+    val aodAutoTimerSeconds = MutableStateFlow(0)
+
+    /** Takes taps so a pocket cannot skip a track; the power key still exits. */
+    val aodTouchLock = MutableStateFlow(false)
+
+    /** Nudges the artwork a hair every minute, so one pixel row doesn't age. */
+    val aodPixelShift = MutableStateFlow(true)
 
     /** Blurs unfocused lyric lines, keeping the active line sharp. */
     val lyricsBlur = MutableStateFlow(true)
@@ -607,6 +836,22 @@ object AppSettings {
      * where a mesh is drawn once per track and then composited).
      */
     val playerTheme = MutableStateFlow(PlayerTheme.DEFAULT)
+
+    /**
+     * The full player's own design, ported from ArchiveTune's PlayerDesignStyle.
+     * [PlayerDesignStyle.BITCHORD] — this app's own — is the default and the
+     * whole player stays exactly as it has always been under it; the other ten
+     * are ArchiveTune's layouts, each a whole artwork/typography/slider/transport
+     * treatment rather than a reskin.
+     */
+    val playerDesignStyle = MutableStateFlow(PlayerDesignStyle.BITCHORD)
+
+    /**
+     * The TikTok player's karaoke strip under the caption, ported from
+     * ArchiveTune's TikTokMainLyricsEnabledKey: the sung line across the bottom
+     * of the feed page, on while it can be.
+     */
+    val tikTokMainLyrics = MutableStateFlow(true)
 
     /** Restores the expanded player to the surface the listener left open. */
     val lastPlayerScreen = MutableStateFlow(LastPlayerScreen.MAIN)
@@ -1059,9 +1304,92 @@ object AppSettings {
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
-        liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
+        run {
+            val glass = GlassDefault.decide(
+                stored = if (prefs.contains(KEY_LIQUID_GLASS)) prefs.getBoolean(KEY_LIQUID_GLASS, true) else null,
+                migrated = prefs.getBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, false),
+            )
+            liquidGlass.value = glass.liquidGlass
+            if (glass.markMigrated) {
+                prefs.edit()
+                    .putBoolean(KEY_LIQUID_GLASS, glass.liquidGlass)
+                    .putBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, true)
+                    .apply()
+            }
+        }
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
+        liquidGlassIntensity.value = runCatching {
+            LiquidGlassIntensity.valueOf(prefs.getString(KEY_LIQUID_GLASS_INTENSITY, null) ?: "STANDARD")
+        }.getOrDefault(LiquidGlassIntensity.STANDARD)
+        liquidGlassRefractionHeight.value = prefs.getFloat(KEY_LIQUID_GLASS_REFRACTION_HEIGHT, DEFAULT_LIQUID_GLASS_REFRACTION_HEIGHT)
+            .coerceIn(0f, 1f)
+        liquidGlassRefractionAmount.value = prefs.getFloat(KEY_LIQUID_GLASS_REFRACTION_AMOUNT, DEFAULT_LIQUID_GLASS_REFRACTION_AMOUNT)
+            .coerceIn(0f, 1f)
+        liquidGlassBlurRadius.value = prefs.getFloat(KEY_LIQUID_GLASS_BLUR_RADIUS, DEFAULT_LIQUID_GLASS_BLUR_RADIUS)
+            .coerceIn(0f, 1f)
+        liquidGlassTintOpacity.value = prefs.getFloat(KEY_LIQUID_GLASS_TINT_OPACITY, DEFAULT_LIQUID_GLASS_TINT_OPACITY)
+            .coerceIn(0f, 2f)
+        liquidGlassShadowDepth.value = prefs.getFloat(KEY_LIQUID_GLASS_SHADOW_DEPTH, DEFAULT_LIQUID_GLASS_SHADOW_DEPTH)
+            .coerceIn(0f, 1f)
+        liquidGlassDepth3D.value = prefs.getBoolean(KEY_LIQUID_GLASS_DEPTH_3D, true)
+        liquidGlassChromaticAberration.value = prefs.getBoolean(KEY_LIQUID_GLASS_CHROMATIC_ABERRATION, true)
+        liquidGlassBackdropVibrancy.value = prefs.getBoolean(KEY_LIQUID_GLASS_BACKDROP_VIBRANCY, true)
+        liquidGlassAdaptiveLuminance.value = prefs.getBoolean(KEY_LIQUID_GLASS_ADAPTIVE_LUMINANCE, true)
+        glassHeaderPills.value = prefs.getBoolean(KEY_GLASS_HEADER_PILLS, true)
+        glassNavBar.value = prefs.getBoolean(KEY_GLASS_NAV_BAR, true)
+        glassMiniPlayer.value = prefs.getBoolean(KEY_GLASS_MINI_PLAYER, true)
+        glassMenus.value = prefs.getBoolean(KEY_GLASS_MENUS, true)
+        miniPlayerBarBehavior.value = runCatching {
+            MiniPlayerBarBehavior.valueOf(prefs.getString(KEY_MINI_PLAYER_BAR_BEHAVIOR, null) ?: "ADAPTIVE")
+        }.getOrDefault(MiniPlayerBarBehavior.ADAPTIVE)
+        navBarFrosted.value = prefs.getBoolean(KEY_NAV_BAR_FROSTED, true)
+        navBarTint.value = prefs.getBoolean(KEY_NAV_BAR_TINT, false)
+        liquidGlassNavBar.value = prefs.getBoolean(KEY_LIQUID_GLASS_NAV_BAR, false)
+        navBarGlassGlow.value = prefs.getBoolean(KEY_NAV_BAR_GLASS_GLOW, true)
+        navBarGlassGlowIntensity.value = prefs.getFloat(KEY_NAV_BAR_GLASS_GLOW_INTENSITY, 1f).coerceIn(0.2f, 2f)
+        navBarWidth.value = prefs.getFloat(KEY_NAV_BAR_WIDTH, 1.0f).coerceIn(0.5f, 1.0f)
+        navBarHeight.value = prefs.getFloat(KEY_NAV_BAR_HEIGHT, 1.0f).coerceIn(0.8f, 1.4f)
+        navBarOpacity.value = prefs.getFloat(KEY_NAV_BAR_OPACITY, 1.0f).coerceIn(0.2f, 1.0f)
+        navBarTransparency.value = prefs.getFloat(KEY_NAV_BAR_TRANSPARENCY, 0f).coerceIn(0f, 0.95f)
+        navBarLabelSpacing.value = prefs.getFloat(KEY_NAV_BAR_LABEL_SPACING, 1f).coerceIn(0f, 16f)
+        navBarCornerRadius.value = prefs.getFloat(KEY_NAV_BAR_CORNER_RADIUS, 28f).coerceIn(0f, 48f)
+        hideStatusBar.value = prefs.getBoolean(KEY_HIDE_STATUS_BAR, false)
+        uiScale.value = prefs.getFloat(KEY_UI_SCALE, 1.0f).coerceIn(MIN_UI_SCALE, MAX_UI_SCALE)
+        blurIntensity.value = prefs.getFloat(KEY_BLUR_INTENSITY, DEFAULT_BLUR_INTENSITY).coerceIn(0f, MAX_BLUR_INTENSITY)
+        customFontName.value = prefs.getString(KEY_CUSTOM_FONT_NAME, "").orEmpty()
+        customFontUri.value = prefs.getString(KEY_CUSTOM_FONT_URI, "").orEmpty()
+        movingBlur.value = prefs.getBoolean(KEY_MOVING_BLUR, false)
+        hideSlideBar.value = prefs.getBoolean(KEY_HIDE_SLIDE_BAR, false)
+        hidePlayerThumbnail.value = prefs.getBoolean(KEY_HIDE_PLAYER_THUMBNAIL, false)
+        thumbnailCornerRadius.value = prefs.getFloat(KEY_THUMBNAIL_CORNER_RADIUS, DEFAULT_THUMBNAIL_CORNER_RADIUS)
+            .coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
+        playerButtonsStyle.value = readEnum(KEY_PLAYER_BUTTONS_STYLE, PlayerButtonsStyle.DEFAULT)
+        playerSliderStyle.value = readEnum(KEY_PLAYER_SLIDER_STYLE, PlayerSliderStyle.STANDARD)
+        lyricsBackgroundStyle.value = readEnum(KEY_LYRICS_BACKGROUND_STYLE, LyricsBackgroundStyle.DEFAULT)
+        miniPlayerBackgroundStyle.value = readEnum(KEY_MINI_PLAYER_BACKGROUND_STYLE, MiniPlayerBackgroundStyle.FROSTED)
+        minimalHomeMode.value = prefs.getBoolean(KEY_MINIMAL_HOME_MODE, false)
+        defaultOpenTab.value = readEnum(KEY_DEFAULT_OPEN_TAB, DefaultOpenTab.HOME)
+        tabletMode.value = prefs.getBoolean(KEY_TABLET_MODE, false)
+        backAnimationStyle.value = readEnum(KEY_BACK_ANIMATION_STYLE, BackAnimationStyle.DEFAULT)
+        navBarShowLabels.value = prefs.getBoolean(KEY_NAV_BAR_SHOW_LABELS, true)
+        hideSignInBanner.value = prefs.getBoolean(KEY_HIDE_SIGN_IN_BANNER, false)
+        hideLibraryReplayCard.value = prefs.getBoolean(KEY_HIDE_LIBRARY_REPLAY_CARD, false)
+        hideLibraryOnDeviceShelf.value = prefs.getBoolean(KEY_HIDE_LIBRARY_ON_DEVICE_SHELF, false)
+        aodEnabled.value = prefs.getBoolean(KEY_AOD_ENABLED, false)
+        aodShowThumbnail.value = prefs.getBoolean(KEY_AOD_SHOW_THUMBNAIL, true)
+        aodShowArtist.value = prefs.getBoolean(KEY_AOD_SHOW_ARTIST, true)
+        aodShowAlbum.value = prefs.getBoolean(KEY_AOD_SHOW_ALBUM, false)
+        aodShowProgress.value = prefs.getBoolean(KEY_AOD_SHOW_PROGRESS, true)
+        aodShowTimeLabels.value = prefs.getBoolean(KEY_AOD_SHOW_TIME_LABELS, true)
+        aodShowControls.value = prefs.getBoolean(KEY_AOD_SHOW_CONTROLS, true)
+        aodShowClock.value = prefs.getBoolean(KEY_AOD_SHOW_CLOCK, true)
+        aodShowBattery.value = prefs.getBoolean(KEY_AOD_SHOW_BATTERY, true)
+        aodBrightness.value = prefs.getFloat(KEY_AOD_BRIGHTNESS, 0.15f).coerceIn(0.02f, 1f)
+        aodAutoDimming.value = prefs.getBoolean(KEY_AOD_AUTO_DIMMING, true)
+        aodAutoTimerSeconds.value = prefs.getInt(KEY_AOD_AUTO_TIMER_SECONDS, 0).coerceIn(0, 3600)
+        aodTouchLock.value = prefs.getBoolean(KEY_AOD_TOUCH_LOCK, false)
+        aodPixelShift.value = prefs.getBoolean(KEY_AOD_PIXEL_SHIFT, true)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
             .coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS)
@@ -1084,6 +1412,10 @@ object AppSettings {
         }.getOrElse {
             if (prefs.getBoolean(KEY_LEGACY_MESH_GRADIENT, false)) PlayerTheme.LEGACY else PlayerTheme.DEFAULT
         }
+        playerDesignStyle.value = runCatching {
+            PlayerDesignStyle.valueOf(prefs.getString(KEY_PLAYER_DESIGN_STYLE, null).orEmpty())
+        }.getOrDefault(PlayerDesignStyle.BITCHORD)
+        tikTokMainLyrics.value = prefs.getBoolean(KEY_TIKTOK_MAIN_LYRICS, true)
         lastPlayerScreen.value = runCatching {
             LastPlayerScreen.valueOf(
                 prefs.getString(KEY_LAST_PLAYER_SCREEN, null) ?: LastPlayerScreen.MAIN.name,
@@ -1532,6 +1864,10 @@ object AppSettings {
     fun setLiquidGlass(value: Boolean) {
         liquidGlass.value = value
         prefs.edit().putBoolean(KEY_LIQUID_GLASS, value).apply()
+        // Ported per the user's spec: Liquid Glass brings the adaptive bar with
+        // it — the glass bar's folded shape assumes it, so the behavior goes
+        // along the moment the glass comes on.
+        if (value) setMiniPlayerBarBehavior(MiniPlayerBarBehavior.ADAPTIVE)
     }
 
     fun setGlassPerformance(value: Boolean) {
@@ -1542,6 +1878,382 @@ object AppSettings {
     fun setProgressiveBlur(value: Boolean) {
         progressiveBlur.value = value
         prefs.edit().putBoolean(KEY_PROGRESSIVE_BLUR, value).apply()
+    }
+
+    fun setLiquidGlassIntensity(value: LiquidGlassIntensity) {
+        liquidGlassIntensity.value = value
+        prefs.edit().putString(KEY_LIQUID_GLASS_INTENSITY, value.name).apply()
+    }
+
+    fun setLiquidGlassRefractionHeight(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassRefractionHeight.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_REFRACTION_HEIGHT, clamped).apply()
+    }
+
+    fun setLiquidGlassRefractionAmount(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassRefractionAmount.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_REFRACTION_AMOUNT, clamped).apply()
+    }
+
+    fun setLiquidGlassBlurRadius(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassBlurRadius.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_BLUR_RADIUS, clamped).apply()
+    }
+
+    fun setLiquidGlassTintOpacity(value: Float) {
+        val clamped = value.coerceIn(0f, 2f)
+        liquidGlassTintOpacity.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_TINT_OPACITY, clamped).apply()
+    }
+
+    fun setLiquidGlassShadowDepth(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassShadowDepth.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_SHADOW_DEPTH, clamped).apply()
+    }
+
+    fun setLiquidGlassDepth3D(value: Boolean) {
+        liquidGlassDepth3D.value = value
+        prefs.edit().putBoolean(KEY_LIQUID_GLASS_DEPTH_3D, value).apply()
+    }
+
+    fun setLiquidGlassChromaticAberration(value: Boolean) {
+        liquidGlassChromaticAberration.value = value
+        prefs.edit().putBoolean(KEY_LIQUID_GLASS_CHROMATIC_ABERRATION, value).apply()
+    }
+
+    fun setLiquidGlassBackdropVibrancy(value: Boolean) {
+        liquidGlassBackdropVibrancy.value = value
+        prefs.edit().putBoolean(KEY_LIQUID_GLASS_BACKDROP_VIBRANCY, value).apply()
+    }
+
+    fun setLiquidGlassAdaptiveLuminance(value: Boolean) {
+        liquidGlassAdaptiveLuminance.value = value
+        prefs.edit().putBoolean(KEY_LIQUID_GLASS_ADAPTIVE_LUMINANCE, value).apply()
+    }
+
+    /** Restores every Liquid Glass tuning value to what the app ships with. */
+    fun resetLiquidGlassTuning() {
+        setLiquidGlassIntensity(LiquidGlassIntensity.STANDARD)
+        setLiquidGlassRefractionHeight(DEFAULT_LIQUID_GLASS_REFRACTION_HEIGHT)
+        setLiquidGlassRefractionAmount(DEFAULT_LIQUID_GLASS_REFRACTION_AMOUNT)
+        setLiquidGlassBlurRadius(DEFAULT_LIQUID_GLASS_BLUR_RADIUS)
+        setLiquidGlassTintOpacity(DEFAULT_LIQUID_GLASS_TINT_OPACITY)
+        setLiquidGlassShadowDepth(DEFAULT_LIQUID_GLASS_SHADOW_DEPTH)
+        setLiquidGlassDepth3D(true)
+        setLiquidGlassChromaticAberration(true)
+        setLiquidGlassBackdropVibrancy(true)
+        setLiquidGlassAdaptiveLuminance(true)
+    }
+
+    fun setGlassHeaderPills(value: Boolean) {
+        glassHeaderPills.value = value
+        prefs.edit().putBoolean(KEY_GLASS_HEADER_PILLS, value).apply()
+    }
+
+    fun setGlassNavBar(value: Boolean) {
+        glassNavBar.value = value
+        prefs.edit().putBoolean(KEY_GLASS_NAV_BAR, value).apply()
+    }
+
+    fun setGlassMiniPlayer(value: Boolean) {
+        glassMiniPlayer.value = value
+        prefs.edit().putBoolean(KEY_GLASS_MINI_PLAYER, value).apply()
+    }
+
+    fun setGlassMenus(value: Boolean) {
+        glassMenus.value = value
+        prefs.edit().putBoolean(KEY_GLASS_MENUS, value).apply()
+    }
+
+    fun setMiniPlayerBarBehavior(value: MiniPlayerBarBehavior) {
+        miniPlayerBarBehavior.value = value
+        prefs.edit().putString(KEY_MINI_PLAYER_BAR_BEHAVIOR, value.name).apply()
+    }
+
+    /**
+     * The three bar styles are one choice, ported from ArchiveTune's mutual
+     * exclusion: turning one on turns the others off, so exactly one surface is
+     * in force (or none, with all three off).
+     */
+    private fun persistNavBarStyles() {
+        prefs.edit()
+            .putBoolean(KEY_NAV_BAR_FROSTED, navBarFrosted.value)
+            .putBoolean(KEY_NAV_BAR_TINT, navBarTint.value)
+            .putBoolean(KEY_LIQUID_GLASS_NAV_BAR, liquidGlassNavBar.value)
+            .apply()
+    }
+
+    fun setNavBarFrosted(value: Boolean) {
+        navBarFrosted.value = value
+        if (value) {
+            navBarTint.value = false
+            liquidGlassNavBar.value = false
+        }
+        persistNavBarStyles()
+    }
+
+    fun setNavBarTint(value: Boolean) {
+        navBarTint.value = value
+        if (value) {
+            navBarFrosted.value = false
+            liquidGlassNavBar.value = false
+        }
+        persistNavBarStyles()
+    }
+
+    fun setLiquidGlassNavBar(value: Boolean) {
+        liquidGlassNavBar.value = value
+        if (value) {
+            navBarFrosted.value = false
+            navBarTint.value = false
+            // The glass bar's fixed shape assumes the adaptive behavior, the
+            // same way the master glass switch does.
+            setMiniPlayerBarBehavior(MiniPlayerBarBehavior.ADAPTIVE)
+        }
+        persistNavBarStyles()
+    }
+
+    fun setNavBarGlassGlow(value: Boolean) {
+        navBarGlassGlow.value = value
+        prefs.edit().putBoolean(KEY_NAV_BAR_GLASS_GLOW, value).apply()
+    }
+
+    fun setNavBarGlassGlowIntensity(value: Float) {
+        val clamped = value.coerceIn(0.2f, 2f)
+        navBarGlassGlowIntensity.value = clamped
+        prefs.edit().putFloat(KEY_NAV_BAR_GLASS_GLOW_INTENSITY, clamped).apply()
+    }
+
+    fun setNavBarWidth(value: Float) {
+        val clamped = value.coerceIn(0.5f, 1.0f)
+        navBarWidth.value = clamped
+        prefs.edit().putFloat(KEY_NAV_BAR_WIDTH, clamped).apply()
+    }
+
+    fun setNavBarHeight(value: Float) {
+        val clamped = value.coerceIn(0.8f, 1.4f)
+        navBarHeight.value = clamped
+        prefs.edit().putFloat(KEY_NAV_BAR_HEIGHT, clamped).apply()
+    }
+
+    fun setNavBarOpacity(value: Float) {
+        val clamped = value.coerceIn(0.2f, 1.0f)
+        navBarOpacity.value = clamped
+        prefs.edit().putFloat(KEY_NAV_BAR_OPACITY, clamped).apply()
+    }
+
+    fun setNavBarTransparency(value: Float) {
+        val clamped = value.coerceIn(0f, 0.95f)
+        navBarTransparency.value = clamped
+        prefs.edit().putFloat(KEY_NAV_BAR_TRANSPARENCY, clamped).apply()
+    }
+
+    fun setNavBarLabelSpacing(value: Float) {
+        val clamped = value.coerceIn(0f, 16f)
+        navBarLabelSpacing.value = clamped
+        prefs.edit().putFloat(KEY_NAV_BAR_LABEL_SPACING, clamped).apply()
+    }
+
+    fun setNavBarCornerRadius(value: Float) {
+        val clamped = value.coerceIn(0f, 48f)
+        navBarCornerRadius.value = clamped
+        prefs.edit().putFloat(KEY_NAV_BAR_CORNER_RADIUS, clamped).apply()
+    }
+
+    /** Restores the six dimension values to the shapes the app ships with. */
+    fun resetNavBarDimensions() {
+        setNavBarWidth(1.0f)
+        setNavBarHeight(1.0f)
+        setNavBarOpacity(1.0f)
+        setNavBarTransparency(0f)
+        setNavBarLabelSpacing(1f)
+        setNavBarCornerRadius(28f)
+    }
+
+    fun setHideStatusBar(value: Boolean) {
+        hideStatusBar.value = value
+        prefs.edit().putBoolean(KEY_HIDE_STATUS_BAR, value).apply()
+    }
+
+    fun setUiScale(value: Float) {
+        val clamped = value.coerceIn(MIN_UI_SCALE, MAX_UI_SCALE)
+        uiScale.value = clamped
+        prefs.edit().putFloat(KEY_UI_SCALE, clamped).apply()
+    }
+
+    fun setBlurIntensity(value: Float) {
+        val clamped = value.coerceIn(0f, MAX_BLUR_INTENSITY)
+        blurIntensity.value = clamped
+        prefs.edit().putFloat(KEY_BLUR_INTENSITY, clamped).apply()
+    }
+
+    // ---- Setters for the ported Appearance rows ----
+
+    /** Names the font the uri holds; the two are written together. */
+    fun setCustomFont(name: String, uri: String) {
+        customFontName.value = name
+        customFontUri.value = uri
+        prefs.edit()
+            .putString(KEY_CUSTOM_FONT_NAME, name)
+            .putString(KEY_CUSTOM_FONT_URI, uri)
+            .apply()
+    }
+
+    fun setMovingBlur(value: Boolean) {
+        movingBlur.value = value
+        prefs.edit().putBoolean(KEY_MOVING_BLUR, value).apply()
+    }
+
+    fun setHideSlideBar(value: Boolean) {
+        hideSlideBar.value = value
+        prefs.edit().putBoolean(KEY_HIDE_SLIDE_BAR, value).apply()
+    }
+
+    fun setHidePlayerThumbnail(value: Boolean) {
+        hidePlayerThumbnail.value = value
+        prefs.edit().putBoolean(KEY_HIDE_PLAYER_THUMBNAIL, value).apply()
+    }
+
+    fun setThumbnailCornerRadius(value: Float) {
+        val clamped = value.coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
+        thumbnailCornerRadius.value = clamped
+        prefs.edit().putFloat(KEY_THUMBNAIL_CORNER_RADIUS, clamped).apply()
+    }
+
+    fun setPlayerButtonsStyle(value: PlayerButtonsStyle) {
+        playerButtonsStyle.value = value
+        prefs.edit().putString(KEY_PLAYER_BUTTONS_STYLE, value.name).apply()
+    }
+
+    fun setPlayerSliderStyle(value: PlayerSliderStyle) {
+        playerSliderStyle.value = value
+        prefs.edit().putString(KEY_PLAYER_SLIDER_STYLE, value.name).apply()
+    }
+
+    fun setLyricsBackgroundStyle(value: LyricsBackgroundStyle) {
+        lyricsBackgroundStyle.value = value
+        prefs.edit().putString(KEY_LYRICS_BACKGROUND_STYLE, value.name).apply()
+    }
+
+    fun setMiniPlayerBackgroundStyle(value: MiniPlayerBackgroundStyle) {
+        miniPlayerBackgroundStyle.value = value
+        prefs.edit().putString(KEY_MINI_PLAYER_BACKGROUND_STYLE, value.name).apply()
+    }
+
+    fun setMinimalHomeMode(value: Boolean) {
+        minimalHomeMode.value = value
+        prefs.edit().putBoolean(KEY_MINIMAL_HOME_MODE, value).apply()
+    }
+
+    fun setDefaultOpenTab(value: DefaultOpenTab) {
+        defaultOpenTab.value = value
+        prefs.edit().putString(KEY_DEFAULT_OPEN_TAB, value.name).apply()
+    }
+
+    fun setTabletMode(value: Boolean) {
+        tabletMode.value = value
+        prefs.edit().putBoolean(KEY_TABLET_MODE, value).apply()
+    }
+
+    fun setBackAnimationStyle(value: BackAnimationStyle) {
+        backAnimationStyle.value = value
+        prefs.edit().putString(KEY_BACK_ANIMATION_STYLE, value.name).apply()
+    }
+
+    fun setNavBarShowLabels(value: Boolean) {
+        navBarShowLabels.value = value
+        prefs.edit().putBoolean(KEY_NAV_BAR_SHOW_LABELS, value).apply()
+    }
+
+    fun setHideSignInBanner(value: Boolean) {
+        hideSignInBanner.value = value
+        prefs.edit().putBoolean(KEY_HIDE_SIGN_IN_BANNER, value).apply()
+    }
+
+    fun setHideLibraryReplayCard(value: Boolean) {
+        hideLibraryReplayCard.value = value
+        prefs.edit().putBoolean(KEY_HIDE_LIBRARY_REPLAY_CARD, value).apply()
+    }
+
+    fun setHideLibraryOnDeviceShelf(value: Boolean) {
+        hideLibraryOnDeviceShelf.value = value
+        prefs.edit().putBoolean(KEY_HIDE_LIBRARY_ON_DEVICE_SHELF, value).apply()
+    }
+
+    fun setAodEnabled(value: Boolean) {
+        aodEnabled.value = value
+        prefs.edit().putBoolean(KEY_AOD_ENABLED, value).apply()
+    }
+
+    fun setAodShowThumbnail(value: Boolean) {
+        aodShowThumbnail.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_THUMBNAIL, value).apply()
+    }
+
+    fun setAodShowArtist(value: Boolean) {
+        aodShowArtist.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_ARTIST, value).apply()
+    }
+
+    fun setAodShowAlbum(value: Boolean) {
+        aodShowAlbum.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_ALBUM, value).apply()
+    }
+
+    fun setAodShowProgress(value: Boolean) {
+        aodShowProgress.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_PROGRESS, value).apply()
+    }
+
+    fun setAodShowTimeLabels(value: Boolean) {
+        aodShowTimeLabels.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_TIME_LABELS, value).apply()
+    }
+
+    fun setAodShowControls(value: Boolean) {
+        aodShowControls.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_CONTROLS, value).apply()
+    }
+
+    fun setAodShowClock(value: Boolean) {
+        aodShowClock.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_CLOCK, value).apply()
+    }
+
+    fun setAodShowBattery(value: Boolean) {
+        aodShowBattery.value = value
+        prefs.edit().putBoolean(KEY_AOD_SHOW_BATTERY, value).apply()
+    }
+
+    fun setAodBrightness(value: Float) {
+        val clamped = value.coerceIn(0.02f, 1f)
+        aodBrightness.value = clamped
+        prefs.edit().putFloat(KEY_AOD_BRIGHTNESS, clamped).apply()
+    }
+
+    fun setAodAutoDimming(value: Boolean) {
+        aodAutoDimming.value = value
+        prefs.edit().putBoolean(KEY_AOD_AUTO_DIMMING, value).apply()
+    }
+
+    fun setAodAutoTimerSeconds(value: Int) {
+        val clamped = value.coerceIn(0, 3600)
+        aodAutoTimerSeconds.value = clamped
+        prefs.edit().putInt(KEY_AOD_AUTO_TIMER_SECONDS, clamped).apply()
+    }
+
+    fun setAodTouchLock(value: Boolean) {
+        aodTouchLock.value = value
+        prefs.edit().putBoolean(KEY_AOD_TOUCH_LOCK, value).apply()
+    }
+
+    fun setAodPixelShift(value: Boolean) {
+        aodPixelShift.value = value
+        prefs.edit().putBoolean(KEY_AOD_PIXEL_SHIFT, value).apply()
     }
 
     fun setHighPerformanceMode(value: Boolean) {
@@ -1730,6 +2442,16 @@ object AppSettings {
     fun setPlayerTheme(value: PlayerTheme) {
         playerTheme.value = value
         prefs.edit().putString(KEY_PLAYER_THEME, value.name).apply()
+    }
+
+    fun setPlayerDesignStyle(value: PlayerDesignStyle) {
+        playerDesignStyle.value = value
+        prefs.edit().putString(KEY_PLAYER_DESIGN_STYLE, value.name).apply()
+    }
+
+    fun setTikTokMainLyrics(value: Boolean) {
+        tikTokMainLyrics.value = value
+        prefs.edit().putBoolean(KEY_TIKTOK_MAIN_LYRICS, value).apply()
     }
 
     fun setLastPlayerScreen(value: LastPlayerScreen) {
@@ -2323,9 +3045,97 @@ object AppSettings {
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
     private const val KEY_LIQUID_GLASS = "liquid_glass"
+    private const val KEY_LIQUID_GLASS_DEFAULT_ON_V1 = "liquid_glass_default_on_v1"
     private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
+    private const val KEY_LIQUID_GLASS_INTENSITY = "liquid_glass_intensity"
+    private const val KEY_LIQUID_GLASS_REFRACTION_HEIGHT = "liquid_glass_refraction_height"
+    private const val KEY_LIQUID_GLASS_REFRACTION_AMOUNT = "liquid_glass_refraction_amount"
+    private const val KEY_LIQUID_GLASS_BLUR_RADIUS = "liquid_glass_blur_radius"
+    private const val KEY_LIQUID_GLASS_TINT_OPACITY = "liquid_glass_tint_opacity"
+    private const val KEY_LIQUID_GLASS_SHADOW_DEPTH = "liquid_glass_shadow_depth"
+    private const val KEY_LIQUID_GLASS_DEPTH_3D = "liquid_glass_depth_3d"
+    private const val KEY_LIQUID_GLASS_CHROMATIC_ABERRATION = "liquid_glass_chromatic_aberration"
+    private const val KEY_LIQUID_GLASS_BACKDROP_VIBRANCY = "liquid_glass_backdrop_vibrancy"
+    private const val KEY_LIQUID_GLASS_ADAPTIVE_LUMINANCE = "liquid_glass_adaptive_luminance"
+    private const val KEY_GLASS_HEADER_PILLS = "glass_header_pills"
+    private const val KEY_GLASS_NAV_BAR = "glass_nav_bar"
+    private const val KEY_GLASS_MINI_PLAYER = "glass_mini_player"
+    private const val KEY_GLASS_MENUS = "glass_menus"
+    private const val KEY_MINI_PLAYER_BAR_BEHAVIOR = "mini_player_bar_behavior"
+    private const val KEY_NAV_BAR_FROSTED = "nav_bar_frosted"
+    private const val KEY_NAV_BAR_TINT = "nav_bar_tint"
+    private const val KEY_LIQUID_GLASS_NAV_BAR = "liquid_glass_nav_bar"
+    private const val KEY_NAV_BAR_GLASS_GLOW = "nav_bar_glass_glow"
+    private const val KEY_NAV_BAR_GLASS_GLOW_INTENSITY = "nav_bar_glass_glow_intensity"
+    private const val KEY_NAV_BAR_WIDTH = "nav_bar_width"
+    private const val KEY_NAV_BAR_HEIGHT = "nav_bar_height"
+    private const val KEY_NAV_BAR_OPACITY = "nav_bar_opacity"
+    private const val KEY_NAV_BAR_TRANSPARENCY = "nav_bar_transparency"
+    private const val KEY_NAV_BAR_LABEL_SPACING = "nav_bar_label_spacing"
+    private const val KEY_NAV_BAR_CORNER_RADIUS = "nav_bar_corner_radius"
+    private const val KEY_HIDE_STATUS_BAR = "hide_status_bar"
+    private const val KEY_UI_SCALE = "ui_scale"
+    private const val KEY_BLUR_INTENSITY = "blur_intensity"
+    private const val KEY_CUSTOM_FONT_NAME = "custom_font_name"
+    private const val KEY_CUSTOM_FONT_URI = "custom_font_uri"
+    private const val KEY_MOVING_BLUR = "moving_blur"
+    private const val KEY_HIDE_SLIDE_BAR = "hide_slide_bar"
+    private const val KEY_HIDE_PLAYER_THUMBNAIL = "hide_player_thumbnail"
+    private const val KEY_THUMBNAIL_CORNER_RADIUS = "thumbnail_corner_radius"
+    private const val KEY_PLAYER_BUTTONS_STYLE = "player_buttons_style"
+    private const val KEY_PLAYER_SLIDER_STYLE = "player_slider_style"
+    private const val KEY_LYRICS_BACKGROUND_STYLE = "lyrics_background_style"
+    private const val KEY_MINI_PLAYER_BACKGROUND_STYLE = "mini_player_background_style"
+    private const val KEY_MINIMAL_HOME_MODE = "minimal_home_mode"
+    private const val KEY_DEFAULT_OPEN_TAB = "default_open_tab"
+    private const val KEY_TABLET_MODE = "tablet_mode"
+    private const val KEY_BACK_ANIMATION_STYLE = "back_animation_style"
+    private const val KEY_NAV_BAR_SHOW_LABELS = "nav_bar_show_labels"
+    private const val KEY_HIDE_SIGN_IN_BANNER = "hide_sign_in_banner"
+    private const val KEY_HIDE_LIBRARY_REPLAY_CARD = "hide_library_replay_card"
+    private const val KEY_HIDE_LIBRARY_ON_DEVICE_SHELF = "hide_library_on_device_shelf"
+    private const val KEY_AOD_ENABLED = "aod_enabled"
+    private const val KEY_AOD_SHOW_THUMBNAIL = "aod_show_thumbnail"
+    private const val KEY_AOD_SHOW_ARTIST = "aod_show_artist"
+    private const val KEY_AOD_SHOW_ALBUM = "aod_show_album"
+    private const val KEY_AOD_SHOW_PROGRESS = "aod_show_progress"
+    private const val KEY_AOD_SHOW_TIME_LABELS = "aod_show_time_labels"
+    private const val KEY_AOD_SHOW_CONTROLS = "aod_show_controls"
+    private const val KEY_AOD_SHOW_CLOCK = "aod_show_clock"
+    private const val KEY_AOD_SHOW_BATTERY = "aod_show_battery"
+    private const val KEY_AOD_BRIGHTNESS = "aod_brightness"
+    private const val KEY_AOD_AUTO_DIMMING = "aod_auto_dimming"
+    private const val KEY_AOD_AUTO_TIMER_SECONDS = "aod_auto_timer_seconds"
+    private const val KEY_AOD_TOUCH_LOCK = "aod_touch_lock"
+    private const val KEY_AOD_PIXEL_SHIFT = "aod_pixel_shift"
+
+    /** The sleeve's stock corner, which the corner-radius row opens on. */
+    const val DEFAULT_THUMBNAIL_CORNER_RADIUS = 8f
+    const val MAX_THUMBNAIL_CORNER_RADIUS = 28f
+
+    /** Reads an enum by name, falling back when the stored name isn't one. */
+    private inline fun <reified T : Enum<T>> readEnum(key: String, default: T): T =
+        runCatching {
+            enumValueOf<T>(prefs.getString(key, null) ?: default.name)
+        }.getOrDefault(default)
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
+
+    // The Liquid Glass tuning defaults, shared with the renderer (see
+    // LiquidGlassTuning) so "Reset" in Settings means the same thing there.
+    const val DEFAULT_LIQUID_GLASS_REFRACTION_HEIGHT = 0.30f
+    const val DEFAULT_LIQUID_GLASS_REFRACTION_AMOUNT = 0.75f
+    const val DEFAULT_LIQUID_GLASS_BLUR_RADIUS = 0.65f
+    const val DEFAULT_LIQUID_GLASS_TINT_OPACITY = 1.40f
+    const val DEFAULT_LIQUID_GLASS_SHADOW_DEPTH = 0.45f
+
+    /** The full-cover blur's default strength in dp — what the player has always drawn. */
+    const val DEFAULT_BLUR_INTENSITY = 48f
+    const val MAX_BLUR_INTENSITY = 64f
+
+    /** The UI scale's bounds, as in ArchiveTune. */
+    const val MIN_UI_SCALE = 0.85f
+    const val MAX_UI_SCALE = 1.30f
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"
@@ -2337,6 +3147,8 @@ object AppSettings {
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_FULL_BLEED_DETAIL_ARTWORK = "full_bleed_detail_artwork"
     private const val KEY_PLAYER_THEME = "player_theme"
+    private const val KEY_PLAYER_DESIGN_STYLE = "player_design_style"
+    private const val KEY_TIKTOK_MAIN_LYRICS = "tiktok_main_lyrics"
     private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
     private const val KEY_SYNCED_LYRICS = "synced_lyrics"

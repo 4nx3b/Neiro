@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BRIDGE: strings of the ported settings host (ArchiveTuneSettingsHost). -->
+<resources>
+    <string name="bridge_settings_unported_title">Not part of Neiro</string>
+    <string name="bridge_settings_unported_body">This page drives an ArchiveTune integration (accounts, sources or system services) that Neiro does not run. Neiro\'s own settings cover it where it applies.</string>
+    <string name="bridge_settings_back">Back</string>
+</resources>

@@ -59,18 +59,18 @@ jobs:
       # MD5 of the distributionUrl - and is stable for this URL.
       - name: Pre-seed the Gradle distribution
         run: |
-          DIST="$HOME/.gradle/wrapper/dists/gradle-8.11.1-bin/ch07yfcfywmhguk3iz62k0jum"
+          DIST="$HOME/.gradle/wrapper/dists/gradle-9.3.1-bin/4mmrk48ojqgqwhmlxtzuti6qa"
           mkdir -p "$DIST"
-          if [ ! -f "$DIST/gradle-8.11.1-bin.zip" ]; then
+          if [ ! -f "$DIST/gradle-9.3.1-bin.zip" ]; then
             for attempt in 1 2 3 4 5; do
               curl -L --retry 5 --retry-delay 10 --retry-all-errors \
                 --connect-timeout 60 --max-time 900 --fail \
-                -o "$DIST/gradle-8.11.1-bin.zip.part" \
-                https://github.com/gradle/gradle-distributions/releases/download/v8.11.1/gradle-8.11.1-bin.zip && break
+                -o "$DIST/gradle-9.3.1-bin.zip.part" \
+                https://github.com/gradle/gradle-distributions/releases/download/v9.3.1/gradle-9.3.1-bin.zip && break
               echo "download attempt $attempt failed; retrying" >&2
               sleep 15
             done
-            mv "$DIST/gradle-8.11.1-bin.zip.part" "$DIST/gradle-8.11.1-bin.zip"
+            mv "$DIST/gradle-9.3.1-bin.zip.part" "$DIST/gradle-9.3.1-bin.zip"
           fi
 
       - name: Tests
