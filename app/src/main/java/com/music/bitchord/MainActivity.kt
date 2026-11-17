@@ -3310,23 +3310,14 @@ private fun BitChordApp(
                                 onSignOutQobuz = { confirmQobuzSignOut = true },
                                 onSignInSoundCloud = { showSoundCloudLogin = true },
                                 onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
+                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                             )
                         } else if (pageRoute == AppRoute.Integration) {
                             IntegrationScreen(
-                                onOpenSources = { navigator.push(AppRoute.Sources) },
                                 onOpenDiscord = { navigator.push(AppRoute.Discord) },
-                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 onOpenListenBrainzLogin = { showListenBrainzLogin = true },
                                 onOpenLastfmLogin = { showLastfmLogin = true },
                                 onChooseLastfmService = { choosingLastfmService = true },
-                                onSignInTidal = { showTidalLogin = true },
-                                onSignOutTidal = { confirmTidalSignOut = true },
-                                onSignInDeezer = { showDeezerLogin = true },
-                                onSignOutDeezer = { confirmDeezerSignOut = true },
-                                onSignInQobuz = { showQobuzLogin = true },
-                                onSignOutQobuz = { confirmQobuzSignOut = true },
-                                onSignInSoundCloud = { showSoundCloudLogin = true },
-                                onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Internet) {
@@ -3335,6 +3326,7 @@ private fun BitChordApp(
                                     navigator.push(AppRoute.SettingsChoice(SettingsChoiceKind.YT_MUSIC_REGION))
                                 },
                                 onOpenDialog = { internetDialog = it },
+                                onOpenChoice = { navigator.push(AppRoute.SettingsChoice(it)) },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Lyrics) {

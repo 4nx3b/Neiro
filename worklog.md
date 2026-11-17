@@ -833,3 +833,151 @@ Stage Summary:
 - **Accompanist is out**: `LyricsEnhanced` keeps its scaffolding (fetch, TTML/LRC parse, translation/romanisation, click-to-seek, scrub preview) and renders natively — the BitChordLyrics word-sweep technique (drawWithContent + clipRect gradient wipe) on a LazyColumn with anchor auto-scroll; `LyricsSpicyMobile.kt` and the `EnhancedLyricsStyle` picker are deleted; both mocharealm artifacts leave the module.
 - **am-lyrics on the web** goes 1.8.2 → 1.9.1 (package.json + pnpm-lock).
 - **Every locale** got the Integration/Internet/Lyrics strings the LocaleStringsTest demands, preferring ArchiveTune's own translations where they exist.
+
+## Task 1-a: the settings reorganization the owner ordered
+
+Task ID: 1-a
+Agent: Super Z (sub agent, session task-1a)
+
+Task: Reorganize Settings exactly as the owner ordered: the audio-quality
+ceilings and the Dolby Atmos switch off the main page, six categories
+(Downloads, Content Preferences, Local Music, Language, Performance,
+Behavior) dissolved into the pages whose subject they are, Spotify moved from
+Integration to Sources, and the Replay row and the work-out-genres switch
+moved to where the owner wants them read.
+
+Work Log:
+- SettingsSheet.kt:
+  - The main page's Audio quality group is gone; a Replay row (same icon,
+    subtitle, keywords and `onOpenReplay` as Your data's) sits in the top
+    group directly after Listen Together; the Wear OS row no longer sits
+    under the category list — it is a Miscellaneous row now.
+  - `SettingsCategory` keeps five entries — PLAYBACK, APPEARANCE, STORAGE,
+    YOUR_DATA, MISCELLANEOUS — and the icon map lost the six dead branches.
+    Nothing outside SettingsSheet/AppNavigator names a category, and the
+    top-bar title mapping reads `route.category.title`, so no other call
+    site changed.
+  - Playback gains the Dolby Atmos switch (between Spatial audio and
+    Equalizer, still `BypassedByBitPerfect`-wrapped and greyed where the
+    device can't decode E-AC-3), plus Content Preferences and Local Music
+    groups carrying every row of the two dissolved categories (the folder
+    picker and the conditional Use-all-folders row included).
+  - Storage leads with the Downloads group (Download quality, Wi-Fi only,
+    Export-compatible downloads, Sync downloaded playlists).
+  - Miscellaneous gains Language (App language + the activity-hosted
+    `AppLanguageDialog`), Performance (High performance mode + the
+    conditional Refresh rate row) and Behavior (the Performance row into
+    `BehaviorPerformancePage`), and the Wear OS row, all still searchable
+    through `SearchableSettingsGroup`'s keyword rows.
+  - Your data keeps only Export/Import data — the later task replaces them.
+  - `AudioQuality.localizedLabel()` went private→internal so the Internet
+    page labels the ceilings with the same strings.
+- InternetScreen.kt: an Audio quality group after the YouTube Music region
+  group, with the same On Wi-Fi / On mobile data rows (same icons, In-use
+  badges off the live `meteredConnection`, same choice-page navigation
+  through a new `onOpenChoice` parameter).
+- IntegrationScreen.kt: the Music sources group (Sources row, Direct source
+  stream subrow, Tidal/Deezer/Qobuz/SoundCloud account rows) is gone — all
+  duplicated on Sources already — and the External sources group left with
+  Spotify. The Scrobbling group gains the work-out-genres switch directly
+  under the Last.fm sign-in row. Ten now-unused parameters and their
+  MainActivity wiring came out with the rows.
+- SourcesScreen.kt: a Spotify group after the SoundCloud account group — the
+  Spotify logo row, the Connected subtitle, the Disconnect destructive row,
+  the connect footer — reached through a new `onOpenSpotify` parameter.
+- MainActivity.kt: the three call sites updated (Integration slimmed,
+  Internet gains `onOpenChoice`, Sources gains `onOpenSpotify`); no other
+  region touched.
+- No string keys were added, removed, or renamed — every moved row reuses
+  its existing key; `LocaleStringsTest` is unaffected by construction.
+
+Stage Summary:
+- Settings' page structure matches the owner's order with zero row-level
+  behaviour changes: every moved row kept its callbacks, preference keys,
+  conditional visibility and search keywords. Compile verification is CI's
+  (never local); the orchestrator commits.
+
+## Task 1-b: synced lyrics fixed across the ported player styles
+
+Task ID: 1-b
+Agent: Super Z (sub agent, session task-1b)
+
+Task: Fix synced-lyrics rendering in every style ported from ArchiveTune
+(Flamingo/APPLE_MUSIC, TikTok, the vendored BitChord page and strip, the
+full-screen lyrics screen): word-synced lyrics arrived fused into
+"Ibeentrynacall" with no per-word sweep, line-synced lyrics sat misplaced,
+the app's lyrics offset never reached the ported players, and the vendored
+BitChord strip could never show lyrics at all.
+
+Work Log:
+- Root cause, verified in the sources: `toArchiveTuneLrc()` joined
+  `<stamp>word` with no inter-word spaces, but the app's `LyricWord.text`
+  is trimmed while the ported parser keeps inter-tag substrings verbatim —
+  so the reconstructed words had no spaces and the line text fused. The
+  app's `lyricsOffsetMs` was bridged nowhere (the vendored
+  `lyricsSyncOffset` was a per-track `rememberSaveable(0)`), and the ported
+  views added their own leads (LRC_LEAD_MS 120/300, LYRIC_VISUAL_TUNING
+  150) that the native style has no counterpart for. The vendored strip
+  read `database.lyrics(id)` off an in-memory MusicDatabase nothing seeds.
+- `ArchiveTuneBridgeImpl.kt`:
+  - `toArchiveTuneLrc()` now writes the A2 convention: each word run
+    carries its own trailing space (`<00:27.39>I <00:27.54>been `), the
+    tag-stripped line text equals the original (spaces intact), and the
+    last run is closed by a bare terminator stamp at `LyricLine.endMs` —
+    the parser reads a bare tag as the final word's end and nothing else,
+    so the sweep stops where the line stops (verified against
+    `parseEnhancedLrcLine`'s empty-text skip and
+    `clampEnhancedLrcLastWordEnds`).
+  - The collector now watches `lyricsChecked` too and emits the module's
+    `LYRICS_NOT_FOUND` marker when a lookup finished with nothing, so the
+    ported pages and the strip report "not available" instead of
+    shimmering forever (the AOD ticker already guards that marker).
+- `constants/PreferenceKeys.kt`: new `LyricsSyncOffsetKey`
+  ("lyricsSyncOffset", int).
+- `ArchiveTunePreferenceBridge.kt`: `lyricsSyncOffset` bridged two-way to
+  `AppSettings.lyricsOffsetMs`, negated — Neiro's playhead is
+  `position − offset`, the ported stack's `position + offset`, so the sign
+  flip is what makes a track synced in one style stay synced in the other.
+  `docs/archivetune-settings-map.md` gains the row (39 bridged now).
+- Readers routed to the bridged preference: vendored `Player.kt` (which
+  feeds Flamingo, TikTok and the full-screen LyricsScreen) and
+  `BitChordPlayer.kt` replaced their per-track `rememberSaveable` locals
+  with `rememberPreference(LyricsSyncOffsetKey, 0)`; the vendored
+  LyricsMenu's offset dialog therefore writes the app's setting.
+- `BitChordPlayer.kt`: the strip's source switched from
+  `database.lyrics(id)` to the live `playerConnection.currentLyrics` flow
+  (id-matched like the lyric pages), parsed by the same
+  `parseBitChordLyrics` — the strip now shows the current line and sweeps
+  it word by word, and `lyricsUnavailable` becomes reachable.
+- Layout unification, per the user's ask:
+  - `LyricsEnhanced.kt` (Flamingo portrait/landscape, TikTok inline pane,
+    vendored BitChord ENHANCED page, LyricsScreen ENHANCED): the lyric
+    column gets a fixed symmetric `NativeLyricsGutter = 30.dp`
+    contentPadding (BitChord's PLAYER_GUTTER equivalent; rows carry no
+    horizontal padding of their own) and `LRC_LEAD_MS` is zeroed — the
+    anchor was already the ~16%-from-top pin. The word sweep itself
+    (SweptLyricText/sweepTo over revealedChars) was already the BitChord
+    technique; it now has real words to walk.
+  - `LyricsV2.kt` (LyricsScreen V2/SPOTIFY, vendored BitChord V2/SPOTIFY):
+    the LazyColumn gets `contentPadding` of 18dp each side (rows keep
+    their own 12dp → 30dp total), the active-line anchor moves from
+    35% to `LYRICS_ANCHOR_FRACTION = 0.16f` (matching LyricsEnhanced and
+    the native panel), and the 300ms LRC lead + 150ms visual tuning are
+    zeroed. Word separation came from the bridge fix: each word run's
+    trailing space is what the FlowRow now lays out; the space-run branch
+    stays for TTML sources.
+  - `LyricsScreen.kt`: the pane's 24dp horizontal padding (and the
+    landscape full-screen 36dp) dropped — the components carry the fixed
+    gutter themselves now.
+  - `TikTokSongPage.kt`: the inline pane's 6dp horizontal padding dropped
+    for the same reason. `TikTokMainLyrics` keeps its caller-chosen
+    overlay insets; its sweep is fixed by the bridge. AOD untouched.
+- No string resources added. No files outside the task's scope touched.
+
+Stage Summary:
+- Every ported style renders the app's lyrics the way the native BitChord
+  panel does: words separated and swept word by word on their own timings,
+  lines anchored ~16% from the top inside a fixed 30dp gutter, timing
+  driven by the app's lyrics offset through the negated bridge with the
+  per-view leads gone, and the vendored BitChord strip live at last.
+  Compile verification is CI's (never local); the orchestrator commits.

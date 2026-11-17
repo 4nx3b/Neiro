@@ -244,8 +244,6 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
 
-    val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
-    val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
     val skipGaplessAlbums by AppSettings.skipGaplessAlbums.collectAsStateWithLifecycle()
@@ -356,8 +354,6 @@ fun SettingsScreen(
     val scrobbleDelaySeconds by AppSettings.scrobbleDelaySeconds.collectAsStateWithLifecycle()
     val listenBrainzEnabled by AppSettings.listenBrainzEnabled.collectAsStateWithLifecycle()
     val listenBrainzToken by AppSettings.listenBrainzToken.collectAsStateWithLifecycle()
-
-    val replayGenres by AppSettings.replayGenres.collectAsStateWithLifecycle()
 
     // Read here so the row can say "In a party · ABC123" rather than making
     // somebody open the screen to find out whether they are still in one.
@@ -563,71 +559,17 @@ fun SettingsScreen(
                         onClick = onListenTogether,
                     )
                 }
-            }
-
-            // The row that used to sit at the top of this group was called
-            // "Lossless / HQ Audio" and toggled `SourceRegistry.setModuleEnabled` —
-            // it switched the *module source* on and off, not lossless. Sources
-            // used to list that as the module's own row here; the row and the
-            // Direct Source Stream line under it moved to the Sources
-            // sub-setting page under Playback, where ArchiveTune gathers
-            // them. Lossless itself is no longer a setting at all — see
-            // [SourceResolver.requestForNow][com.music.bitchord.data.sources.SourceResolver.requestForNow].
-            SearchableSettingsGroup(search, header = stringResource(R.string.audio_quality)) {
-                val onWifiTitle = stringResource(R.string.on_wifi)
-                row(onWifiTitle, "wi-fi", "streaming quality") {
+                // The page a listener goes to directly, like the party above it,
+                // rather than a document filed under Your data: it answers the
+                // question the top group is for — "what am I listening to?".
+                val replayTitle = stringResource(R.string.replay)
+                row(replayTitle, "stats", "history", "wrapped") {
                     SettingsRow(
-                        icon = SfIcons.Wifi,
-                        title = onWifiTitle,
-                        badge = stringResource(R.string.in_use).takeIf { metered == false },
-                        value = wifiQuality.localizedLabel(),
-                        onClick = { onOpenChoice(SettingsChoiceKind.AUDIO_QUALITY_WIFI) },
+                        icon = SfIcons.BarChart,
+                        title = replayTitle,
+                        subtitle = stringResource(R.string.replay_subtitle),
+                        onClick = onOpenReplay,
                     )
-                }
-                val onMobileDataTitle = stringResource(R.string.on_mobile_data)
-                row(onMobileDataTitle, "cellular", "streaming quality") {
-                    SettingsRow(
-                        icon = SfIcons.SignalCellularAlt,
-                        title = onMobileDataTitle,
-                        badge = stringResource(R.string.in_use).takeIf { metered == true },
-                        value = cellularQuality.localizedLabel(),
-                        onClick = { onOpenChoice(SettingsChoiceKind.AUDIO_QUALITY_CELLULAR) },
-                    )
-                }
-                // Sits with the quality ceilings rather than with Playback: it
-                // decides which version of a track gets fetched, the same question
-                // the two rows above answer, and not how one is played back.
-                //
-                // Greyed rather than hidden where the device can't decode E-AC-3.
-                // A missing row reads as a feature the app doesn't have; a disabled
-                // one with a reason under it is the difference between "BitChord
-                // has no Atmos" and "this phone has no Dolby decoder", and only the
-                // second is true. The stored preference is left untouched either
-                // way — see [AppSettings.dolbyAtmos].
-                val dolbyAtmosTitle = stringResource(R.string.dolby_atmos)
-                row(dolbyAtmosTitle, "surround", "e-ac-3") {
-                    BypassedByBitPerfect(bitPerfectReady) {
-                        SettingsRow(
-                            iconPainter = painterResource(R.drawable.ic_dolby_atmos),
-                            title = dolbyAtmosTitle,
-                            subtitle = stringResource(
-                                if (dolbyAtmosSupported) {
-                                    R.string.dolby_atmos_subtitle
-                                } else {
-                                    R.string.dolby_atmos_unavailable
-                                },
-                            ),
-                            enabled = dolbyAtmosSupported,
-                            trailing = {
-                                IosSwitch(
-                                    checked = dolbyAtmos && dolbyAtmosSupported,
-                                    onCheckedChange = AppSettings::setDolbyAtmos,
-                                    enabled = dolbyAtmosSupported,
-                                )
-                            },
-                            onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
-                        )
-                    }
                 }
             }
 
@@ -635,59 +577,6 @@ fun SettingsScreen(
             // when their rows answer here instead (below).
             if (!searching) {
                 SettingsCategoryList(onOpen = onOpenSection)
-                if (watchAvailable) {
-                    SettingsGroup {
-                        WearOsSettingsRow(onClick = onWearOs)
-                    }
-                }
-            }
-        }
-
-        // Its own group rather than rows bolted onto the two above, because a
-        // download is not a third kind of connection. The ceilings answer "what
-        // does this minute cost"; these answer "what am I keeping, and when may
-        // it be fetched" — and those two questions only make sense read
-        // together, which is what puts them side by side here.
-        if (shows(SettingsCategory.DOWNLOADS)) SearchableSettingsGroup(search, header = stringResource(R.string.downloads)) {
-            val downloadQualityTitle = stringResource(R.string.download_quality)
-            row(downloadQualityTitle, "offline", "lossless") {
-                SettingsRow(
-                    icon = SfIcons.Download,
-                    title = downloadQualityTitle,
-                    subtitle = stringResource(R.string.download_quality_subtitle, downloadQuality.perTrack),
-                    value = downloadQuality.localizedLabel(),
-                    onClick = { onOpenChoice(SettingsChoiceKind.DOWNLOAD_QUALITY) },
-                )
-            }
-            // Reads as part of Download quality above it, not as a setting
-            // of its own — same treatment as Play animated cover over
-            // cellular gets under Animated cover art.
-            val downloadWifiOnlyTitle = stringResource(R.string.download_wifi_only)
-            row(downloadWifiOnlyTitle, "wi-fi", "cellular", divided = false) {
-                SettingsSubRow(
-                    title = downloadWifiOnlyTitle,
-                    checked = wifiOnlyDownloads,
-                    onCheckedChange = AppSettings::setWifiOnlyDownloads,
-                    badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
-                )
-            }
-            val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)
-            row(exportDownloadsTitle, "music folder") {
-                SettingsSubRow(
-                    title = exportDownloadsTitle,
-                    checked = exportDownloads,
-                    onCheckedChange = AppSettings::setExportDownloads,
-                    subtitle = "Music/BitChord".takeIf { exportDownloads },
-                )
-            }
-            val syncPlaylistsTitle = stringResource(R.string.sync_downloaded_playlists)
-            row(syncPlaylistsTitle, "playlist", "new songs", "background", "automatic") {
-                SettingsSubRow(
-                    title = syncPlaylistsTitle,
-                    checked = syncDownloadedPlaylists,
-                    onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
-                    subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
-                )
             }
         }
 
@@ -1117,6 +1006,42 @@ fun SettingsScreen(
                     )
                 }
             }
+            // Beside Spatial audio now rather than with the quality ceilings it
+            // came from: it decides how a track is played back — the same
+            // question the rows around it answer — and not which version of it
+            // is fetched.
+            //
+            // Greyed rather than hidden where the device can't decode E-AC-3.
+            // A missing row reads as a feature the app doesn't have; a disabled
+            // one with a reason under it is the difference between "BitChord
+            // has no Atmos" and "this phone has no Dolby decoder", and only the
+            // second is true. The stored preference is left untouched either
+            // way — see [AppSettings.dolbyAtmos].
+            val dolbyAtmosTitle = stringResource(R.string.dolby_atmos)
+            row(dolbyAtmosTitle, "surround", "e-ac-3") {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    SettingsRow(
+                        iconPainter = painterResource(R.drawable.ic_dolby_atmos),
+                        title = dolbyAtmosTitle,
+                        subtitle = stringResource(
+                            if (dolbyAtmosSupported) {
+                                R.string.dolby_atmos_subtitle
+                            } else {
+                                R.string.dolby_atmos_unavailable
+                            },
+                        ),
+                        enabled = dolbyAtmosSupported,
+                        trailing = {
+                            IosSwitch(
+                                checked = dolbyAtmos && dolbyAtmosSupported,
+                                onCheckedChange = AppSettings::setDolbyAtmos,
+                                enabled = dolbyAtmosSupported,
+                            )
+                        },
+                        onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
+                    )
+                }
+            }
             // The system panel is not listed here as well. A device with a
             // Dolby or Dirac panel has something BitChord cannot reproduce and
             // keeps its row — but one level in, at the foot of the equaliser
@@ -1134,7 +1059,7 @@ fun SettingsScreen(
             }
         }
 
-        if (shows(SettingsCategory.CONTENT_PREFERENCES)) SearchableSettingsGroup(search, header = stringResource(R.string.content_preferences)) {
+        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(search, header = stringResource(R.string.content_preferences)) {
             val preferMusicOnlyTitle = stringResource(R.string.prefer_music_only)
             row(preferMusicOnlyTitle, "video", "audio", "music video", "convert", "song") {
                 SettingsRow(
@@ -1220,6 +1145,45 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setSquareVideoThumbnails(!squareVideoThumbnails) },
+                )
+            }
+        }
+
+        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(search, header = stringResource(R.string.local_music)) {
+            val localMusicFolderTitle = stringResource(R.string.local_music_folder)
+            row(localMusicFolderTitle, "folder", "offline", "files") {
+                SettingsRow(
+                    icon = SfIcons.Folder,
+                    title = localMusicFolderTitle,
+                    subtitle = LocalMediaRepository.selectedFolderLabel(localMusicFolderUri)
+                        ?: stringResource(R.string.all_audio_folders),
+                    onClick = { localMusicFolderPicker.launch(null) },
+                )
+            }
+            if (localMusicFolderUri.isNotBlank()) {
+                val useAllAudioFoldersTitle = stringResource(R.string.use_all_audio_folders)
+                row(useAllAudioFoldersTitle, "folder") {
+                    SettingsRow(
+                        icon = SfIcons.LibraryMusic,
+                        title = useAllAudioFoldersTitle,
+                        subtitle = stringResource(R.string.use_all_audio_folders_subtitle),
+                        onClick = { AppSettings.setLocalMusicFolderUri("") },
+                    )
+                }
+            }
+            val filterNonMusicAudioTitle = stringResource(R.string.filter_non_music_audio)
+            row(filterNonMusicAudioTitle, "podcast", "recording") {
+                SettingsRow(
+                    icon = SfIcons.FilterAlt,
+                    title = filterNonMusicAudioTitle,
+                    subtitle = stringResource(R.string.filter_non_music_audio_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = filterNonMusicAudio,
+                            onCheckedChange = AppSettings::setFilterNonMusicAudio,
+                        )
+                    },
+                    onClick = { AppSettings.setFilterNonMusicAudio(!filterNonMusicAudio) },
                 )
             }
         }
@@ -1712,117 +1676,49 @@ fun SettingsScreen(
             }
         }
 
-        // ---- Behavior: how the app moves and responds, rather than how it looks ----
-        if (shows(SettingsCategory.BEHAVIOR)) SearchableSettingsGroup(search, header = stringResource(R.string.behavior)) {
-            // The three reduce switches live a page deep, as one Performance
-            // group: they are the app's concessions to a slow device, read
-            // together rather than beside a theme or a font.
-            val performanceTitle = stringResource(R.string.performance)
-            row(
-                performanceTitle,
-                "performance", "reduce", "animation", "blur", "blend", "effects", "motion", "lag",
-            ) {
+        // Its own group rather than rows bolted onto the cache below it,
+        // because a download is not a kind of cache. The cache answers "how much
+        // room"; these answer "what am I keeping, and when may it be fetched"
+        // — and keeping is the whole subject of the page they sit on now.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.downloads)) {
+            val downloadQualityTitle = stringResource(R.string.download_quality)
+            row(downloadQualityTitle, "offline", "lossless") {
                 SettingsRow(
-                    icon = SfIcons.Performance,
-                    title = performanceTitle,
-                    subtitle = stringResource(R.string.behavior_performance_subtitle),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.BEHAVIOR_PERFORMANCE) },
+                    icon = SfIcons.Download,
+                    title = downloadQualityTitle,
+                    subtitle = stringResource(R.string.download_quality_subtitle, downloadQuality.perTrack),
+                    value = downloadQuality.localizedLabel(),
+                    onClick = { onOpenChoice(SettingsChoiceKind.DOWNLOAD_QUALITY) },
                 )
             }
-        }
-
-        if (shows(SettingsCategory.PERFORMANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
-            val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
-            row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
-                SettingsRow(
-                    icon = SfIcons.Performance,
-                    title = highPerformanceModeTitle,
-                    subtitle = if (highPerformanceMode) {
-                        stringResource(R.string.high_performance_active, selectedPerformanceRefreshRate)
-                    } else {
-                        stringResource(R.string.high_performance_subtitle)
-                    },
-                    trailing = {
-                        IosSwitch(
-                            checked = highPerformanceMode,
-                            onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    showPerformanceWarning = true
-                                } else {
-                                    AppSettings.setHighPerformanceMode(false)
-                                }
-                            },
-                        )
-                    },
-                    onClick = {
-                        if (highPerformanceMode) {
-                            AppSettings.setHighPerformanceMode(false)
-                        } else {
-                            showPerformanceWarning = true
-                        }
-                    },
+            // Reads as part of Download quality above it, not as a setting
+            // of its own — same treatment as Play animated cover over
+            // cellular gets under Animated cover art.
+            val downloadWifiOnlyTitle = stringResource(R.string.download_wifi_only)
+            row(downloadWifiOnlyTitle, "wi-fi", "cellular", divided = false) {
+                SettingsSubRow(
+                    title = downloadWifiOnlyTitle,
+                    checked = wifiOnlyDownloads,
+                    onCheckedChange = AppSettings::setWifiOnlyDownloads,
+                    badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
                 )
             }
-            if (highPerformanceMode) {
-                val refreshRateTitle = stringResource(R.string.refresh_rate)
-                row(refreshRateTitle, "hz", "frame rate") {
-                    SettingsRow(
-                        icon = SfIcons.FrameRate,
-                        title = refreshRateTitle,
-                    )
-                    SegmentedControl(
-                        options = supportedRefreshRates.map { "$it Hz" },
-                        selectedIndex = supportedRefreshRates.indexOf(selectedPerformanceRefreshRate),
-                        onSelect = { index ->
-                            AppSettings.setPerformanceRefreshRate(supportedRefreshRates[index])
-                        },
-                        modifier = Modifier.padding(
-                            start = TEXT_INSET,
-                            end = ROW_INSET,
-                            top = 10.dp,
-                            bottom = 14.dp,
-                        ),
-                    )
-                }
-            }
-        }
-
-        if (shows(SettingsCategory.LOCAL_MUSIC)) SearchableSettingsGroup(search, header = stringResource(R.string.local_music)) {
-            val localMusicFolderTitle = stringResource(R.string.local_music_folder)
-            row(localMusicFolderTitle, "folder", "offline", "files") {
-                SettingsRow(
-                    icon = SfIcons.Folder,
-                    title = localMusicFolderTitle,
-                    subtitle = LocalMediaRepository.selectedFolderLabel(localMusicFolderUri)
-                        ?: stringResource(R.string.all_audio_folders),
-                    onClick = { localMusicFolderPicker.launch(null) },
+            val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)
+            row(exportDownloadsTitle, "music folder") {
+                SettingsSubRow(
+                    title = exportDownloadsTitle,
+                    checked = exportDownloads,
+                    onCheckedChange = AppSettings::setExportDownloads,
+                    subtitle = "Music/BitChord".takeIf { exportDownloads },
                 )
             }
-            if (localMusicFolderUri.isNotBlank()) {
-                val useAllAudioFoldersTitle = stringResource(R.string.use_all_audio_folders)
-                row(useAllAudioFoldersTitle, "folder") {
-                    SettingsRow(
-                        icon = SfIcons.LibraryMusic,
-                        title = useAllAudioFoldersTitle,
-                        subtitle = stringResource(R.string.use_all_audio_folders_subtitle),
-                        onClick = { AppSettings.setLocalMusicFolderUri("") },
-                    )
-                }
-            }
-            val filterNonMusicAudioTitle = stringResource(R.string.filter_non_music_audio)
-            row(filterNonMusicAudioTitle, "podcast", "recording") {
-                SettingsRow(
-                    icon = SfIcons.FilterAlt,
-                    title = filterNonMusicAudioTitle,
-                    subtitle = stringResource(R.string.filter_non_music_audio_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = filterNonMusicAudio,
-                            onCheckedChange = AppSettings::setFilterNonMusicAudio,
-                        )
-                    },
-                    onClick = { AppSettings.setFilterNonMusicAudio(!filterNonMusicAudio) },
+            val syncPlaylistsTitle = stringResource(R.string.sync_downloaded_playlists)
+            row(syncPlaylistsTitle, "playlist", "new songs", "background", "automatic") {
+                SettingsSubRow(
+                    title = syncPlaylistsTitle,
+                    checked = syncDownloadedPlaylists,
+                    onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
+                    subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
                 )
             }
         }
@@ -1895,46 +1791,7 @@ fun SettingsScreen(
             }
         }
 
-        // Only in a build that carries the watch app — see app/build.gradle.kts.
-        // On the main page it is listed with the categories; here it answers
-        // a search.
-        if (searching && watchAvailable) {
-            SearchableSettingsGroup(search) {
-                row(stringResource(R.string.wear_os_section), "watch", "wear os", "galaxy watch", "pixel watch", "install") {
-                    WearOsSettingsRow(onClick = onWearOs)
-                }
-            }
-        }
-
         if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.your_data)) {
-            val replayTitle = stringResource(R.string.replay)
-            row(replayTitle, "stats", "history", "wrapped") {
-                SettingsRow(
-                    icon = SfIcons.BarChart,
-                    title = replayTitle,
-                    subtitle = stringResource(R.string.replay_subtitle),
-                    onClick = onOpenReplay,
-                )
-            }
-            val workOutGenresTitle = stringResource(R.string.work_out_genres)
-            row(workOutGenresTitle, "genre", "replay") {
-                SettingsRow(
-                    icon = SfIcons.LocalOffer,
-                    title = workOutGenresTitle,
-                    subtitle = if (replayGenres) {
-                        stringResource(R.string.replay_genres_enabled_subtitle)
-                    } else {
-                        stringResource(R.string.replay_genres_disabled_subtitle)
-                    },
-                    trailing = {
-                        IosSwitch(
-                            checked = replayGenres,
-                            onCheckedChange = AppSettings::setReplayGenres,
-                        )
-                    },
-                    onClick = { AppSettings.setReplayGenres(!replayGenres) },
-                )
-            }
             val exportDataTitle = stringResource(R.string.export_data)
             row(exportDataTitle, "backup") {
                 SettingsRow(
@@ -2116,7 +1973,7 @@ fun SettingsScreen(
             // belongs to — it moved there with the rest of the look settings.
         }
 
-        if (shows(SettingsCategory.LANGUAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
             val appLanguageTitle = stringResource(R.string.app_language)
             row(appLanguageTitle, "locale", "translate") {
                 val selectedLanguage = AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag()
@@ -2127,6 +1984,92 @@ fun SettingsScreen(
                     subtitle = stringResource(languageDisplayNameRes(selectedLanguage)),
                     onClick = onAppLanguage,
                 )
+            }
+        }
+
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
+            val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
+            row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = highPerformanceModeTitle,
+                    subtitle = if (highPerformanceMode) {
+                        stringResource(R.string.high_performance_active, selectedPerformanceRefreshRate)
+                    } else {
+                        stringResource(R.string.high_performance_subtitle)
+                    },
+                    trailing = {
+                        IosSwitch(
+                            checked = highPerformanceMode,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    showPerformanceWarning = true
+                                } else {
+                                    AppSettings.setHighPerformanceMode(false)
+                                }
+                            },
+                        )
+                    },
+                    onClick = {
+                        if (highPerformanceMode) {
+                            AppSettings.setHighPerformanceMode(false)
+                        } else {
+                            showPerformanceWarning = true
+                        }
+                    },
+                )
+            }
+            if (highPerformanceMode) {
+                val refreshRateTitle = stringResource(R.string.refresh_rate)
+                row(refreshRateTitle, "hz", "frame rate") {
+                    SettingsRow(
+                        icon = SfIcons.FrameRate,
+                        title = refreshRateTitle,
+                    )
+                    SegmentedControl(
+                        options = supportedRefreshRates.map { "$it Hz" },
+                        selectedIndex = supportedRefreshRates.indexOf(selectedPerformanceRefreshRate),
+                        onSelect = { index ->
+                            AppSettings.setPerformanceRefreshRate(supportedRefreshRates[index])
+                        },
+                        modifier = Modifier.padding(
+                            start = TEXT_INSET,
+                            end = ROW_INSET,
+                            top = 10.dp,
+                            bottom = 14.dp,
+                        ),
+                    )
+                }
+            }
+        }
+
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.behavior)) {
+            // The three reduce switches live a page deep, as one Performance
+            // group: they are the app's concessions to a slow device, read
+            // together rather than beside the odds and ends around them.
+            val performanceTitle = stringResource(R.string.performance)
+            row(
+                performanceTitle,
+                "performance", "reduce", "animation", "blur", "blend", "effects", "motion", "lag",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = performanceTitle,
+                    subtitle = stringResource(R.string.behavior_performance_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.BEHAVIOR_PERFORMANCE) },
+                )
+            }
+        }
+
+        // Only in a build that carries the watch app — see app/build.gradle.kts.
+        // It is one of this page's rows now, and answers a search like the rest
+        // of them.
+        if (shows(SettingsCategory.MISCELLANEOUS) && watchAvailable) {
+            SearchableSettingsGroup(search) {
+                row(stringResource(R.string.wear_os_section), "watch", "wear os", "galaxy watch", "pixel watch", "install") {
+                    WearOsSettingsRow(onClick = onWearOs)
+                }
             }
         }
 
@@ -2394,7 +2337,7 @@ private fun Context.countOfMonths(months: Int): String = if (months == 0) {
 }
 
 @Composable
-private fun AudioQuality.localizedLabel(): String = stringResource(
+internal fun AudioQuality.localizedLabel(): String = stringResource(
     when (this) {
         AudioQuality.LOW -> R.string.low
         AudioQuality.MEDIUM -> R.string.medium
@@ -3238,36 +3181,27 @@ internal fun SegmentedControl(
 
 /**
  * The groups of Settings that are pages of their own, in the order the main
- * page lists them. Account, Listen Together and Audio quality aren't here:
- * they stay on the main page, where they always were.
+ * page lists them. Account, Listen Together and Replay aren't here: they stay
+ * on the main page, where they always were. The audio-quality ceilings live
+ * under Internet now, and everything the pages below shed — downloads,
+ * content preferences, local music, language, performance, behavior — rides
+ * with the page whose subject it is.
  */
 enum class SettingsCategory(@param:StringRes val title: Int) {
-    DOWNLOADS(R.string.downloads),
     PLAYBACK(R.string.playback),
-    CONTENT_PREFERENCES(R.string.content_preferences),
     APPEARANCE(R.string.appearance),
-    BEHAVIOR(R.string.behavior),
-    PERFORMANCE(R.string.performance),
-    LOCAL_MUSIC(R.string.local_music),
     STORAGE(R.string.storage),
     YOUR_DATA(R.string.your_data),
     MISCELLANEOUS(R.string.miscellaneous),
-    LANGUAGE(R.string.language),
     ;
 
     val icon: ImageVector
         get() = when (this) {
-            DOWNLOADS -> SfIcons.Download
             PLAYBACK -> SfIcons.PlayCircle
-            CONTENT_PREFERENCES -> SfIcons.Video
             APPEARANCE -> SfIcons.Appearance
-            BEHAVIOR -> SfIcons.SmartButton
-            PERFORMANCE -> SfIcons.Performance
-            LOCAL_MUSIC -> SfIcons.LibraryMusic
             STORAGE -> SfIcons.Storage
             YOUR_DATA -> SfIcons.YourData
             MISCELLANEOUS -> SfIcons.Miscellaneous
-            LANGUAGE -> SfIcons.Language
         }
 }
 

@@ -12,63 +12,37 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
-import com.music.bitchord.auth.clearSpotifyWebSession
-import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.sharedui.resources.Res
-import com.music.bitchord.sharedui.resources.spotify_logo
 import com.music.bitchord.ui.components.IosSwitch
 import com.music.bitchord.ui.icons.SfIcons
 import kotlin.math.roundToInt
-import org.jetbrains.compose.resources.painterResource
 
 /**
  * The Integration page, ported from ArchiveTune's Integration screen and given
- * the rows this app actually has. The categorization is upstream's: a General
- * group for Discord, Music sources for the per-service accounts and the
- * source manager, External sources for Spotify, and Scrobbling for the
- * last.fm / Libre.fm / ListenBrainz services. ArchiveTune's AI Integration,
- * Apple Music, Telegram, cross-service playlist import and Source Pool rows
- * stay off this page — nothing behind them exists here yet — and the account
- * sign-in itself stays on the Account page, because who is listening is not
- * what the app talks to.
+ * the rows this app actually has: a General group for Discord and a
+ * Scrobbling group for the last.fm / Libre.fm / ListenBrainz services, with
+ * the work-out-genres switch directly under the Last.fm sign-in row, since
+ * Last.fm is who the genres are asked of. The per-service accounts, the
+ * source manager they stream through and Spotify all live on the Sources
+ * page, so this page holds the services left over rather than repeating
+ * theirs. ArchiveTune's AI Integration, Apple Music, Telegram, cross-service
+ * playlist import and Source Pool rows stay off this page — nothing behind
+ * them exists here yet — and the account sign-in itself stays on the Account
+ * page, because who is listening is not what the app talks to.
  */
 @Composable
 fun IntegrationScreen(
-    onOpenSources: () -> Unit,
     onOpenDiscord: () -> Unit,
-    onOpenSpotify: () -> Unit,
     onOpenListenBrainzLogin: () -> Unit,
     onOpenLastfmLogin: () -> Unit,
     onChooseLastfmService: () -> Unit,
-    onSignInTidal: () -> Unit,
-    onSignOutTidal: () -> Unit,
-    onSignInDeezer: () -> Unit,
-    onSignOutDeezer: () -> Unit,
-    onSignInQobuz: () -> Unit,
-    onSignOutQobuz: () -> Unit,
-    onSignInSoundCloud: () -> Unit,
-    onSignOutSoundCloud: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    val party by ListenTogether.state.collectAsStateWithLifecycle()
-    val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
-
-    val tidalSession by com.music.bitchord.data.tidal.TidalAccountStore.session.collectAsStateWithLifecycle()
-    val tidalSignedIn = tidalSession != null
-    val deezerAccount by com.music.bitchord.data.deezer.DeezerAccountStore.account.collectAsStateWithLifecycle()
-    val deezerSignedIn = deezerAccount != null
-    val qobuzAccount by com.music.bitchord.data.qobuz.QobuzAccountStore.account.collectAsStateWithLifecycle()
-    val qobuzSignedIn = qobuzAccount != null
-    val soundCloudAccount by com.music.bitchord.data.soundcloud.SoundCloudAccountStore.account.collectAsStateWithLifecycle()
-    val soundCloudSignedIn = soundCloudAccount != null
-
     val lastfmEnabled by AppSettings.lastfmEnabled.collectAsStateWithLifecycle()
     val lastfmUsername by AppSettings.lastfmUsername.collectAsStateWithLifecycle()
     val lastfmSessionKey by AppSettings.lastfmSessionKey.collectAsStateWithLifecycle()
@@ -85,7 +59,7 @@ fun IntegrationScreen(
     val discordToken by AppSettings.discordToken.collectAsStateWithLifecycle()
     val discordUsername by AppSettings.discordUsername.collectAsStateWithLifecycle()
     val discordRpcEnabled by AppSettings.discordRpcEnabled.collectAsStateWithLifecycle()
-    val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val replayGenres by AppSettings.replayGenres.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -110,104 +84,6 @@ fun IntegrationScreen(
                 },
                 onClick = onOpenDiscord,
             )
-        }
-
-        SettingsGroup(
-            header = stringResource(R.string.music_sources),
-        ) {
-            val sourceTitle = stringResource(R.string.source)
-            val sourceSubtitle = stringResource(R.string.sources_subtitle)
-            SettingsRow(
-                icon = SfIcons.Extension,
-                title = sourceTitle,
-                subtitle = sourceSubtitle,
-                onClick = onOpenSources,
-            )
-            RowDivider()
-            val directSourceTitle = stringResource(R.string.direct_source_stream)
-            SettingsSubRow(
-                title = directSourceTitle,
-                checked = directSourceStream && !party.inParty,
-                onCheckedChange = AppSettings::setDirectSourceStream,
-                subtitle = stringResource(R.string.direct_source_stream_in_party).takeIf { party.inParty },
-                enabled = !party.inParty,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = SfIcons.Waves,
-                title = stringResource(R.string.tidal_account),
-                subtitle = tidalSession?.username
-                    ?: stringResource(R.string.tidal_not_signed_in),
-                value = when (tidalSession?.flow) {
-                    com.music.bitchord.data.tidal.TidalAccountStore.FLOW_PKCE -> stringResource(R.string.tidal_full_access)
-                    null -> null
-                    else -> stringResource(R.string.tidal_session_limited)
-                },
-                onClick = if (tidalSignedIn) onSignOutTidal else onSignInTidal,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = SfIcons.MusicNote,
-                title = stringResource(R.string.deezer_account),
-                subtitle = deezerAccount?.name
-                    ?: stringResource(R.string.deezer_not_signed_in),
-                value = if (deezerAccount?.lossless == true) {
-                    stringResource(R.string.deezer_lossless_account)
-                } else {
-                    null
-                },
-                onClick = if (deezerSignedIn) onSignOutDeezer else onSignInDeezer,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = SfIcons.SurroundSound,
-                title = stringResource(R.string.qobuz_account),
-                subtitle = qobuzAccount?.label
-                    ?: stringResource(R.string.qobuz_not_signed_in),
-                value = if (qobuzAccount?.premium == true) {
-                    stringResource(R.string.qobuz_lossless_account)
-                } else {
-                    null
-                },
-                onClick = if (qobuzSignedIn) onSignOutQobuz else onSignInQobuz,
-            )
-            RowDivider()
-            SettingsRow(
-                icon = SfIcons.Cloud,
-                title = stringResource(R.string.soundcloud_account),
-                subtitle = soundCloudAccount?.username
-                    ?: stringResource(R.string.soundcloud_not_signed_in),
-                value = if (soundCloudSignedIn) {
-                    stringResource(R.string.soundcloud_signed_in_value)
-                } else {
-                    null
-                },
-                onClick = if (soundCloudSignedIn) onSignOutSoundCloud else onSignInSoundCloud,
-            )
-        }
-
-        SettingsGroup(
-            header = stringResource(R.string.external_sources),
-            footer = stringResource(R.string.spotify_connect_subtitle),
-        ) {
-            SettingsRow(
-                iconPainter = painterResource(Res.drawable.spotify_logo),
-                title = stringResource(R.string.spotify),
-                subtitle = stringResource(
-                    if (spotifyConnected.isNotBlank()) R.string.connected else R.string.tap_to_connect,
-                ),
-                onClick = onOpenSpotify,
-            )
-            if (spotifyConnected.isNotBlank()) {
-                RowDivider()
-                DestructiveRow(
-                    label = stringResource(R.string.spotify_disconnect),
-                    onClick = {
-                        clearSpotifyWebSession()
-                        AppSettings.setSpotifySpdcToken("")
-                    },
-                )
-            }
         }
 
         if (AppSettings.scrobblingAvailable) {
@@ -299,6 +175,26 @@ fun IntegrationScreen(
                             onOpenLastfmLogin()
                         }
                     },
+                )
+                // Directly beneath the sign-in row: the genres are asked of
+                // Last.fm itself, so the switch travels with the account it
+                // needs rather than with the stats it feeds.
+                RowDivider()
+                SettingsRow(
+                    icon = SfIcons.LocalOffer,
+                    title = stringResource(R.string.work_out_genres),
+                    subtitle = if (replayGenres) {
+                        stringResource(R.string.replay_genres_enabled_subtitle)
+                    } else {
+                        stringResource(R.string.replay_genres_disabled_subtitle)
+                    },
+                    trailing = {
+                        IosSwitch(
+                            checked = replayGenres,
+                            onCheckedChange = AppSettings::setReplayGenres,
+                        )
+                    },
+                    onClick = { AppSettings.setReplayGenres(!replayGenres) },
                 )
                 if (lastfmEnabled && lastfmSessionKey.isNotBlank()) {
                     RowDivider()
