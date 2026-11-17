@@ -1737,4 +1737,7 @@
 
     <string name="pause_at_zero_volume">Pauza przy zerowej głośności</string>
     <string name="pause_at_zero_volume_subtitle">Pauza przy zerowej głośności i wznowienie, gdy głośność wróci</string>
+
+    <string name="auto_start_on_bluetooth">Automatycznie wznów przy połączeniu Bluetooth</string>
+    <string name="auto_start_on_bluetooth_subtitle">Wznawia odtwarzanie po podłączeniu urządzenia audio Bluetooth</string>
 </resources>

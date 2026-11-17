@@ -346,6 +346,16 @@ object AppSettings {
      */
     val pauseAtZeroVolume = MutableStateFlow(false)
 
+    /**
+     * Whether playback resumes on its own when a Bluetooth audio device
+     * connects. Ported from ArchiveTune's auto start on Bluetooth: the
+     * receiver waits the fork's second-and-a-half for the link to settle
+     * before it touches the player, and only an audio-shaped device wakes
+     * it at all. Off by default — a connection is not always the listener
+     * asking to hear something.
+     */
+    val autoStartOnBluetooth = MutableStateFlow(false)
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1251,6 +1261,7 @@ object AppSettings {
         keepCpuAwake.value = prefs.getBoolean(KEY_KEEP_CPU_AWAKE, false)
         persistentQueue.value = prefs.getBoolean(KEY_PERSISTENT_QUEUE, true)
         pauseAtZeroVolume.value = prefs.getBoolean(KEY_PAUSE_AT_ZERO_VOLUME, false)
+        autoStartOnBluetooth.value = prefs.getBoolean(KEY_AUTO_START_ON_BLUETOOTH, false)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1677,6 +1688,11 @@ object AppSettings {
     fun setPauseAtZeroVolume(value: Boolean) {
         pauseAtZeroVolume.value = value
         prefs.edit().putBoolean(KEY_PAUSE_AT_ZERO_VOLUME, value).apply()
+    }
+
+    fun setAutoStartOnBluetooth(value: Boolean) {
+        autoStartOnBluetooth.value = value
+        prefs.edit().putBoolean(KEY_AUTO_START_ON_BLUETOOTH, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2947,6 +2963,7 @@ object AppSettings {
     private const val KEY_KEEP_CPU_AWAKE = "keep_cpu_awake"
     private const val KEY_PERSISTENT_QUEUE = "persistent_queue"
     private const val KEY_PAUSE_AT_ZERO_VOLUME = "pause_at_zero_volume"
+    private const val KEY_AUTO_START_ON_BLUETOOTH = "auto_start_on_bluetooth"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

@@ -1697,4 +1697,7 @@
 
     <string name="pause_at_zero_volume">डिवाइस वॉल्यूम 0 होने पर रोकें</string>
     <string name="pause_at_zero_volume_subtitle">शून्य वॉल्यूम पर रोकता है और वॉल्यूम बढ़ने पर फिर शुरू करता है</string>
+
+    <string name="auto_start_on_bluetooth">ब्लूटूथ कनेक्ट होने पर अपने आप शुरू करें</string>
+    <string name="auto_start_on_bluetooth_subtitle">ब्लूटूथ ऑडियो डिवाइस कनेक्ट होने पर प्लेबैक फिर शुरू करता है</string>
 </resources>

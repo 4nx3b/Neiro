@@ -1,8 +1,13 @@
 package com.music.bitchord.playback
 
 import android.app.PendingIntent
+import android.bluetooth.BluetoothClass
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
@@ -605,6 +610,79 @@ class PlaybackService : MediaLibraryService() {
         zeroVolumeObserver?.let { contentResolver.unregisterContentObserver(it) }
         zeroVolumeObserver = null
         pausedForZeroVolume = false
+    }
+
+    /**
+     * The receiver behind Auto-start on Bluetooth connect, ported from
+     * ArchiveTune: registered only while the setting is on, woken only by an
+     * ACL connection from an audio-shaped device, and it waits the fork's
+     * one-and-a-half seconds for the link to settle before it touches the
+     * player — playing when paused, or preparing and playing a restored-but-
+     * idle queue, and never starting a party the listener did not begin.
+     */
+    private var bluetoothStartReceiver: BroadcastReceiver? = null
+
+    private val bluetoothStartReceiverBody =
+        object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action != BluetoothDevice.ACTION_ACL_CONNECTED) return
+                @Suppress("DEPRECATION")
+                val device =
+                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+                val isAudioDevice =
+                    try {
+                        val majorClass = device.bluetoothClass?.majorDeviceClass
+                        majorClass == BluetoothClass.Device.Major.AUDIO_VIDEO ||
+                            majorClass == BluetoothClass.Device.Major.WEARABLE
+                    } catch (_: SecurityException) {
+                        true
+                    }
+                if (!isAudioDevice) return
+                scope.launch {
+                    kotlinx.coroutines.delay(1_500)
+                    handleBluetoothAutoStart()
+                }
+            }
+        }
+
+    private fun handleBluetoothAutoStart() {
+        val sessionPlayer = player ?: return
+        if (ListenTogether.state.value.inParty) return
+        if (sessionPlayer.currentMediaItem != null &&
+            sessionPlayer.playbackState != androidx.media3.common.Player.STATE_IDLE &&
+            sessionPlayer.playbackState != androidx.media3.common.Player.STATE_ENDED
+        ) {
+            if (!sessionPlayer.playWhenReady) sessionPlayer.play()
+            return
+        }
+        if (sessionPlayer.mediaItemCount > 0) {
+            sessionPlayer.prepare()
+            sessionPlayer.play()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun observeBluetoothAutoStart() {
+        if (bluetoothStartReceiver != null) return
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+            checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val filter = IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED)
+        val receiver = bluetoothStartReceiverBody
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(receiver, filter, android.content.Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(receiver, filter)
+        }
+        bluetoothStartReceiver = receiver
+    }
+
+    private fun stopBluetoothAutoStart() {
+        val receiver = bluetoothStartReceiver ?: return
+        runCatching { unregisterReceiver(receiver) }
+        bluetoothStartReceiver = null
     }
 
     private fun updatePlaybackWakeLock() {
@@ -7403,6 +7481,11 @@ class PlaybackService : MediaLibraryService() {
             }
         }
         scope.launch {
+            AppSettings.autoStartOnBluetooth.collect { on ->
+                if (on) observeBluetoothAutoStart() else stopBluetoothAutoStart()
+            }
+        }
+        scope.launch {
             AppSettings.skipSilence.collect { on -> eachPlayer { it.skipSilenceEnabled = on } }
         }
         scope.launch {
@@ -8005,6 +8088,7 @@ class PlaybackService : MediaLibraryService() {
     override fun onDestroy() {
         if (playbackWakeLock?.isHeld == true) playbackWakeLock?.release()
         stopObservingZeroVolume()
+        stopBluetoothAutoStart()
         WearBridge.attachStreams(null)
         WearBridge.releaseSpeaker()
         // Let go of the receiver's player but leave its session alone: a

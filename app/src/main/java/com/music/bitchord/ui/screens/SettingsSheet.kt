@@ -254,6 +254,7 @@ fun SettingsScreen(
     val keepCpuAwake by AppSettings.keepCpuAwake.collectAsStateWithLifecycle()
     val persistentQueue by AppSettings.persistentQueue.collectAsStateWithLifecycle()
     val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
+    val autoStartOnBluetooth by AppSettings.autoStartOnBluetooth.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -943,6 +944,22 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setPauseAtZeroVolume(!pauseAtZeroVolume) },
+                )
+            }
+            // Ported from ArchiveTune's auto start on Bluetooth.
+            val autoStartBluetoothTitle = stringResource(R.string.auto_start_on_bluetooth)
+            row(autoStartBluetoothTitle, "bluetooth", "auto", "resume", "connect") {
+                SettingsRow(
+                    icon = SfIcons.Bluetooth,
+                    title = autoStartBluetoothTitle,
+                    subtitle = stringResource(R.string.auto_start_on_bluetooth_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoStartOnBluetooth,
+                            onCheckedChange = AppSettings::setAutoStartOnBluetooth,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoStartOnBluetooth(!autoStartOnBluetooth) },
                 )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)

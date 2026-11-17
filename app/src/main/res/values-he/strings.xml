@@ -1702,4 +1702,7 @@
 
     <string name="pause_at_zero_volume">השהיה בעוצמת אפס</string>
     <string name="pause_at_zero_volume_subtitle">משהה בעוצמת אפס וממשיך כשהעוצמה עולה</string>
+
+    <string name="auto_start_on_bluetooth">המשך אוטומטי בחיבור בלוטות</string>
+    <string name="auto_start_on_bluetooth_subtitle">ממשיך בנגינה כשמתחבר מכשיר אודיו בלוטות</string>
 </resources>

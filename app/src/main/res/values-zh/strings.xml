@@ -1674,4 +1674,7 @@
 
     <string name="pause_at_zero_volume">设备音量为 0 时暂停</string>
     <string name="pause_at_zero_volume_subtitle">音量为零时暂停，音量恢复后继续播放</string>
+
+    <string name="auto_start_on_bluetooth">连接蓝牙时自动播放</string>
+    <string name="auto_start_on_bluetooth_subtitle">蓝牙音频设备连接时自动恢复播放</string>
 </resources>

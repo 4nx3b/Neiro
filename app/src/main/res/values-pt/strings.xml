@@ -1702,4 +1702,7 @@
 
     <string name="pause_at_zero_volume">Pausar quando o volume estiver em 0</string>
     <string name="pause_at_zero_volume_subtitle">Pausa no volume zero e retoma quando o volume aumenta</string>
+
+    <string name="auto_start_on_bluetooth">Retomar ao conectar Bluetooth</string>
+    <string name="auto_start_on_bluetooth_subtitle">Retoma a reprodução quando um dispositivo de áudio Bluetooth conecta</string>
 </resources>

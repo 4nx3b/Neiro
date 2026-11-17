@@ -1654,4 +1654,7 @@
 
     <string name="pause_at_zero_volume">Cihaz sesi sıfırken duraklat</string>
     <string name="pause_at_zero_volume_subtitle">Ses sıfırdurken duraklatır ve ses yükseldiğinde devam eder</string>
+
+    <string name="auto_start_on_bluetooth">Bluetooth bağlanınca otomatik devam et</string>
+    <string name="auto_start_on_bluetooth_subtitle">Bir Bluetooth ses cihazı bağlandığında oynatmayı sürdürür</string>
 </resources>

@@ -1674,4 +1674,7 @@
 
     <string name="pause_at_zero_volume">Jeda saat volume perangkat 0</string>
     <string name="pause_at_zero_volume_subtitle">Jeda di volume nol dan lanjut saat volume naik</string>
+
+    <string name="auto_start_on_bluetooth">Lanjut otomatis saat Bluetooth tersambung</string>
+    <string name="auto_start_on_bluetooth_subtitle">Melanjutkan pemutar saat perangkat audio Bluetooth tersambung</string>
 </resources>

@@ -1680,4 +1680,7 @@
 
     <string name="pause_at_zero_volume">หยุดชั่วคราวเมื่อวอลุ่มเป็น 0</string>
     <string name="pause_at_zero_volume_subtitle">หยุดเมื่อวอลุ่มเป็นศูนย์และเล่นต่อเมื่อวอลุ่มกลับมา</string>
+
+    <string name="auto_start_on_bluetooth">เล่นต่ออัตโนมัติเมื่อเชื่อมต่อบลูทูธ</string>
+    <string name="auto_start_on_bluetooth_subtitle">เล่นต่อเมื่ออุปกรณ์เสียงบลูทูธเชื่อมต่อ</string>
 </resources>

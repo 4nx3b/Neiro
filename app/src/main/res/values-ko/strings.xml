@@ -1547,4 +1547,7 @@
 
     <string name="pause_at_zero_volume">볼륨 0에서 일시정지</string>
     <string name="pause_at_zero_volume_subtitle">볼륨이 0이면 일시정지하고 볼륨이 돌아오면 이어서 재생합니다</string>
+
+    <string name="auto_start_on_bluetooth">블루투스 연결 시 자동 재생</string>
+    <string name="auto_start_on_bluetooth_subtitle">블루투스 오디오 기기가 연결되면 재생을 재개합니다</string>
 </resources>

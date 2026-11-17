@@ -1614,4 +1614,7 @@
 
     <string name="pause_at_zero_volume">Tạm dừng khi âm lượng bằng 0</string>
     <string name="pause_at_zero_volume_subtitle">Tạm dừng khi âm lượng bằng 0 và tiếp tục khi âm lượng tăng lên</string>
+
+    <string name="auto_start_on_bluetooth">Tự động phát khi kết nối Bluetooth</string>
+    <string name="auto_start_on_bluetooth_subtitle">Phát lại nhạc khi thiết bị âm thanh Bluetooth kết nối</string>
 </resources>

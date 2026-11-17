@@ -1697,4 +1697,7 @@
 
     <string name="pause_at_zero_volume">Bei Gerätelautstärke 0 pausieren</string>
     <string name="pause_at_zero_volume_subtitle">Pausiert die Wiedergabe bei null Lautstärke und setzt sie fort, sobald die Lautstärke steigt</string>
+
+    <string name="auto_start_on_bluetooth">Bei Bluetooth-Verbindung automatisch fortfahren</string>
+    <string name="auto_start_on_bluetooth_subtitle">Setzt die Wiedergabe fort, wenn sich ein Bluetooth-Audiogerät verbindet</string>
 </resources>

@@ -1503,4 +1503,7 @@
 
     <string name="pause_at_zero_volume">裝置音量為 0 時暫停</string>
     <string name="pause_at_zero_volume_subtitle">音量為零時暫停，音量恢復後繼續播放</string>
+
+    <string name="auto_start_on_bluetooth">連接藍牙時自動播放</string>
+    <string name="auto_start_on_bluetooth_subtitle">藍牙音訊裝置連線時自動恢復播放</string>
 </resources>
