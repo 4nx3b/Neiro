@@ -1575,7 +1575,7 @@
     <string name="auto_start_on_bluetooth_subtitle">Automatically resume playback when a Bluetooth audio device connects</string>
 
     <string name="preload_songs">Preload songs</string>
-    <string name="preload_songs_subtitle">Resolves upcoming songs' streams ahead of time; ten is the fork's default</string>
+    <string name="preload_songs_subtitle">Resolves upcoming songs\' streams ahead of time; ten is the fork\'s default</string>
     <string name="preload_songs_value">%1$d songs</string>
 
     <string name="history_duration">History duration</string>

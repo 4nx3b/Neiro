@@ -1694,19 +1694,19 @@
     <string name="keep_cpu_awake_subtitle">Tient un verrou de réveil CPU pendant la musique, pour que la veille profonde ne coupe pas le flux</string>
 
     <string name="persistent_queue">Restaurer la dernière file</string>
-    <string name="persistent_queue_subtitle">Restaure ta dernière file au démarrage de l'app</string>
+    <string name="persistent_queue_subtitle">Restaure ta dernière file au démarrage de l\'app</string>
 
     <string name="pause_at_zero_volume">Mettre en pause quand le volume est à 0</string>
     <string name="pause_at_zero_volume_subtitle">Met en pause au volume zéro et reprend quand le volume remonte</string>
 
     <string name="auto_start_on_bluetooth">Reprendre à la connexion Bluetooth</string>
-    <string name="auto_start_on_bluetooth_subtitle">Reprend la lecture à la connexion d'un appareil audio Bluetooth</string>
+    <string name="auto_start_on_bluetooth_subtitle">Reprend la lecture à la connexion d\'un appareil audio Bluetooth</string>
 
     <string name="preload_songs">Chansons préchargées</string>
     <string name="preload_songs_subtitle">Résout d\'avance autant de chansons à venir ; 10 par défaut</string>
     <string name="preload_songs_value">%1$d chansons</string>
 
-    <string name="history_duration">Durée d'écoute</string>
+    <string name="history_duration">Durée d\'écoute</string>
     <string name="history_duration_subtitle">Temps de lecture requis pour qu\'une chanson compte comme écoutée</string>
     <string name="history_duration_value">%1$d s</string>
 
