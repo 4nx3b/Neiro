@@ -1583,9 +1583,6 @@
     <string name="liquid_glass_intensity_subtle">Subtle</string>
     <string name="liquid_glass_intensity_vivid">Vivid</string>
     <string name="liquid_glass_master_footer">The master switch the glass hangs on: every surface below answers to it, and turning it on brings the adaptive bar along with it.</string>
-    <string name="liquid_glass_nav_bar">Liquid Glass navigation bar</string>
-    <string name="liquid_glass_nav_bar_desc">Draw the floating bar itself as Liquid Glass, with its own fixed shape</string>
-    <string name="liquid_glass_nav_bar_disabled">Turn on Liquid Glass effects first</string>
     <string name="liquid_glass_optics">Optics</string>
     <string name="liquid_glass_optics_footer">Each control is a multiple of the stock glass; 100% is what the app has always drawn.</string>
     <string name="liquid_glass_percent_value">%1$d%%</string>
@@ -1616,13 +1613,10 @@
     <string name="navigation_bar_dimensions_footer">The standard bar\'s own geometry. While the Liquid Glass bar is in force its shape is the glass\'s own, and the dials stand down.</string>
     <string name="navigation_bar_dp_value">%1$d dp</string>
     <string name="navigation_bar_footer">The standard bar\'s own settings. The liquid glass bar, while Liquid Glass is on, carries its own shape.</string>
-    <string name="navigation_bar_frosted_blur">Frosted navigation bar</string>
-    <string name="navigation_bar_frosted_blur_desc">A frosted blur behind the floating bar — the haze it has always drawn</string>
     <string name="navigation_bar_glass_glow">Glass glow</string>
     <string name="navigation_bar_glass_glow_desc">Nuvio-style rim light and soft sheen on the navigation bar and compact controls</string>
     <string name="navigation_bar_glass_glow_intensity">Glass glow intensity</string>
     <string name="navigation_bar_glass_glow_intensity_desc">Scales the rim light and sheen strength of the navigation bar and compact controls. 100% is the default look.</string>
-    <string name="navigation_bar_glass_note">The liquid glass bar is up: its labels are part of its shape, and it answers to the Liquid Glass switch above instead.</string>
     <string name="navigation_bar_height">Height</string>
     <string name="navigation_bar_label_spacing">Label spacing</string>
     <string name="navigation_bar_labels">Show labels</string>
@@ -1631,8 +1625,6 @@
     <string name="navigation_bar_reset_dimensions">Reset dimensions to default</string>
     <string name="navigation_bar_settings_subtitle">Labels under the tabs</string>
     <string name="navigation_bar_settings_title">Navigation bar</string>
-    <string name="navigation_bar_tint_frosted_blur">Tint navigation bar</string>
-    <string name="navigation_bar_tint_frosted_blur_desc">The bar tinted with the accent color — a light pastel in light mode, a deep tinted dark in dark mode. Turns the neutral frosted option off.</string>
     <string name="navigation_bar_transparency">Transparency</string>
     <string name="navigation_bar_width">Width</string>
     <string name="player">Player</string>
@@ -1671,8 +1663,6 @@
     <string name="sf_pro_fonts">SF Pro fonts</string>
     <string name="sf_pro_fonts_subtitle">Browse sf-pro.kouzu.in and download fonts</string>
     <string name="sf_pro_retry">Retry</string>
-    <string name="tablet_mode">Tablet mode</string>
-    <string name="tablet_mode_subtitle">The player drawn as a tablet window gets it, at any width</string>
     <string name="ui_scale">UI scale</string>
     <string name="ui_scale_subtitle">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>

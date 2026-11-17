@@ -84,7 +84,6 @@ import moe.rukamori.archivetune.constants.PlayerDesignStyleKey
 import moe.rukamori.archivetune.constants.TikTokMainLyricsEnabledKey
 import moe.rukamori.archivetune.constants.RandomThemeOnStartupKey
 import moe.rukamori.archivetune.constants.ShowPlayerVolumeBarKey
-import moe.rukamori.archivetune.constants.TabletModeEnabledKey
 import moe.rukamori.archivetune.constants.UiScaleFactorKey
 import moe.rukamori.archivetune.ui.component.EnumListPreference
 import moe.rukamori.archivetune.ui.component.FrostedHeaderPill
@@ -185,11 +184,6 @@ fun AppearanceSettings(navController: NavController, scrollTo: String? = null) {
         rememberPreference(
             UiScaleFactorKey,
             defaultValue = 1.0f,
-        )
-    val (tabletModeEnabled, onTabletModeEnabledChange) =
-        rememberPreference(
-            TabletModeEnabledKey,
-            defaultValue = false,
         )
     val (blurRadius, onBlurRadiusChange) = rememberPreference(BlurRadiusKey, defaultValue = 48f)
     val (backdropEnabled, onBackdropEnabledChange) = rememberPreference(BackdropEnabledKey, defaultValue = true)
@@ -774,17 +768,6 @@ fun AppearanceSettings(navController: NavController, scrollTo: String? = null) {
                 modifier = positions.modifierFor("app_language"),
                 title = stringResource(R.string.misc),
             ) {
-                item {
-                    SwitchPreference(
-                        modifier = positions.modifierFor("tablet_mode"),
-                        title = { Text(stringResource(R.string.tablet_mode)) },
-                        description = stringResource(R.string.tablet_mode_desc),
-                        icon = { Icon(painterResource(R.drawable.desktop_windows), null) },
-                        checked = tabletModeEnabled,
-                        onCheckedChange = onTabletModeEnabledChange,
-                    )
-                }
-
                 item {
                     PreferenceEntry(
                         modifier = positions.modifierFor("navigation_bar_settings"),

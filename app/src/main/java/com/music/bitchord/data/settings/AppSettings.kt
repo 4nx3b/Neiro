@@ -597,21 +597,6 @@ object AppSettings {
      */
     val miniPlayerBarBehavior = MutableStateFlow(MiniPlayerBarBehavior.ADAPTIVE)
 
-    /**
-     * The standard bar's frosted surface — the haze it has always drawn. One of
-     * the three bar styles with [navBarTint] and [liquidGlassNavBar].
-     */
-    val navBarFrosted = MutableStateFlow(true)
-
-    /** The standard bar's accent-tinted surface, one of the three bar styles. */
-    val navBarTint = MutableStateFlow(false)
-
-    /**
-     * The standard bar drawn as Liquid Glass with its own fixed geometry, one of
-     * the three bar styles — the dimensions are the glass's own while it is on.
-     */
-    val liquidGlassNavBar = MutableStateFlow(false)
-
     /** The Nuvio-style rim light and soft sheen on the bar and compact circles. */
     val navBarGlassGlow = MutableStateFlow(true)
 
@@ -675,14 +660,6 @@ object AppSettings {
     val minimalHomeMode = MutableStateFlow(false)
 
     val defaultOpenTab = MutableStateFlow(DefaultOpenTab.HOME)
-
-    /**
-     * Draws the player the way a tablet-sized window gets it — the full-cover
-     * blur standing behind everything — at any width. Ported from ArchiveTune's
-     * tablet mode; the window's own width still decides on its own until this
-     * is switched on.
-     */
-    val tabletMode = MutableStateFlow(false)
 
     val backAnimationStyle = MutableStateFlow(BackAnimationStyle.DEFAULT)
 
@@ -1326,9 +1303,6 @@ object AppSettings {
         miniPlayerBarBehavior.value = runCatching {
             MiniPlayerBarBehavior.valueOf(prefs.getString(KEY_MINI_PLAYER_BAR_BEHAVIOR, null) ?: "ADAPTIVE")
         }.getOrDefault(MiniPlayerBarBehavior.ADAPTIVE)
-        navBarFrosted.value = prefs.getBoolean(KEY_NAV_BAR_FROSTED, true)
-        navBarTint.value = prefs.getBoolean(KEY_NAV_BAR_TINT, false)
-        liquidGlassNavBar.value = prefs.getBoolean(KEY_LIQUID_GLASS_NAV_BAR, false)
         navBarGlassGlow.value = prefs.getBoolean(KEY_NAV_BAR_GLASS_GLOW, true)
         navBarGlassGlowIntensity.value = prefs.getFloat(KEY_NAV_BAR_GLASS_GLOW_INTENSITY, 1f).coerceIn(0.2f, 2f)
         navBarWidth.value = prefs.getFloat(KEY_NAV_BAR_WIDTH, 1.0f).coerceIn(0.5f, 1.0f)
@@ -1345,9 +1319,7 @@ object AppSettings {
         movingBlur.value = prefs.getBoolean(KEY_MOVING_BLUR, false)
         hideSlideBar.value = prefs.getBoolean(KEY_HIDE_SLIDE_BAR, false)
         minimalHomeMode.value = prefs.getBoolean(KEY_MINIMAL_HOME_MODE, false)
-        defaultOpenTab.value = readEnum(KEY_DEFAULT_OPEN_TAB, DefaultOpenTab.HOME)
-        tabletMode.value = prefs.getBoolean(KEY_TABLET_MODE, false)
-        backAnimationStyle.value = readEnum(KEY_BACK_ANIMATION_STYLE, BackAnimationStyle.DEFAULT)
+        defaultOpenTab.value = readEnum(KEY_DEFAULT_OPEN_TAB, DefaultOpenTab.HOME)        backAnimationStyle.value = readEnum(KEY_BACK_ANIMATION_STYLE, BackAnimationStyle.DEFAULT)
         navBarShowLabels.value = prefs.getBoolean(KEY_NAV_BAR_SHOW_LABELS, true)
         hideSignInBanner.value = prefs.getBoolean(KEY_HIDE_SIGN_IN_BANNER, false)
         hideLibraryReplayCard.value = prefs.getBoolean(KEY_HIDE_LIBRARY_REPLAY_CARD, false)
@@ -1950,49 +1922,6 @@ object AppSettings {
         prefs.edit().putString(KEY_MINI_PLAYER_BAR_BEHAVIOR, value.name).apply()
     }
 
-    /**
-     * The three bar styles are one choice, ported from ArchiveTune's mutual
-     * exclusion: turning one on turns the others off, so exactly one surface is
-     * in force (or none, with all three off).
-     */
-    private fun persistNavBarStyles() {
-        prefs.edit()
-            .putBoolean(KEY_NAV_BAR_FROSTED, navBarFrosted.value)
-            .putBoolean(KEY_NAV_BAR_TINT, navBarTint.value)
-            .putBoolean(KEY_LIQUID_GLASS_NAV_BAR, liquidGlassNavBar.value)
-            .apply()
-    }
-
-    fun setNavBarFrosted(value: Boolean) {
-        navBarFrosted.value = value
-        if (value) {
-            navBarTint.value = false
-            liquidGlassNavBar.value = false
-        }
-        persistNavBarStyles()
-    }
-
-    fun setNavBarTint(value: Boolean) {
-        navBarTint.value = value
-        if (value) {
-            navBarFrosted.value = false
-            liquidGlassNavBar.value = false
-        }
-        persistNavBarStyles()
-    }
-
-    fun setLiquidGlassNavBar(value: Boolean) {
-        liquidGlassNavBar.value = value
-        if (value) {
-            navBarFrosted.value = false
-            navBarTint.value = false
-            // The glass bar's fixed shape assumes the adaptive behavior, the
-            // same way the master glass switch does.
-            setMiniPlayerBarBehavior(MiniPlayerBarBehavior.ADAPTIVE)
-        }
-        persistNavBarStyles()
-    }
-
     fun setNavBarGlassGlow(value: Boolean) {
         navBarGlassGlow.value = value
         prefs.edit().putBoolean(KEY_NAV_BAR_GLASS_GLOW, value).apply()
@@ -2097,11 +2026,6 @@ object AppSettings {
     fun setDefaultOpenTab(value: DefaultOpenTab) {
         defaultOpenTab.value = value
         prefs.edit().putString(KEY_DEFAULT_OPEN_TAB, value.name).apply()
-    }
-
-    fun setTabletMode(value: Boolean) {
-        tabletMode.value = value
-        prefs.edit().putBoolean(KEY_TABLET_MODE, value).apply()
     }
 
     fun setBackAnimationStyle(value: BackAnimationStyle) {
@@ -3008,9 +2932,6 @@ object AppSettings {
     private const val KEY_GLASS_MINI_PLAYER = "glass_mini_player"
     private const val KEY_GLASS_MENUS = "glass_menus"
     private const val KEY_MINI_PLAYER_BAR_BEHAVIOR = "mini_player_bar_behavior"
-    private const val KEY_NAV_BAR_FROSTED = "nav_bar_frosted"
-    private const val KEY_NAV_BAR_TINT = "nav_bar_tint"
-    private const val KEY_LIQUID_GLASS_NAV_BAR = "liquid_glass_nav_bar"
     private const val KEY_NAV_BAR_GLASS_GLOW = "nav_bar_glass_glow"
     private const val KEY_NAV_BAR_GLASS_GLOW_INTENSITY = "nav_bar_glass_glow_intensity"
     private const val KEY_NAV_BAR_WIDTH = "nav_bar_width"
@@ -3028,7 +2949,6 @@ object AppSettings {
     private const val KEY_HIDE_SLIDE_BAR = "hide_slide_bar"
     private const val KEY_MINIMAL_HOME_MODE = "minimal_home_mode"
     private const val KEY_DEFAULT_OPEN_TAB = "default_open_tab"
-    private const val KEY_TABLET_MODE = "tablet_mode"
     private const val KEY_BACK_ANIMATION_STYLE = "back_animation_style"
     private const val KEY_NAV_BAR_SHOW_LABELS = "nav_bar_show_labels"
     private const val KEY_HIDE_SIGN_IN_BANNER = "hide_sign_in_banner"

@@ -333,8 +333,6 @@
     <string name="ui_scale">UI scale</string>
     <string name="ui_scale_desc">Adjust the size of all UI elements (smaller = more content, larger = easier to read)</string>
     <string name="ui_scale_value">%1$d%%</string>
-    <string name="tablet_mode">Tablet mode</string>
-    <string name="tablet_mode_desc">Use the two-pane layout with a side rail on every screen size.</string>
     <string name="back_animation_style">Back animation style</string>
     <string name="back_animation_style_default">Default</string>
     <string name="back_animation_style_predictive">Predictive back gesture</string>

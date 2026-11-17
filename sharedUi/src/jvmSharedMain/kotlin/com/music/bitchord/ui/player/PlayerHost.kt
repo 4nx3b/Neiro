@@ -271,12 +271,6 @@ interface PlayerSettingsSource {
 
     /** Hides the seek bar. */
     val hideSlideBar: StateFlow<Boolean>
-
-    /**
-     * Draws the player the way a tablet-sized window gets it, at any width.
-     * Ported from ArchiveTune's tablet mode.
-     */
-    val tabletMode: StateFlow<Boolean>
     val lyricsBlur: StateFlow<Boolean>
     val lyricsOffsetMs: StateFlow<Int>
     val lyricsSourceOrder: StateFlow<List<LyricsSource>>

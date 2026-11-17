@@ -75,9 +75,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val tikTokMainLyrics get() = AppSettings.tikTokMainLyrics
         override val blurIntensity get() = AppSettings.blurIntensity
         override val movingBlur get() = AppSettings.movingBlur
-        override val hideSlideBar get() = AppSettings.hideSlideBar
-        override val tabletMode get() = AppSettings.tabletMode
-        override val lyricsBlur get() = AppSettings.lyricsBlur
+        override val hideSlideBar get() = AppSettings.hideSlideBar        override val lyricsBlur get() = AppSettings.lyricsBlur
         override val lyricsOffsetMs get() = AppSettings.lyricsOffsetMs
         override val lyricsSourceOrder get() = AppSettings.lyricsSourceOrder
         override val meteredConnection get() = AppSettings.meteredConnection

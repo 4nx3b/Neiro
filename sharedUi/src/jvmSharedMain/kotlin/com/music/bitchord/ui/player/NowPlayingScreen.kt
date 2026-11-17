@@ -1780,8 +1780,7 @@ fun NowPlayingScreen(
     // Tablet-sized players use the full-cover blur in all three states, and so
     // does the phone under the simple theme — see the backdrop. "Tablet mode",
     // ported from ArchiveTune, asks for that treatment at any width.
-    val tabletModeSetting by PlayerSettings.tabletMode.collectAsStateWithLifecycle()
-    val tabletArtworkBackdrop = tabletSizedPlayer(windowWidth) || tabletModeSetting
+    val tabletArtworkBackdrop = tabletSizedPlayer(windowWidth)
     // Owned by the song-level player composition, not by any one screen state.
     // Opening lyrics/queue, and rotating into or out of landscape, therefore
     // reuse the same tiny pre-blurred bitmap instead of running a screen-sized

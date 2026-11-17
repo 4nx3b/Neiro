@@ -29,7 +29,6 @@ val HideStatusBarKey = booleanPreferencesKey("hideStatusBar")
 
 val UiScaleFactorKey = floatPreferencesKey("uiScaleFactor")
 
-val TabletModeEnabledKey = booleanPreferencesKey("tabletModeEnabled")
 val EnableHapticFeedbackKey = booleanPreferencesKey("enableHapticFeedback")
 val UseSystemFontKey = booleanPreferencesKey("useSystemFont")
 val FontPreferenceKey = stringPreferencesKey("fontPreference")
@@ -133,7 +132,6 @@ val BackdropBlurAmountKey = intPreferencesKey("backdropBlurAmount")
 val MiniPlayerLastAnchorKey = intPreferencesKey("miniPlayerLastAnchor")
 
 val LiquidGlassEnabledKey = booleanPreferencesKey("liquidGlassEnabled")
-val LiquidGlassNavBarEnabledKey = booleanPreferencesKey("liquidGlassNavBarEnabled")
 val NavigationBarBitchordKey = booleanPreferencesKey("navigationBarBitchord")
 val SukisuLiquidGlassNavBarKey = booleanPreferencesKey("sukisuLiquidGlassNavBar")
 
@@ -1005,9 +1003,7 @@ enum class PlayerBackgroundStyle {
     GLOW_ANIMATED,
 }
 
-val NavigationBarFrostedBlurKey = booleanPreferencesKey("navigationBarFrostedBlur")
 
-val NavigationBarTintFrostedBlurKey = booleanPreferencesKey("navigationBarTintFrostedBlur")
 val HideNavigationBarLabelsKey = booleanPreferencesKey("hideNavigationBarLabels")
 val AddToPlaylistSortKey = stringPreferencesKey("addToPlaylistSort")
 

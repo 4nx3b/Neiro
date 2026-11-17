@@ -287,7 +287,6 @@ fun SettingsScreen(
     val hideSlideBar by AppSettings.hideSlideBar.collectAsStateWithLifecycle()
     val minimalHomeMode by AppSettings.minimalHomeMode.collectAsStateWithLifecycle()
     val defaultOpenTab by AppSettings.defaultOpenTab.collectAsStateWithLifecycle()
-    val tabletMode by AppSettings.tabletMode.collectAsStateWithLifecycle()
     val backAnimationStyle by AppSettings.backAnimationStyle.collectAsStateWithLifecycle()
     val sessionId by AppSettings.audioSessionId.collectAsStateWithLifecycle()
     val outputPcmMode by AppSettings.outputPcmMode.collectAsStateWithLifecycle()
@@ -1546,23 +1545,6 @@ fun SettingsScreen(
 
         // ---- The ported Misc group ----
         if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.misc)) {
-            // Ported from ArchiveTune's tablet mode: the player drawn as a
-            // tablet-sized window gets it, whatever this window is.
-            val tabletModeTitle = stringResource(R.string.tablet_mode)
-            row(tabletModeTitle, "tablet", "dual", "layout", "player") {
-                SettingsRow(
-                    icon = SfIcons.Fullscreen,
-                    title = tabletModeTitle,
-                    subtitle = stringResource(R.string.tablet_mode_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = tabletMode,
-                            onCheckedChange = AppSettings::setTabletMode,
-                        )
-                    },
-                    onClick = { AppSettings.setTabletMode(!tabletMode) },
-                )
-            }
             // Ported from ArchiveTune's navigation bar settings.
             val navBarTitle = stringResource(R.string.navigation_bar_settings_title)
             row(navBarTitle, "navigation", "bar", "labels", "tabs") {
@@ -3950,21 +3932,14 @@ private fun AodSettingsPage() {
 
 /**
  * The bottom bar's own settings, ported from ArchiveTune's navigation bar
- * page: what the mini player and bar do on scroll, the three surfaces the
- * standard bar can wear — frosted, tint, Liquid Glass, one at a time — the
- * glass glow with its strength, the labels, and the six dimension dials with
- * their reset. The BitChord and SukiSU bars of ArchiveTune's page stay
- * unported, as asked.
+ * page: what the mini player and bar do on scroll, the glass glow with its
+ * strength, the labels, and the six dimension dials with their reset. The
+ * BitChord and SukiSU bars of ArchiveTune's page stay unported, as asked.
  */
 @Composable
 private fun NavigationBarSettingsPage() {
     val showLabels by AppSettings.navBarShowLabels.collectAsStateWithLifecycle()
-    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
-    val glassSupported = isGlassSupported()
     val behavior by AppSettings.miniPlayerBarBehavior.collectAsStateWithLifecycle()
-    val navBarFrosted by AppSettings.navBarFrosted.collectAsStateWithLifecycle()
-    val navBarTint by AppSettings.navBarTint.collectAsStateWithLifecycle()
-    val liquidGlassNavBar by AppSettings.liquidGlassNavBar.collectAsStateWithLifecycle()
     val navBarGlassGlow by AppSettings.navBarGlassGlow.collectAsStateWithLifecycle()
     val navBarGlassGlowIntensity by AppSettings.navBarGlassGlowIntensity.collectAsStateWithLifecycle()
     val navBarWidth by AppSettings.navBarWidth.collectAsStateWithLifecycle()
@@ -3975,10 +3950,6 @@ private fun NavigationBarSettingsPage() {
     val navBarCornerRadius by AppSettings.navBarCornerRadius.collectAsStateWithLifecycle()
     val dimensionsAtDefault = navBarWidth == 1.0f && navBarHeight == 1.0f && navBarOpacity == 1.0f &&
         navBarTransparency == 0f && navBarLabelSpacing == 1f && navBarCornerRadius == 28f
-
-    // The glass bar claims the standard bar's geometry as its own, so the
-    // dials stand down while it is in force — ported from ArchiveTune.
-    val dimensionsEnabled = !liquidGlassNavBar
 
     SettingsGroup(
         header = stringResource(R.string.navigation_bar_compact_behavior),
@@ -4001,43 +3972,6 @@ private fun NavigationBarSettingsPage() {
         header = stringResource(R.string.general),
         footer = stringResource(R.string.navigation_bar_footer),
     ) {
-        val frostedTitle = stringResource(R.string.navigation_bar_frosted_blur)
-        SettingsRow(
-            title = frostedTitle,
-            subtitle = stringResource(R.string.navigation_bar_frosted_blur_desc),
-            trailing = { IosSwitch(checked = navBarFrosted, onCheckedChange = AppSettings::setNavBarFrosted) },
-            onClick = { AppSettings.setNavBarFrosted(!navBarFrosted) },
-        )
-        RowDivider()
-        val tintTitle = stringResource(R.string.navigation_bar_tint_frosted_blur)
-        SettingsRow(
-            title = tintTitle,
-            subtitle = stringResource(R.string.navigation_bar_tint_frosted_blur_desc),
-            trailing = { IosSwitch(checked = navBarTint, onCheckedChange = AppSettings::setNavBarTint) },
-            onClick = { AppSettings.setNavBarTint(!navBarTint) },
-        )
-        RowDivider()
-        val glassNavBarTitle = stringResource(R.string.liquid_glass_nav_bar)
-        SettingsRow(
-            title = glassNavBarTitle,
-            subtitle = stringResource(
-                when {
-                    !glassSupported -> R.string.liquid_glass_unavailable
-                    !liquidGlass -> R.string.liquid_glass_nav_bar_disabled
-                    else -> R.string.liquid_glass_nav_bar_desc
-                },
-            ),
-            enabled = glassSupported && liquidGlass,
-            trailing = {
-                IosSwitch(
-                    checked = liquidGlassNavBar,
-                    onCheckedChange = AppSettings::setLiquidGlassNavBar,
-                    enabled = glassSupported && liquidGlass,
-                )
-            },
-            onClick = { AppSettings.setLiquidGlassNavBar(!liquidGlassNavBar) },
-        )
-        RowDivider()
         val glassGlowTitle = stringResource(R.string.navigation_bar_glass_glow)
         SettingsRow(
             title = glassGlowTitle,
@@ -4084,7 +4018,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarWidth((it * 100f).roundToInt() / 100f) },
             valueRange = 0.5f..1f,
             steps = 9,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4095,7 +4028,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarHeight((it * 100f).roundToInt() / 100f) },
             valueRange = 0.8f..1.4f,
             steps = 11,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4106,7 +4038,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarOpacity((it * 100f).roundToInt() / 100f) },
             valueRange = 0.2f..1f,
             steps = 15,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4117,7 +4048,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarTransparency((it * 100f).roundToInt() / 100f) },
             valueRange = 0f..0.95f,
             steps = 18,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4128,7 +4058,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarLabelSpacing((it * 16f).roundToInt().toFloat()) },
             valueRange = 0f..1f,
             steps = 15,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4139,29 +4068,16 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarCornerRadius((it * 48f).roundToInt().toFloat()) },
             valueRange = 0f..1f,
             steps = 47,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SettingsRow(
             icon = SfIcons.Revert,
             title = stringResource(R.string.navigation_bar_reset_dimensions),
-            enabled = dimensionsEnabled && !dimensionsAtDefault,
+            enabled = !dimensionsAtDefault,
             onClick = { AppSettings.resetNavBarDimensions() },
         )
     }
 
-    // The one thing worth saying while the glass bar is the bar in force: its
-    // shape is the glass's own and not the dials' to take.
-    if (liquidGlassNavBar) {
-        SettingsGroup {
-            Text(
-                text = stringResource(R.string.navigation_bar_glass_note),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = GROUP_INSET + 4.dp, vertical = 12.dp),
-            )
-        }
-    }
 }
 
 /**

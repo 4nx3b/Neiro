@@ -707,11 +707,9 @@ private fun BitChordApp(
         }
     }
     // Which bar stack is drawing: the all-in-one glass bar while Liquid Glass
-    // and its navigation-bar element are on — unless the ported glass style on
-    // the Navigation bar page has claimed the standard bar for its own lens.
+    // and its navigation-bar element are on.
     val glassNavBarElement by AppSettings.glassNavBar.collectAsStateWithLifecycle()
-    val liquidGlassNavBarStyle by AppSettings.liquidGlassNavBar.collectAsStateWithLifecycle()
-    val glassBarStack = glassActive && glassNavBarElement && !liquidGlassNavBarStyle
+    val glassBarStack = glassActive && glassNavBarElement
     // The tab the app opens on, ported from ArchiveTune's default open tab.
     // Read once — a change is about the *next* launch, not this one's layout.
     val defaultOpenTab = remember { AppSettings.defaultOpenTab.value }

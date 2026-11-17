@@ -49,7 +49,6 @@ import moe.rukamori.archivetune.constants.PlayerDesignStyleKey
 import moe.rukamori.archivetune.constants.ShowPlayerVolumeBarKey
 import moe.rukamori.archivetune.constants.SkipSilenceKey
 import moe.rukamori.archivetune.constants.StopMusicOnTaskClearKey
-import moe.rukamori.archivetune.constants.TabletModeEnabledKey
 import moe.rukamori.archivetune.constants.UiScaleFactorKey
 import moe.rukamori.archivetune.ui.screens.settings.DarkMode
 import moe.rukamori.archivetune.ui.screens.settings.NavigationTab
@@ -107,12 +106,6 @@ object ArchiveTunePreferenceBridge {
             read = { AppSettings.uiScale.value },
             write = AppSettings::setUiScale,
             changes = AppSettings.uiScale.distinct(),
-        )
-        BridgedPreferences.bridge(
-            key = TabletModeEnabledKey,
-            read = { AppSettings.tabletMode.value },
-            write = AppSettings::setTabletMode,
-            changes = AppSettings.tabletMode.distinct(),
         )
         BridgedPreferences.bridge(
             key = MinimalHomeModeKey,
