@@ -579,8 +579,8 @@ class PlaybackService : MediaLibraryService() {
         if (volume == 0) {
             val canPauseNow = sessionPlayer.currentMediaItem != null &&
                 sessionPlayer.playWhenReady &&
-                sessionPlayer.playbackState != android.media3.common.Player.STATE_IDLE &&
-                sessionPlayer.playbackState != android.media3.common.Player.STATE_ENDED
+                sessionPlayer.playbackState != Player.STATE_IDLE &&
+                sessionPlayer.playbackState != Player.STATE_ENDED
             if (canPauseNow) {
                 sessionPlayer.pause()
                 pausedForZeroVolume = true
