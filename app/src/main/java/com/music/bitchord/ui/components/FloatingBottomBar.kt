@@ -388,7 +388,7 @@ fun FloatingBottomBar(
                     glassSpec = glassSpec,
                     selectedTint = adaptiveTint,
                     unselectedTint = adaptiveTint?.copy(alpha = 0.65f),
-                    labelSpacing = if (dimensionsEnabled) navBarLabelSpacing.dp else TAB_ICON_LABEL_GAP,
+                    labelSpacing = navBarLabelSpacing.dp,
                     showLabel = navBarShowLabels,
                     verticalPadding = itemVerticalPadding,
                     onClick = { onTabSelected(index) },
