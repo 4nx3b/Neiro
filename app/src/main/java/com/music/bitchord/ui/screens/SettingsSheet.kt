@@ -249,6 +249,7 @@ fun SettingsScreen(
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
+    val permanentShuffle by AppSettings.permanentShuffle.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -862,6 +863,21 @@ fun SettingsScreen(
                         onClick = { onOpenChoice(SettingsChoiceKind.AUTOMIX_PERFORMANCE) },
                     )
                 }
+            }
+            val permanentShuffleTitle = stringResource(R.string.permanent_shuffle)
+            row(permanentShuffleTitle, "shuffle", "queue") {
+                SettingsRow(
+                    icon = SfIcons.Shuffle,
+                    title = permanentShuffleTitle,
+                    subtitle = stringResource(R.string.permanent_shuffle_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = permanentShuffle,
+                            onCheckedChange = AppSettings::setPermanentShuffle,
+                        )
+                    },
+                    onClick = { AppSettings.setPermanentShuffle(!permanentShuffle) },
+                )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)
             row(skipSilenceTitle, "silence") {

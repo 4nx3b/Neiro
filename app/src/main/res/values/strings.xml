@@ -1558,4 +1558,6 @@
 
     <string name="crash_log_saved">Neiro crashed last time — log saved to %1$s</string>
     <string name="player_style_reset">The %1$s player kept crashing, so Neiro switched back to its own player. The crash log is in Downloads/Neiro.</string>
+    <string name="permanent_shuffle">Permanent shuffle mode</string>
+    <string name="permanent_shuffle_subtitle">Keep shuffle enabled when you start a new song</string>
 </resources>

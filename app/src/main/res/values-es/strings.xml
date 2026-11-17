@@ -1657,4 +1657,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro se cerró inesperadamente la última vez: registro guardado en %1$s</string>
     <string name="player_style_reset">El reproductor %1$s se cerraba una y otra vez, así que Neiro volvió a su propio reproductor. El registro del fallo está en Downloads/Neiro.</string>
+    <string name="permanent_shuffle">Modo aleatorio permanente</string>
+    <string name="permanent_shuffle_subtitle">Mantén la reproducción aleatoria activada al empezar una canción nueva</string>
 </resources>

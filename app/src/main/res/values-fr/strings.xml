@@ -1686,4 +1686,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro a planté la dernière fois — journal enregistré dans %1$s</string>
     <string name="player_style_reset">Le lecteur %1$s plantait sans cesse, Neiro est donc revenu à son propre lecteur. Le journal du plantage se trouve dans Downloads/Neiro.</string>
+    <string name="permanent_shuffle">Mode aléatoire permanent</string>
+    <string name="permanent_shuffle_subtitle">Garder la lecture aléatoire activée au démarrage d\'une nouvelle chanson</string>
 </resources>

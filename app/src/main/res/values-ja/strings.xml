@@ -1663,4 +1663,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">前回 Neiro がクラッシュしました — ログを %1$s に保存しました</string>
     <string name="player_style_reset">%1$s プレーヤーがクラッシュを繰り返したため、Neiro は標準のプレーヤーに戻しました。クラッシュログは Downloads/Neiro にあります。</string>
+    <string name="permanent_shuffle">常時シャッフルモード</string>
+    <string name="permanent_shuffle_subtitle">新しい曲を再生し始めてもシャッフルをオンのままにする</string>
 </resources>

@@ -1725,4 +1725,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro ostatnio uległo awarii — dziennik zapisano w %1$s</string>
     <string name="player_style_reset">Odtwarzacz %1$s wielokrotnie się zawieszał, więc Neiro wróciło do własnego odtwarzacza. Dziennik awarii jest w Downloads/Neiro.</string>
+    <string name="permanent_shuffle">Stały tryb losowy</string>
+    <string name="permanent_shuffle_subtitle">Zachowaj losowe odtwarzanie po rozpoczęciu nowego utworu</string>
 </resources>

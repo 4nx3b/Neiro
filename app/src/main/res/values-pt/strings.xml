@@ -1690,4 +1690,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">O Neiro falhou da última vez — registro salvo em %1$s</string>
     <string name="player_style_reset">O player %1$s continuava falhando, então o Neiro voltou ao próprio player. O registro da falha está em Downloads/Neiro.</string>
+    <string name="permanent_shuffle">Modo aleatório permanente</string>
+    <string name="permanent_shuffle_subtitle">Manter a reprodução aleatória ativada ao iniciar uma nova música</string>
 </resources>

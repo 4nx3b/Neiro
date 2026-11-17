@@ -1602,4 +1602,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro đã gặp sự cố lần trước — nhật ký đã được lưu vào %1$s</string>
     <string name="player_style_reset">Trình phát %1$s liên tục gặp sự cố nên Neiro đã chuyển về trình phát của mình. Nhật ký sự cố nằm trong Downloads/Neiro.</string>
+    <string name="permanent_shuffle">Chế độ ngẫu nhiên vĩnh viễn</string>
+    <string name="permanent_shuffle_subtitle">Giữ phát ngẫu nhiên được bật khi bắt đầu bài hát mới</string>
 </resources>

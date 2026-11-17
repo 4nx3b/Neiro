@@ -1685,4 +1685,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro पिछली बार क्रैश हो गया — लॉग %1$s में सहेजा गया</string>
     <string name="player_style_reset">%1$s प्लेयर बार-बार क्रैश हो रहा था, इसलिए Neiro अपने प्लेयर पर लौट आया। क्रैश लॉग Downloads/Neiro में है।</string>
+    <string name="permanent_shuffle">स्थायी शफ़ल मोड</string>
+    <string name="permanent_shuffle_subtitle">नया गाना शुरू करते समय शफ़ल चालू रखें</string>
 </resources>
