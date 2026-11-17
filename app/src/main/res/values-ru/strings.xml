@@ -1732,4 +1732,8 @@
 
     <string name="auto_start_on_bluetooth">Автопродолжение при подключении Bluetooth</string>
     <string name="auto_start_on_bluetooth_subtitle">Продолжает воспроизведение при подключении Bluetooth-аудиоустройства</string>
+
+    <string name="preload_songs">Предзагрузка песен</string>
+    <string name="preload_songs_subtitle">Заранее подготавливает столько предстоящих песен; по умолчанию 10</string>
+    <string name="preload_songs_value">%1$d песен</string>
 </resources>

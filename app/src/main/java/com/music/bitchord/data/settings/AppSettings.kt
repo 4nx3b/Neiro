@@ -356,6 +356,18 @@ object AppSettings {
      */
     val autoStartOnBluetooth = MutableStateFlow(false)
 
+    /**
+     * How many upcoming songs read-ahead warms stream URLs for, ported from
+     * ArchiveTune's preload songs: a resolve is cheap and staggered, so
+     * warming several at once is what makes a run of skips land already
+     * resolved. The full-byte half of read-ahead stays exactly one track —
+     * its tuning — whatever this dial says. Ten, the fork's default.
+     */
+    val preloadSongsCount = MutableStateFlow(10)
+
+    /** The dial's bounds, inclusive; read-ahead never warms more than ten or fewer than none. */
+    val preloadSongsCountRange = 0..10
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1262,6 +1274,7 @@ object AppSettings {
         persistentQueue.value = prefs.getBoolean(KEY_PERSISTENT_QUEUE, true)
         pauseAtZeroVolume.value = prefs.getBoolean(KEY_PAUSE_AT_ZERO_VOLUME, false)
         autoStartOnBluetooth.value = prefs.getBoolean(KEY_AUTO_START_ON_BLUETOOTH, false)
+        preloadSongsCount.value = prefs.getInt(KEY_PRELOAD_SONGS_COUNT, 10).coerceIn(0, 10)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1693,6 +1706,12 @@ object AppSettings {
     fun setAutoStartOnBluetooth(value: Boolean) {
         autoStartOnBluetooth.value = value
         prefs.edit().putBoolean(KEY_AUTO_START_ON_BLUETOOTH, value).apply()
+    }
+
+    fun setPreloadSongsCount(value: Int) {
+        val clamped = value.coerceIn(preloadSongsCountRange)
+        preloadSongsCount.value = clamped
+        prefs.edit().putInt(KEY_PRELOAD_SONGS_COUNT, clamped).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2964,6 +2983,7 @@ object AppSettings {
     private const val KEY_PERSISTENT_QUEUE = "persistent_queue"
     private const val KEY_PAUSE_AT_ZERO_VOLUME = "pause_at_zero_volume"
     private const val KEY_AUTO_START_ON_BLUETOOTH = "auto_start_on_bluetooth"
+    private const val KEY_PRELOAD_SONGS_COUNT = "preload_songs_count"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

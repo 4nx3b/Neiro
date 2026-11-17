@@ -1677,4 +1677,8 @@
 
     <string name="auto_start_on_bluetooth">Lanjut otomatis saat Bluetooth tersambung</string>
     <string name="auto_start_on_bluetooth_subtitle">Melanjutkan pemutar saat perangkat audio Bluetooth tersambung</string>
+
+    <string name="preload_songs">Preload lagu</string>
+    <string name="preload_songs_subtitle">Menyelesaikan di muka sebanyak itu lagu berikutnya; 10 bawaan</string>
+    <string name="preload_songs_value">%1$d lagu</string>
 </resources>

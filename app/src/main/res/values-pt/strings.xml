@@ -1705,4 +1705,8 @@
 
     <string name="auto_start_on_bluetooth">Retomar ao conectar Bluetooth</string>
     <string name="auto_start_on_bluetooth_subtitle">Retoma a reprodução quando um dispositivo de áudio Bluetooth conecta</string>
+
+    <string name="preload_songs">Pré-carregar músicas</string>
+    <string name="preload_songs_subtitle">Resolve com antecedência esta quantidade de próximas músicas; 10 é o padrão</string>
+    <string name="preload_songs_value">%1$d músicas</string>
 </resources>

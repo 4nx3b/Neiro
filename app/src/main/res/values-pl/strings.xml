@@ -1740,4 +1740,8 @@
 
     <string name="auto_start_on_bluetooth">Automatycznie wznów przy połączeniu Bluetooth</string>
     <string name="auto_start_on_bluetooth_subtitle">Wznawia odtwarzanie po podłączeniu urządzenia audio Bluetooth</string>
+
+    <string name="preload_songs">Wstępne ładowanie utworów</string>
+    <string name="preload_songs_subtitle">Wcześniej rozwiązuje tyle nadchodzących utworów; domyślnie 10</string>
+    <string name="preload_songs_value">%1$d utworów</string>
 </resources>

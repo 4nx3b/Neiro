@@ -255,6 +255,7 @@ fun SettingsScreen(
     val persistentQueue by AppSettings.persistentQueue.collectAsStateWithLifecycle()
     val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
     val autoStartOnBluetooth by AppSettings.autoStartOnBluetooth.collectAsStateWithLifecycle()
+    val preloadSongsCount by AppSettings.preloadSongsCount.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -960,6 +961,25 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setAutoStartOnBluetooth(!autoStartOnBluetooth) },
+                )
+            }
+            // Ported from ArchiveTune's preload songs: how many upcoming
+            // tracks read-ahead warms stream URLs for.
+            val preloadSongsTitle = stringResource(R.string.preload_songs)
+            row(preloadSongsTitle, "preload", "warm", "ahead", "read") {
+                SliderRow(
+                    icon = SfIcons.Performance,
+                    title = preloadSongsTitle,
+                    subtitle = stringResource(R.string.preload_songs_subtitle),
+                    value = if (preloadSongsCount == 0) {
+                        stringResource(R.string.off)
+                    } else {
+                        stringResource(R.string.preload_songs_value, preloadSongsCount)
+                    },
+                    sliderValue = preloadSongsCount.toFloat(),
+                    onSliderValue = { AppSettings.setPreloadSongsCount(it.roundToInt()) },
+                    valueRange = 0f..10f,
+                    steps = 9,
                 )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)

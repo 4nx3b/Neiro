@@ -1683,4 +1683,8 @@
 
     <string name="auto_start_on_bluetooth">เล่นต่ออัตโนมัติเมื่อเชื่อมต่อบลูทูธ</string>
     <string name="auto_start_on_bluetooth_subtitle">เล่นต่อเมื่ออุปกรณ์เสียงบลูทูธเชื่อมต่อ</string>
+
+    <string name="preload_songs">โหลดเพลงล่วงหน้า</string>
+    <string name="preload_songs_subtitle">เตรียมเพลงถัดไปจำนวนนี้ล่วงหน้า; ค่าเริ่มต้นคือ 10</string>
+    <string name="preload_songs_value">%1$d เพลง</string>
 </resources>

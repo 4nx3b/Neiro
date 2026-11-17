@@ -1678,4 +1678,8 @@
 
     <string name="auto_start_on_bluetooth">Bluetooth 接続時に自動で再開</string>
     <string name="auto_start_on_bluetooth_subtitle">Bluetooth オーディオ機器が接続されたとき再生を再開します</string>
+
+    <string name="preload_songs">楽曲を事前に読み込む</string>
+    <string name="preload_songs_subtitle">この曲数の次曲を先に解決します。既定は10</string>
+    <string name="preload_songs_value">%1$d 曲</string>
 </resources>

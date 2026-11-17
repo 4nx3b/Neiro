@@ -1617,4 +1617,8 @@
 
     <string name="auto_start_on_bluetooth">Tự động phát khi kết nối Bluetooth</string>
     <string name="auto_start_on_bluetooth_subtitle">Phát lại nhạc khi thiết bị âm thanh Bluetooth kết nối</string>
+
+    <string name="preload_songs">Tải trước bài hát</string>
+    <string name="preload_songs_subtitle">Chuẩn bị trước bấy nhiêu bài hát sắp tới; mặc định là 10</string>
+    <string name="preload_songs_value">%1$d bài hát</string>
 </resources>

@@ -1700,4 +1700,8 @@
 
     <string name="auto_start_on_bluetooth">ब्लूटूथ कनेक्ट होने पर अपने आप शुरू करें</string>
     <string name="auto_start_on_bluetooth_subtitle">ब्लूटूथ ऑडियो डिवाइस कनेक्ट होने पर प्लेबैक फिर शुरू करता है</string>
+
+    <string name="preload_songs">गाने पहले से लोड करें</string>
+    <string name="preload_songs_subtitle">आगे आने वाले गाने पहले से हल करता है; 10 डिफ़ॉल्ट</string>
+    <string name="preload_songs_value">%1$d गाने</string>
 </resources>

@@ -1705,4 +1705,8 @@
 
     <string name="auto_start_on_bluetooth">המשך אוטומטי בחיבור בלוטות</string>
     <string name="auto_start_on_bluetooth_subtitle">ממשיך בנגינה כשמתחבר מכשיר אודיו בלוטות</string>
+
+    <string name="preload_songs">טעינת שירים מראש</string>
+    <string name="preload_songs_subtitle">מכין מראש כמה שירים קרובים; 10 בברירת מחדל</string>
+    <string name="preload_songs_value">%1$d שירים</string>
 </resources>

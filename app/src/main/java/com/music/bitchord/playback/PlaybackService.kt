@@ -6648,7 +6648,8 @@ class PlaybackService : MediaLibraryService() {
         }
         val nextIndex = player.nextMediaItemIndex
         val upcomingSongs = if (nextIndex != C.INDEX_UNSET) {
-            val end = (nextIndex + AudioCache.QUEUE_DEPTH - 1).coerceAtMost(player.mediaItemCount - 1)
+            val end = (nextIndex + AudioCache.preloadDepth() - 1).coerceAtLeast(nextIndex - 1)
+                .coerceAtMost(player.mediaItemCount - 1)
             // A video about to be converted plays under another id, so every
             // byte warmed for it now would be wasted.
             (nextIndex..end).map(player::getMediaItemAt)

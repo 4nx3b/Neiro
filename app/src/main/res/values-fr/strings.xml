@@ -1701,4 +1701,8 @@
 
     <string name="auto_start_on_bluetooth">Reprendre à la connexion Bluetooth</string>
     <string name="auto_start_on_bluetooth_subtitle">Reprend la lecture à la connexion d'un appareil audio Bluetooth</string>
+
+    <string name="preload_songs">Chansons préchargées</string>
+    <string name="preload_songs_subtitle">Résout d\'avance autant de chansons à venir ; 10 par défaut</string>
+    <string name="preload_songs_value">%1$d chansons</string>
 </resources>

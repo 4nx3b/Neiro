@@ -1639,4 +1639,8 @@
 
     <string name="auto_start_on_bluetooth">Riprendi alla connessione Bluetooth</string>
     <string name="auto_start_on_bluetooth_subtitle">Riprende la riproduzione quando si collega un dispositivo audio Bluetooth</string>
+
+    <string name="preload_songs">Pre-carica brani</string>
+    <string name="preload_songs_subtitle">Risolve in anticipo altrettanti brani in arrivo; 10 è lo standard</string>
+    <string name="preload_songs_value">%1$d brani</string>
 </resources>

@@ -1700,4 +1700,8 @@
 
     <string name="auto_start_on_bluetooth">Bei Bluetooth-Verbindung automatisch fortfahren</string>
     <string name="auto_start_on_bluetooth_subtitle">Setzt die Wiedergabe fort, wenn sich ein Bluetooth-Audiogerät verbindet</string>
+
+    <string name="preload_songs">Songs vorab laden</string>
+    <string name="preload_songs_subtitle">Löst im Voraus so viele kommende Songs auf; 10 ist der Standard</string>
+    <string name="preload_songs_value">%1$d Songs</string>
 </resources>

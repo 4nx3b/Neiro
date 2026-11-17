@@ -1657,4 +1657,8 @@
 
     <string name="auto_start_on_bluetooth">Bluetooth bağlanınca otomatik devam et</string>
     <string name="auto_start_on_bluetooth_subtitle">Bir Bluetooth ses cihazı bağlandığında oynatmayı sürdürür</string>
+
+    <string name="preload_songs">Şarkıları önceden yükle</string>
+    <string name="preload_songs_subtitle">Gelecek şarkıları önceden çözer; varsayılan 10</string>
+    <string name="preload_songs_value">%1$d şarkı</string>
 </resources>

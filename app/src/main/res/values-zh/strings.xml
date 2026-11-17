@@ -1677,4 +1677,8 @@
 
     <string name="auto_start_on_bluetooth">连接蓝牙时自动播放</string>
     <string name="auto_start_on_bluetooth_subtitle">蓝牙音频设备连接时自动恢复播放</string>
+
+    <string name="preload_songs">预载歌曲</string>
+    <string name="preload_songs_subtitle">提前解析接下来若干首歌曲；默认为 10</string>
+    <string name="preload_songs_value">%1$d 首歌曲</string>
 </resources>
