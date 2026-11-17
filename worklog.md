@@ -1673,3 +1673,23 @@ Work Log:
 Stage Summary:
 - The only error both workflows listed is gone; the next push re-runs
   the loop.
+
+## Task 8: the third CI round — R8 meets the embedded server
+
+Task ID: 8
+Agent: Super Z (orchestrator, session task-8)
+
+Task: Check and TV passed on 17c34fd; the Release APK workflow failed
+in :app:minifyProdReleaseWithR8 on one missing class.
+
+Work Log:
+- ktor-server's ReloadingZipFileSystem references the JDK-internal
+  com.sun.nio.file.SensitivityWatchEventModifier — the watcher the
+  desktop zip-reload feature uses to poll jar files for edits. The
+  phone never runs that path, so the proguard file's JVM-only section
+  gains -dontwarn com.sun.nio.file.** beside Rhino's and SMBJ's
+  desktop-only entries, documented the same way.
+
+Stage Summary:
+- Debug builds and Check never run R8; only the prod release needed
+  the rule. The next push re-runs all three.
