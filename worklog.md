@@ -1653,3 +1653,23 @@ Stage Summary:
 - Every error the run listed is addressed by name; brace balance on
   all touched files is byte-identical to the pushed tree. The next
   push runs the loop again.
+
+## Task 7: the second CI round — one call form
+
+Task ID: 7
+Agent: Super Z (orchestrator, session task-7)
+
+Task: The second Check and TV runs (43201d3) failed on the single
+remaining error — IntegrationScreen's Discord row still called
+vectorResource wrong.
+
+Work Log:
+- vectorResource is an extension on ImageVector's companion, not a
+  top-level res function: the fully-qualified call form cannot resolve.
+  The row now uses DiscordScreen's own idiom — the receiver spelled
+  through ImageVector with the androidx.compose.ui.res.vectorResource
+  import in scope.
+
+Stage Summary:
+- The only error both workflows listed is gone; the next push re-runs
+  the loop.

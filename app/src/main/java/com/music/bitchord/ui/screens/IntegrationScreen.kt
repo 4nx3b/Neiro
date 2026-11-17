@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
@@ -74,7 +75,7 @@ fun IntegrationScreen(
             footer = stringResource(R.string.rich_presence_footer),
         ) {
             SettingsRow(
-                icon = androidx.compose.ui.res.vectorResource(R.drawable.ic_discord),
+                icon = androidx.compose.ui.graphics.vector.ImageVector.vectorResource(R.drawable.ic_discord),
                 title = "Discord",
                 subtitle = when {
                     discordToken.isEmpty() -> stringResource(R.string.tap_to_connect)
