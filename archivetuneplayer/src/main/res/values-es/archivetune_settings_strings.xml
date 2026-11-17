@@ -13,8 +13,6 @@
     <string name="follow_theme">Seguir tema</string>
     <string name="gradient">Gradiente</string>
     <string name="player_design_style">Estilo del diseño del reproductor</string>
-    <string name="player_design_v4">Cinemático</string>
-    <string name="player_design_v5">Pequeño</string>
     <string name="player_background_blur">Desenfoque</string>
     <string name="coloring">Colorido</string>
     <string name="blur_gradient">Gradiente desenfocado</string>
@@ -64,7 +62,6 @@
     <string name="theme_presets_title">Predefinidos</string>
     <string name="show_home_category_chips">Mostrar los iconos de las categorías de inicio</string>
     <string name="show_home_category_chips_desc">Mostrar los iconos de filtrado por categoría en la pantalla de inicio</string>
-    <string name="player_design_v7">Inmersivo</string>
     <string name="lyrics_romanize_chinese">Transcribir letras en chino</string>
     <string name="lyrics_romanize_hindi">Transcribir letras en hindi</string>
     <string name="lyrics_romanize_other_languages">Transcribir en alfabeto latino otras letras que no estén en latín</string>
@@ -228,7 +225,7 @@
     <string name="custom_font">Fuente personalizada</string>
     <string name="custom_font_desc">Elige una fuente .ttf</string>
     <string name="custom_font_invalid">Elige una fuente .ttf</string>
-    <string name="player_background_style_v8_v9_desc">No disponible con los estilos de reproductor V8 y V9</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="device_mute_recovery_volume">Subir el volumen desde 0</string>
     <string name="device_mute_recovery_volume_disabled">Desactivado</string>
     <string name="display">Pantalla</string>
@@ -239,5 +236,5 @@
     <string name="language_pack_required">Descarga primero el paquete de japonés</string>
     <string name="settings_language_packs_subtitle">Datos de idioma y descargas opcionales</string>
     <string name="show_player_volume_bar">Mostrar barra de volumen</string>
-    <string name="player_volume_bar_v7_v8_only">Disponible únicamente con los estilos de reproductor V7 y V8</string>
+    <string name="player_volume_bar_v7_v8_only">Not available with the current player style</string>
 </resources>

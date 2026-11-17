@@ -31,16 +31,9 @@
     <string name="liquid_glass_effects_unsupported">Liquid Glass requires Android 12 or above</string>
     <string name="liquid_glass_mini_player_unsupported">Liquid Glass mini player requires Android 12 or above</string>
     <string name="player_design_style">Player design style</string>
-    <string name="player_design_v4">Cinematic</string>
-    <string name="player_design_v5">Little</string>
-    <string name="player_design_v7">Immersive</string>
     <string name="player_design_v9">Material Extended</string>
-    <string name="player_design_v10">Editorial</string>
     <string name="player_design_bitchord">BitChord</string>
     <string name="player_design_tiktok">TikTok</string>
-    <string name="player_design_simpmusic">SimpMusic</string>
-    <string name="player_design_spatialflow">SpatialFlow</string>
-    <string name="player_design_looper">Looper</string>
     <string name="player_design_apple_music">Apple Music</string>
     <string name="player_background_blur">Blur</string>
     <string name="coloring">Coloring</string>
@@ -171,7 +164,7 @@
     <string name="tiktok_main_lyrics">Show lyrics on main player</string>
     <string name="tiktok_main_lyrics_desc">Display a scrolling karaoke lyrics strip with word animation, translation and romanisation on the TikTok player screen, aligned with the song info</string>
     <string name="show_player_volume_bar">Show volume bar</string>
-    <string name="player_volume_bar_v7_v8_only">Available only with V7 and V8 player styles</string>
+    <string name="player_volume_bar_v7_v8_only">Not available with the current player style</string>
     <string name="appearance">Appearance</string>
     <string name="app_icon_description">Choose the launcher icon</string>
     <string name="theme">Theme</string>
@@ -287,7 +280,7 @@
     <string name="custom_value">Custom value</string>
     <string name="archivetune_canvas">ArchiveTune Canvas</string>
     <string name="archivetune_canvas_desc">Animate album artwork while playing (Powered by BetterLyrics)</string>
-    <string name="player_background_style_v8_v9_desc">Unavailable with V8, V9, and V10 player styles</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="lyrics_background_style_own_player_desc">Unavailable with the Apple Music, TikTok and SpatialFlow player styles</string>
     <string name="dark_theme_follow_system">Follow system</string>
     <string name="disable_blur">Disable blur effects</string>

@@ -993,18 +993,11 @@ enum class HomeSource {
 val HomeSourceKey = stringPreferencesKey("homeSource")
 
 enum class PlayerDesignStyle {
-    V4,
-    V5,
-    V7,
     V9,
     APPLE_MUSIC,
-    V10,
 
     BITCHORD,
     TIKTOK,
-    SIMPMUSIC,
-    SPATIALFLOW,
-    LOOPER,
 }
 
 val FlamingoShowVolumeBarKey = booleanPreferencesKey("flamingoNowPlayingShowVolumeBar")

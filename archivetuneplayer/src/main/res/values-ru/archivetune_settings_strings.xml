@@ -10,7 +10,6 @@
     <string name="follow_theme">Следовать теме</string>
     <string name="gradient">Градиент</string>
     <string name="player_design_style">Стиль дизайна плеера</string>
-    <string name="player_design_v4">Кинематографичный</string>
     <string name="player_background_blur">Размытие</string>
     <string name="coloring">Раскраска</string>
     <string name="blur_gradient">Размытие градиента</string>
@@ -37,7 +36,6 @@
     </plurals>
     <string name="crop_thumbnail_to_square">Обрезать миниатюры до соотношения 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Отображать миниатюры YouTube в квадратном формате вместо 16:9</string>
-    <string name="player_design_v5">Маленький</string>
     <string name="swipe_sensitivity">Чувствительность к свайпу экрана мини-плеера</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <string name="history_duration">Длительность истории</string>
@@ -65,7 +63,6 @@
     <string name="audio_crossfade_dialog_title">Длительность кроссфейда</string>
     <string name="show_home_category_chips">Показать вкладки домашней категории</string>
     <string name="show_home_category_chips_desc">Показать вкладки фильтров категорий на главной вкладке</string>
-    <string name="player_design_v7">Погружение</string>
     <string name="lyrics_romanize_chinese">Романизировать китайский текст</string>
     <string name="lyrics_romanize_hindi">Романизировать текст на хинди</string>
     <string name="lyrics_romanize_other_languages">Романизировать остальной не латинский текст</string>

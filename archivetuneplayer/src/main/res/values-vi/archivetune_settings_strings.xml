@@ -14,7 +14,6 @@
     <string name="follow_theme">Theo giao diện</string>
     <string name="gradient">Gradient</string>
     <string name="player_design_style">Kiểu thiết kế trình phát</string>
-    <string name="player_design_v4">Điện ảnh</string>
     <string name="player_background_blur">Làm mờ</string>
     <string name="coloring">Tô màu</string>
     <string name="blur_gradient">Gradient làm mờ</string>
@@ -56,13 +55,11 @@
     <string name="theme_editor_hex">Hex</string>
     <string name="theme_editor_hex_input">Giá trị hex (#RRGGBB hoặc #AARRGGBB)</string>
     <string name="theme_presets_title">Cài đặt sẵn</string>
-    <string name="player_design_v5">Little</string>
     <string name="audio_crossfade_title">Crossfade</string>
     <string name="audio_crossfade_description">Chồng âm bài hát sau lên bài trước trong khi bài trước tắt dần.</string>
     <string name="audio_crossfade_dialog_title">Thời lượng Crossfade</string>
     <string name="show_home_category_chips">Hiển thị danh mục chip ở trang chủ</string>
     <string name="show_home_category_chips_desc">Hiển thị các chip lọc danh mục trên màn hình chính</string>
-    <string name="player_design_v7">Đắm chìm</string>
     <string name="lyrics_romanize_chinese">Romanize lời bài hát Trung Quốc</string>
     <string name="lyrics_romanize_hindi">Romanize lời bài hát Ấn Độ</string>
     <string name="lyrics_romanize_other_languages">Romanize các lời bài hát không phải ký tự latin</string>
@@ -213,7 +210,7 @@
     <string name="disable_animations_desc">Vô hiệu hóa hầu hết các hoạt ảnh ứng dụng. Được đề xuất cho các thiết bị cấu hình thấp</string>
     <string name="app_icon">Biểu tượng ứng dụng</string>
     <string name="display">Màn hình</string>
-    <string name="player_background_style_v8_v9_desc">Không khả dụng với kiểu trình phát V8 và V9</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="romanization">Latinh hóa</string>
     <string name="album_backdrop">Mờ nền</string>
     <string name="album_backdrop_desc">Hiển thị ảnh nghệ thuật dưới dạng nền mờ trên trình phát</string>
@@ -230,6 +227,6 @@
     <string name="device_mute_recovery_volume">Tăng âm lượng từ 0</string>
     <string name="device_mute_recovery_volume_disabled">Đã tắt</string>
     <string name="show_player_volume_bar">Hiện thanh âm lượng</string>
-    <string name="player_volume_bar_v7_v8_only">Chỉ khả dụng với kiểu trình phát V7 và V8</string>
+    <string name="player_volume_bar_v7_v8_only">Not available with the current player style</string>
     <string name="app_icon_description">Chọn biểu tượng trình khởi động</string>
 </resources>

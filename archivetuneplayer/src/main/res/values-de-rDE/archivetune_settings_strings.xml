@@ -8,7 +8,6 @@
     <string name="follow_theme">Thema folgen</string>
     <string name="gradient">Gradient</string>
     <string name="player_design_style">Player-Design-Stil</string>
-    <string name="player_design_v4">Kinematisch</string>
     <string name="coloring">Farbung</string>
     <string name="blur_gradient">Weichzeichnerverlauf</string>
     <string name="glow">Leuchten</string>
@@ -38,7 +37,6 @@
     <string name="crop_thumbnail_to_square_desc">YouTube Vorschaubilder quadratisch anstelle von 16:9 anzeigen</string>
     <string name="show_tags_in_library">Zeige Tags in Bibliothek</string>
     <string name="show_tags_in_library_desc">Zeige Tag Filter Kärtchen in der Bibliothek</string>
-    <string name="player_design_v5">Klein</string>
     <string name="lyrics_text_size">Songtextgröße</string>
     <string name="audio_crossfade_title">Überblendung</string>
     <string name="audio_crossfade_description">Gestaltet den Übergänge zwischen Liedern durch Überblenden sanfter.</string>
@@ -48,7 +46,6 @@
     <string name="aod_customize_entry_desc">Always-on-Wiedergabebildschirm anpassen</string>
     <string name="show_home_category_chips">Kategorie-Chips auf der Startseite anzeigen</string>
     <string name="show_home_category_chips_desc">Kategorie-Filter-Chips auf der Startseite anzeigen</string>
-    <string name="player_design_v7">Immersiv</string>
     <string name="player_design_v9">Material erweitert</string>
     <string name="lyrics_romanize_chinese">Chinesische Songtexte romanisieren</string>
     <string name="lyrics_romanize_hindi">Hindi Songtexte romanisieren</string>
@@ -197,7 +194,7 @@
     <string name="permanent_shuffle_desc">Lässt Schuffle aktiviert, wenn du einen neuen Song startest</string>
     <string name="archivetune_canvas">ArchiveTune Canvas</string>
     <string name="archivetune_canvas_desc">Albumcover animieren während des Abpielens (Unterstützt von BetterLyrics)</string>
-    <string name="player_background_style_v8_v9_desc">Nicht verfügbar mit V8 und V9 Player-Stil</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="disable_animations">Animationen deaktivieren</string>
     <string name="disable_animations_desc">Die meisten Appanimationen deaktivieren. Für Low-end-Geräte empfohlen</string>
     <string name="blur_intensity">Unschärfeintensität</string>

@@ -35,7 +35,6 @@
     <string name="settings_section_player_content">Lecteur &amp; Contenu</string>
     <string name="manage_playlist_tags">Balises de la playlist</string>
     <string name="manage_playlist_tags_desc">Créez et gérez des balises pour organiser vos playlists</string>
-    <string name="player_design_v4">Cinématique</string>
     <string name="show_tags_in_library">Afficher les balises dans la bibliothèque</string>
     <string name="show_tags_in_library_desc">Afficher les puces de filtrage des balises dans la bibliothèque</string>
     <string name="custom_theme">Thème Personnalisé</string>
@@ -56,7 +55,6 @@
     <string name="theme_editor_hex">Hex</string>
     <string name="theme_editor_hex_input">Valeur hexadécimale (#RRGGBB ou #AARRGGBB)</string>
     <string name="theme_presets_title">Préréglages</string>
-    <string name="player_design_v5">Petit</string>
     <string name="crop_thumbnail_to_square">Recadrer les miniatures au format 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Afficher les miniatures YouTube au format carré au lieu du format 16:9</string>
     <string name="audio_crossfade_title">Fondu enchaîné</string>
@@ -64,7 +62,6 @@
     <string name="audio_crossfade_dialog_title">Durée du fondu enchaîné</string>
     <string name="show_home_category_chips_desc">Afficher les icônes de filtrage par catégorie sur l\'écran d\'accueil</string>
     <string name="show_home_category_chips">Afficher les icônes de catégorie d\'accueil</string>
-    <string name="player_design_v7">Immersion</string>
     <string name="lyrics_romanize_chinese">Paroles chinoises romanisées</string>
     <string name="lyrics_romanize_hindi">Paroles hindi romanisées</string>
     <string name="lyrics_romanize_other_languages">Romaniser les autres paroles non latines</string>
@@ -225,7 +222,7 @@
     <string name="font_preference_custom">Personnalisé</string>
     <string name="custom_font_invalid">Choisissez un fichier de police au format .ttf</string>
     <string name="romanization">Romanisation</string>
-    <string name="player_background_style_v8_v9_desc">Non disponible avec les styles de lecteur V8 et V9</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="custom_font">Police personnalisée</string>
     <string name="device_mute_recovery_volume">Augmenter le volume à partir de 0</string>
     <string name="font_preference">Police</string>
@@ -234,5 +231,5 @@
     <string name="font_preference_system">Système</string>
     <string name="app_icon_description">Sélectionnez l\'icône du lanceur</string>
     <string name="show_player_volume_bar">Afficher la barre de volume</string>
-    <string name="player_volume_bar_v7_v8_only">Disponible uniquement avec les modèles de lecteurs V7 et V8</string>
+    <string name="player_volume_bar_v7_v8_only">Not available with the current player style</string>
 </resources>

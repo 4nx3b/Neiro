@@ -21,9 +21,6 @@
     <string name="follow_theme">Seguir tema</string>
     <string name="gradient">Gradiente</string>
     <string name="player_design_style">Estilo de design do player</string>
-    <string name="player_design_v4">Cinematográfico</string>
-    <string name="player_design_v5">Pequeno</string>
-    <string name="player_design_v7">Imersivo</string>
     <string name="player_design_v9">Material estendido</string>
     <string name="player_background_blur">Desfoque</string>
     <string name="coloring">Coloração</string>
@@ -182,7 +179,7 @@
     <string name="custom_value">Valor personalizado</string>
     <string name="archivetune_canvas">ArchiveTune Canvas</string>
     <string name="archivetune_canvas_desc">Animar a capa do álbum durante a reprodução (Powered by BetterLyrics)</string>
-    <string name="player_background_style_v8_v9_desc">Indisponível com os estilos de player V8 e V9</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="dark_theme_follow_system">Seguir sistema</string>
     <string name="disable_blur">Desativar efeitos de desfoque</string>
     <string name="disable_blur_desc">Desativar efeitos de desfoque em todo o app</string>
@@ -233,6 +230,6 @@
     <string name="permissions_subtitle">Usamos algumas permissões para tocar e gerenciar sua música com confiabilidade. Você pode alterá-las a qualquer momento nas configurações do sistema.</string>
     <string name="allow">Permitir</string>
     <string name="show_player_volume_bar">Mostrar a barra de volume</string>
-    <string name="player_volume_bar_v7_v8_only">Disponível apenas nos modelos de player V7 e V8</string>
+    <string name="player_volume_bar_v7_v8_only">Not available with the current player style</string>
     <string name="app_icon_description">Escolha o ícone do launcher</string>
 </resources>

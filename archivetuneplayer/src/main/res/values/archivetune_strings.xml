@@ -80,8 +80,6 @@
   </plurals>
   <string name="seek_forward_dynamic">+%1$d seconds forwards</string>
   <string name="seek_backward_dynamic">-%1$d seconds backwards</string>
-  <string name="simpmusic_move_up">Move up</string>
-  <string name="simpmusic_move_down">Move down</string>
   <string name="rich_synced">Rich Synced</string>
   <string name="line_synced">Line Synced</string>
   <string name="unsynced">Unsynced</string>

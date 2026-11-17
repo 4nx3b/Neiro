@@ -50,7 +50,6 @@ class ArchiveTunePreferenceBridgeTest {
     fun designStyleRoundTrips() {
         PlayerDesignStyle.entries.forEach { assertEquals(it, Bridge.fromAt(Bridge.toAt(it))) }
         AtStyle.entries.forEach { assertEquals(it, Bridge.toAt(Bridge.fromAt(it))) }
-        assertEquals(AtStyle.V4, Bridge.toAt(PlayerDesignStyle.CINEMATIC))
     }
 
     @Test

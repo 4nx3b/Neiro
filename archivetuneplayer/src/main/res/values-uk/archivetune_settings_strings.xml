@@ -16,8 +16,6 @@
     <string name="follow_theme">Дотримуватися теми</string>
     <string name="gradient">Градієнт</string>
     <string name="player_design_style">Стиль дизайну програвача</string>
-    <string name="player_design_v4">Кінематографічний</string>
-    <string name="player_design_v5">Маленький</string>
     <string name="player_background_blur">Розмиття</string>
     <string name="coloring">Розфарбовування</string>
     <string name="blur_gradient">Розмиття градієнту</string>
@@ -37,7 +35,6 @@
     <string name="lyrics_romanize_korean">Транслітерація текстів пісень корейською</string>
     <string name="general">Загальне</string>
     <string name="history_duration">Тривалість історії</string>
-    <string name="player_design_v7">Занурення</string>
     <string name="lyrics_romanize_chinese">Транскрибувати тексти пісень на китайській мові</string>
     <string name="lyrics_romanize_hindi">Транскрибувати тексти пісень на хінді</string>
     <string name="lyrics_romanize_other_languages">Переписати інші тексти пісень, що не містять латинських літер</string>

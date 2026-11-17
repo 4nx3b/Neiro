@@ -18,7 +18,6 @@
     <string name="lyrics_auto_scroll">Keri laulusõnu automaatselt</string>
     <string name="lyrics_text_size">Laulusõnade teksti suurus</string>
     <string name="player_design_style">Pleieri kujundus</string>
-    <string name="player_design_v4">Kinolaadne</string>
     <string name="player_background_blur">Hägustamine</string>
     <string name="player_buttons_style">Pleieri nuppude värvid</string>
     <string name="swipe_sensitivity">Pleieri väikese vaate nuppude tundlikkus</string>
@@ -38,7 +37,6 @@
     <string name="crop_thumbnail_to_square">Kadreeri pisipildid 1:1 mõõtu</string>
     <string name="crop_thumbnail_to_square_desc">16:9 vormingu asemel kuva Youtube\'i pisipildid ruudukujulistena</string>
     <string name="show_tags_in_library_desc">Näita muusikakogus sildifiltri nupukesi</string>
-    <string name="player_design_v5">Väikene</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <string name="audio_crossfade_title">Ristsulatus</string>
     <string name="audio_crossfade_description">Lugude vahetamisek kasutaja sujuvat üleminekut ühelt loolt teisele.</string>

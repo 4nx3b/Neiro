@@ -341,26 +341,13 @@ fun AppearanceSettings(navController: NavController, scrollTo: String? = null) {
             }
         }
     val lyricsBackground = configuredLyricsBackground.resolveFor(playerBackground)
-    val isPlayerStyleCustomizationEnabled =
-        when (playerDesignStyle) {
-            PlayerDesignStyle.V7,
-            PlayerDesignStyle.V9,
-            PlayerDesignStyle.APPLE_MUSIC,
-            PlayerDesignStyle.V10,
-            PlayerDesignStyle.BITCHORD,
-            PlayerDesignStyle.TIKTOK,
-            PlayerDesignStyle.SIMPMUSIC,
-            PlayerDesignStyle.SPATIALFLOW,
-            PlayerDesignStyle.LOOPER,
-            -> false
-
-            else -> true
-        }
+    // None of the remaining styles customizes the legacy player background /
+    // slider machinery — the customization page was the legacy styles' own.
+    val isPlayerStyleCustomizationEnabled = false
     val isLyricsBackgroundStyleAvailable =
         playerDesignStyle != PlayerDesignStyle.APPLE_MUSIC &&
-            playerDesignStyle != PlayerDesignStyle.TIKTOK &&
-            playerDesignStyle != PlayerDesignStyle.SPATIALFLOW
-    val isVolumeBarSupported = playerDesignStyle == PlayerDesignStyle.V7
+            playerDesignStyle != PlayerDesignStyle.TIKTOK
+    val isVolumeBarSupported = false
     val isSystemInDarkTheme = isSystemInDarkTheme()
     val useDarkTheme =
         remember(darkMode, isSystemInDarkTheme) {
@@ -745,24 +732,13 @@ fun AppearanceSettings(navController: NavController, scrollTo: String? = null) {
                             },
                             valueText = {
                                 when (it) {
-                                    PlayerDesignStyle.V4 -> stringResource(R.string.player_design_v4)
-                                    PlayerDesignStyle.V5 -> stringResource(R.string.player_design_v5)
-                                    PlayerDesignStyle.V7 -> stringResource(R.string.player_design_v7)
                                     PlayerDesignStyle.V9 -> stringResource(R.string.player_design_v9)
                                     PlayerDesignStyle.APPLE_MUSIC ->
                                         stringResource(R.string.player_design_apple_music)
-                                    PlayerDesignStyle.V10 ->
-                                        stringResource(R.string.player_design_v10)
                                     PlayerDesignStyle.BITCHORD ->
                                         stringResource(R.string.player_design_bitchord)
                                     PlayerDesignStyle.TIKTOK ->
                                         stringResource(R.string.player_design_tiktok)
-                                    PlayerDesignStyle.SIMPMUSIC ->
-                                        stringResource(R.string.player_design_simpmusic)
-                                    PlayerDesignStyle.SPATIALFLOW ->
-                                        stringResource(R.string.player_design_spatialflow)
-                                    PlayerDesignStyle.LOOPER ->
-                                        stringResource(R.string.player_design_looper)
                                 }
                             },
                         )

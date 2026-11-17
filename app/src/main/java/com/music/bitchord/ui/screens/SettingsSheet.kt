@@ -1277,13 +1277,12 @@ fun SettingsScreen(
                 )
             }
             // The player's own design, ported from ArchiveTune's PlayerDesignStyle
-            // picker: a whole layout of the now-playing screen, eleven of them,
+            // picker: a whole layout of the now-playing screen, four of them,
             // this app's own the default and first.
             val playerDesignTitle = stringResource(R.string.player_design_style)
             row(
                 playerDesignTitle,
-                "player", "design", "style", "layout", "cinematic", "little", "immersive", "editorial",
-                "apple", "tiktok", "simpmusic", "spatialflow", "looper", "material",
+                "player", "design", "style", "layout", "apple", "tiktok", "material",
             ) {
                 SettingsRow(
                     icon = SfIcons.Appearance,
@@ -2418,21 +2417,18 @@ private fun PlayerTheme.localizedLabel(): String = stringResource(
 
 /**
  * The design styles that stand on a picked background, ported from
- * ArchiveTune's isPlayerStyleCustomizationEnabled: V4 and V5 there, which here
- * are the app's own player, Cinematic and Little.
+ * ArchiveTune's isPlayerStyleCustomizationEnabled — now only the app's own
+ * player, after the legacy styles went.
  */
 private fun PlayerDesignStyle.customizesBackground(): Boolean =
-    this == PlayerDesignStyle.BITCHORD ||
-        this == PlayerDesignStyle.CINEMATIC ||
-        this == PlayerDesignStyle.LITTLE
+    this == PlayerDesignStyle.BITCHORD
 
 /** The same styles take the picked buttons and slider, as ArchiveTune gates them. */
 private fun PlayerDesignStyle.customizesControls(): Boolean = customizesBackground()
 
 /** The styles whose lyrics run on the shared background, rather than their own. */
 private fun PlayerDesignStyle.customizesLyricsBackground(): Boolean =
-    !(this == PlayerDesignStyle.APPLE_MUSIC || this == PlayerDesignStyle.TIKTOK ||
-        this == PlayerDesignStyle.SPATIALFLOW || this == PlayerDesignStyle.SIMPMUSIC)
+    !(this == PlayerDesignStyle.APPLE_MUSIC || this == PlayerDesignStyle.TIKTOK)
 
 @Composable
 private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes())
@@ -2442,32 +2438,18 @@ private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes
 internal fun PlayerDesignStyle.labelRes(): Int =
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord
-        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic
-        PlayerDesignStyle.LITTLE -> R.string.player_design_little
-        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive
         PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended
-        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok
-        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic
-        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow
-        PlayerDesignStyle.LOOPER -> R.string.player_design_looper
     }
 
 @Composable
 private fun PlayerDesignStyle.localizedDetail(): String = stringResource(
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord_detail
-        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic_detail
-        PlayerDesignStyle.LITTLE -> R.string.player_design_little_detail
-        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive_detail
         PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended_detail
-        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial_detail
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music_detail
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok_detail
-        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic_detail
-        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow_detail
-        PlayerDesignStyle.LOOPER -> R.string.player_design_looper_detail
     },
 )
 
@@ -4447,7 +4429,7 @@ private fun NavigationBarSettingsPage() {
 }
 
 /**
- * The player design page, ported from ArchiveTune's picker: eleven whole
+ * The player design page, ported from ArchiveTune's picker: four whole
  * layouts of the now-playing screen, this app's own the default and first.
  * Whichever is in force, the extra switches it carries sit under the list —
  * the ones each style owns, as ArchiveTune's Appearance page hangs them off
@@ -4521,20 +4503,6 @@ private fun PlayerDesignStylePage() {
         }
     }
 
-    // The Immersive player is the one style with a volume bar of its own, as
-    // V7's is — the same shared switch, offered where it applies.
-    if (selected == PlayerDesignStyle.IMMERSIVE) {
-        SettingsGroup(header = stringResource(R.string.player_design_immersive_extras)) {
-            SettingsRow(
-                title = stringResource(R.string.player_design_show_volume_bar),
-                subtitle = stringResource(R.string.player_design_immersive_volume_subtitle),
-                trailing = {
-                    IosSwitch(checked = !hideVolumeBar, onCheckedChange = { AppSettings.setHideVolumeBar(!it) })
-                },
-                onClick = { AppSettings.setHideVolumeBar(hideVolumeBar) },
-            )
-        }
-    }
 }
 
 /**
