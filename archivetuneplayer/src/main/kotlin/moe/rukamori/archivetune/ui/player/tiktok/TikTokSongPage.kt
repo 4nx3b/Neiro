@@ -611,8 +611,7 @@ private fun TikTokInlineLyricsPane(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(top = 4.dp, bottom = 4.dp)
-                    .padding(horizontal = 6.dp),
+                    .padding(top = 4.dp, bottom = 4.dp),
         )
     }
 }

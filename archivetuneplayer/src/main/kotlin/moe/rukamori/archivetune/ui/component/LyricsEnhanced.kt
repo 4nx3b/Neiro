@@ -165,13 +165,10 @@ import kotlin.math.roundToLong
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
-private const val LYRIC_SYNC_LEAD_MS = 120L
-private const val LRC_LEAD_MS = LYRIC_SYNC_LEAD_MS
-
-private const val LYRICS_POSITION_PUBLISH_MIN_DELTA_MS = 10L
-
+private const val LRC_LEAD_MS = 0L
 private const val TTML_LEAD_MS = 0L
 private const val LYRIC_VISUAL_TUNING_OFFSET_MS = 0L
+private const val LYRICS_POSITION_PUBLISH_MIN_DELTA_MS = 10L
 private const val MANUAL_SCROLL_TIMEOUT_MS = 3000L
 private const val MANUAL_SCROLL_DEBOUNCE_MS = 50L
 private const val LYRIC_FIRST_FOCUS_SETTLE_FRAMES = 42
@@ -203,6 +200,11 @@ private const val NATIVE_SCROLL_DAMPING = 0.9f
 private const val NATIVE_SCROLL_STIFFNESS = 100f
 
 private val NativeLineSpacing = 24.dp
+
+// The fixed symmetric gutter every lyric line sits inside, ported from
+// BitChord's own panel (PLAYER_GUTTER): the same 30.dp of clear floor from
+// each side of the screen, whatever style hosts the column.
+private val NativeLyricsGutter = 30.dp
 
 // Blur strength (in em) applied to lines away from the active one: neighbours
 // stay readable but clearly out of focus, Apple-Music style.
@@ -1645,6 +1647,8 @@ private fun NativeLyricsView(
                 PaddingValues(
                     top = anchorTopPadding,
                     bottom = bottomSafePadding,
+                    start = NativeLyricsGutter,
+                    end = NativeLyricsGutter,
                 ),
             verticalArrangement = Arrangement.spacedBy(NativeLineSpacing),
         ) {

@@ -11,7 +11,7 @@ Generated from the ported pages (`archivetuneplayer/.../ui/screens/settings/`) b
   - **local**: it persists in the module's own DataStore and the ported stack reads it there.
   - **dead**: nothing in this port reads it. The switch is stored, but changes nothing.
 
-Totals: 38 bridged, 29 local, 40 dead.
+Totals: 39 bridged, 29 local, 40 dead.
 
 Pure black: Neiro has no pure-black setting, so `ArchiveTunePlayerHost(pureBlack = false)` in MainActivity stays as it is
 until one exists.
@@ -91,6 +91,7 @@ until one exists.
 | `LyricsRomanizeKoreanKey` | LyricsRomanisationSettings, LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
 | `LyricsRomanizeOtherLanguagesKey` | LyricsRomanisationSettings, LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
 | `LyricsScrollKey` | LyricsSettings | LyricsV2 | — | local |
+| `LyricsSyncOffsetKey` | LyricsMenu (offset dialog) | Player, BitChordPlayer, LyricsScreen, FlamingoPlayer, TikTokPlayer, TikTokSongPage, TikTokMainLyrics, LyricsEnhanced, LyricsV2 | `AppSettings.lyricsOffsetMs` (negated: Neiro's playhead subtracts the offset, the ported stack adds it) | **bridge** |
 | `LyricsTextSizeKey` | LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
 | `MinimalHomeModeKey` | AppearanceSettings | — | `AppSettings.minimalHomeMode` | **bridge** |
 | `PauseOnDeviceMuteKey` | PlayerSettings | — | — | dead |
