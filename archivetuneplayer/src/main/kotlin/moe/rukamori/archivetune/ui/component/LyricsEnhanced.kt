@@ -13,6 +13,7 @@
 
 package moe.rukamori.archivetune.ui.component
 
+import moe.rukamori.archivetune.bridge.LyricsClock // BRIDGE: lyrics
 import android.app.Activity
 import android.view.WindowManager
 import android.widget.Toast
@@ -173,7 +174,6 @@ private const val LYRIC_SYNC_LEAD_MS = 120L
 private const val LRC_LEAD_MS = LYRIC_SYNC_LEAD_MS
 
 private const val LYRICS_POSITION_PUBLISH_MIN_DELTA_MS = 10L
-private const val LYRICS_POSITION_SEEK_DELTA_MS = 250L
 
 private const val TTML_LEAD_MS = 0L
 private const val LYRIC_VISUAL_TUNING_OFFSET_MS = 0L
@@ -181,9 +181,6 @@ private const val MANUAL_SCROLL_TIMEOUT_MS = 3000L
 private const val MANUAL_SCROLL_DEBOUNCE_MS = 50L
 private const val LYRIC_FIRST_FOCUS_SETTLE_FRAMES = 42
 private const val LYRIC_FIRST_FOCUS_EMPTY_FRAMES = 6
-private const val SMOOTH_PLAYBACK_MAX_FORWARD_DRIFT_MS = 80L
-private const val SMOOTH_PLAYBACK_MAX_BACKWARD_DRIFT_MS = 180L
-private const val SMOOTH_PLAYBACK_DRIFT_CORRECTION = 0.55f
 
 private const val LYRIC_FOCUS_TARGET_MANUAL = -2
 private const val LYRIC_FOCUS_TARGET_PENDING = -1
@@ -602,7 +599,6 @@ fun LyricsEnhanced(
 
     LaunchedEffect(player, lyricsSessionKey, animationsDisabled, playbackParameters.speed) {
         var wasSliderActive = false
-        var anchorPlayerPositionMs = player.currentPosition.coerceAtLeast(0L)
         var anchorFrameNanos = 0L
         var lastRawPositionMs = player.currentPosition.coerceAtLeast(0L)
 
@@ -611,10 +607,11 @@ fun LyricsEnhanced(
         var cachedCurrentLineStart = Int.MIN_VALUE
         var cachedNextLineStart = Int.MAX_VALUE
         var lastPublishedPositionMs = playbackPositionMs.longValue
+        var lyricsClockMs = playbackPositionMs.longValue.toDouble() // BRIDGE: lyrics
 
         fun publishPosition(nextPosition: Long) {
             val delta = nextPosition - lastPublishedPositionMs
-            if (delta >= LYRICS_POSITION_PUBLISH_MIN_DELTA_MS || delta <= -LYRICS_POSITION_SEEK_DELTA_MS || delta < 0) {
+            if (delta >= LYRICS_POSITION_PUBLISH_MIN_DELTA_MS || delta < 0) { // BRIDGE: lyrics
                 lastPublishedPositionMs = nextPosition
                 if (playbackPositionMs.longValue != nextPosition) {
                     playbackPositionMs.longValue = nextPosition
@@ -630,9 +627,8 @@ fun LyricsEnhanced(
             }
             wasSliderActive = isSliderActive
 
-            val rawPosition = (sliderPosition ?: player.currentPosition).coerceAtLeast(0L)
-
-            val rawPlayerPosition = player.currentPosition.coerceAtLeast(0L)
+            val rawPlayerPosition = player.currentPosition.coerceAtLeast(0L) // BRIDGE: lyrics read once a frame
+            val rawPosition = (sliderPosition ?: rawPlayerPosition).coerceAtLeast(0L) // BRIDGE: lyrics
             if (lastRawPositionMs - rawPlayerPosition > POSITION_RESET_BACKWARD_THRESHOLD_MS) {
                 positionResetCounter += 1
                 currentLineIndexState.intValue = -1
@@ -641,7 +637,6 @@ fun LyricsEnhanced(
 
             val effectivePositionMs: Long
             if (sliderPosition != null || !player.isPlaying || animationsDisabled) {
-                anchorPlayerPositionMs = rawPosition
                 anchorFrameNanos = 0L
                 publishPosition(rawPosition)
                 effectivePositionMs =
@@ -655,31 +650,16 @@ fun LyricsEnhanced(
                 }
             } else {
                 val frameNanos = withFrameNanos { frameTimeNanos -> frameTimeNanos }
-                if (anchorFrameNanos == 0L) {
-                    anchorFrameNanos = frameNanos
-                    anchorPlayerPositionMs = rawPosition
-                }
-
-                val elapsedMs = ((frameNanos - anchorFrameNanos) / 1_000_000f) * latestPlaybackSpeed.value
-                val projectedPosition = anchorPlayerPositionMs + elapsedMs.roundToLong()
-                val driftMs = rawPosition - projectedPosition
-                val nextPosition =
-                    when {
-                        driftMs > SMOOTH_PLAYBACK_MAX_FORWARD_DRIFT_MS ||
-                            driftMs < -SMOOTH_PLAYBACK_MAX_BACKWARD_DRIFT_MS -> {
-                            anchorPlayerPositionMs = rawPosition
-                            anchorFrameNanos = frameNanos
-                            rawPosition
-                        }
-
-                        driftMs != 0L -> {
-                            projectedPosition + (driftMs * SMOOTH_PLAYBACK_DRIFT_CORRECTION).roundToLong()
-                        }
-
-                        else -> {
-                            projectedPosition
-                        }
-                    }.coerceAtLeast(0L)
+                // A monotonic clock (LyricsClock): lyrics-ui restarts its scroll on any
+                // backward step, and the controller's corrections made one every second.
+                if (anchorFrameNanos == 0L) { // BRIDGE: lyrics
+                    anchorFrameNanos = frameNanos // BRIDGE: lyrics
+                    lyricsClockMs = maxOf(rawPosition.toDouble(), lastPublishedPositionMs.toDouble()) // BRIDGE: lyrics
+                } // BRIDGE: lyrics
+                val advanceMs = ((frameNanos - anchorFrameNanos) / 1_000_000.0) * latestPlaybackSpeed.value // BRIDGE: lyrics
+                anchorFrameNanos = frameNanos // BRIDGE: lyrics
+                lyricsClockMs = LyricsClock.next(lyricsClockMs, rawPosition.toDouble(), advanceMs) // BRIDGE: lyrics
+                val nextPosition = lyricsClockMs.roundToLong().coerceAtLeast(0L) // BRIDGE: lyrics
 
                 publishPosition(nextPosition)
                 effectivePositionMs =
