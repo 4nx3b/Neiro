@@ -252,6 +252,7 @@ fun SettingsScreen(
     val permanentShuffle by AppSettings.permanentShuffle.collectAsStateWithLifecycle()
     val autoSkipOnError by AppSettings.autoSkipOnError.collectAsStateWithLifecycle()
     val keepCpuAwake by AppSettings.keepCpuAwake.collectAsStateWithLifecycle()
+    val persistentQueue by AppSettings.persistentQueue.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
@@ -909,6 +910,22 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setKeepCpuAwake(!keepCpuAwake) },
+                )
+            }
+            // Ported from ArchiveTune's persistent queue.
+            val persistentQueueTitle = stringResource(R.string.persistent_queue)
+            row(persistentQueueTitle, "queue", "restore", "startup", "resume") {
+                SettingsRow(
+                    icon = SfIcons.Revert,
+                    title = persistentQueueTitle,
+                    subtitle = stringResource(R.string.persistent_queue_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = persistentQueue,
+                            onCheckedChange = AppSettings::setPersistentQueue,
+                        )
+                    },
+                    onClick = { AppSettings.setPersistentQueue(!persistentQueue) },
                 )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)

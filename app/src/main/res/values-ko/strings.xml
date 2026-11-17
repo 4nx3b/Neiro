@@ -1541,4 +1541,7 @@
     <string name="auto_skip_on_error_subtitle">재생할 수 없는 곡은 재시도가 끝나면 건너뛰어 재생이 계속 이어집니다</string>
     <string name="keep_cpu_awake">재생 중 CPU 절전 방지</string>
     <string name="keep_cpu_awake_subtitle">음악이 재생되는 동안 CPU 웨이크 락을 유지해 딥두즈가 스트림을 끊지 못하게 합니다</string>
+
+    <string name="persistent_queue">마지막 대기열 복원</string>
+    <string name="persistent_queue_subtitle">앱 시작 시 마지막 대기열을 복원합니다</string>
 </resources>

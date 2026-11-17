@@ -1723,4 +1723,7 @@
     <string name="auto_skip_on_error_subtitle">Неудобопроигрываемая дорожка пропускается после исчерпания попыток, чтобы воспроизведение продолжалось</string>
     <string name="keep_cpu_awake">Не давать процессору спать во время воспроизведения</string>
     <string name="keep_cpu_awake_subtitle">Удерживает блокировку пробуждения CPU, пока играет музыка, чтобы глубокий режим сна не обрывал поток</string>
+
+    <string name="persistent_queue">Восстановить последнюю очередь</string>
+    <string name="persistent_queue_subtitle">Восстанавливает последнюю очередь при запуске приложения</string>
 </resources>

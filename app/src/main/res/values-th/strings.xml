@@ -1674,4 +1674,7 @@
     <string name="auto_skip_on_error_subtitle">เพลงที่เล่นไม่ได้จะถูกข้ามเมื่อหมดความพยายามแล้ว เพื่อให้เล่นต่อได้</string>
     <string name="keep_cpu_awake">คุม CPU ให้ตื่นระหว่างเล่นเพลง</string>
     <string name="keep_cpu_awake_subtitle">ถือ wake lock ของ CPU ไว้ระหว่างเล่นเพลง เพื่อไม่ให้โหมดหลับลึกตัดสตรีม</string>
+
+    <string name="persistent_queue">กู้คืนคิวล่าสุด</string>
+    <string name="persistent_queue_subtitle">กู้คืนคิวล่าสุดเมื่อเปิดแอป</string>
 </resources>

@@ -1669,4 +1669,7 @@
     <string name="auto_skip_on_error_subtitle">再生できない曲は再試行を終えた時点でスキップされ、再生は続行されます</string>
     <string name="keep_cpu_awake">再生中はCPUをスリープさせない</string>
     <string name="keep_cpu_awake_subtitle">音楽の再生中はCPUのウェイクロックを保持し、ディープドーズによるストリーム切断を防ぎます</string>
+
+    <string name="persistent_queue">最後のキューを復元</string>
+    <string name="persistent_queue_subtitle">アプリ起動時に最後のキューを復元します</string>
 </resources>

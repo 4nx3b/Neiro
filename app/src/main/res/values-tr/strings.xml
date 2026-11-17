@@ -1648,4 +1648,7 @@
     <string name="auto_skip_on_error_subtitle">Oynatılamayan bir parça, denemeleri tükendiğinde atlanır, böylece oynatma sürer</string>
     <string name="keep_cpu_awake">Oynatma sırasında CPU\'yu uyanık tut</string>
     <string name="keep_cpu_awake_subtitle">Müzik çalarken bir CPU uyku kilidi tutar, böylece derin uyku akışı kesemez</string>
+
+    <string name="persistent_queue">Son kuyruğu geri yükle</string>
+    <string name="persistent_queue_subtitle">Uygulama açılırken son kuyruğunizi geri yükler</string>
 </resources>

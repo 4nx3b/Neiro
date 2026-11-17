@@ -1731,4 +1731,7 @@
     <string name="auto_skip_on_error_subtitle">Utwór, którego nie da się odtworzyć, jest pomijany po wyczerpaniu prób, żeby odtwarzanie szło dalej</string>
     <string name="keep_cpu_awake">Nie usypiaj procesora podczas odtwarzania</string>
     <string name="keep_cpu_awake_subtitle">Przytrzymuje blokadę wybudzenia CPU, gdy gra muzyka, żeby głębokie usypianie nie ucięło strumienia</string>
+
+    <string name="persistent_queue">Przywróć ostatnią kolejkę</string>
+    <string name="persistent_queue_subtitle">Przywraca ostatnią kolejkę przy uruchamianiu aplikacji</string>
 </resources>

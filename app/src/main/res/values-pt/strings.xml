@@ -1696,4 +1696,7 @@
     <string name="auto_skip_on_error_subtitle">Uma faixa que ninguém consegue tocar é pulada quando as tentativas se esgotam, para a reprodução continuar</string>
     <string name="keep_cpu_awake">Manter a CPU acordada durante a reprodução</string>
     <string name="keep_cpu_awake_subtitle">Mantém um wake lock de CPU enquanto a música toca, para o doze profundo não cortar o fluxo</string>
+
+    <string name="persistent_queue">Restaurar a última fila</string>
+    <string name="persistent_queue_subtitle">Restaura sua última fila quando o app inicia</string>
 </resources>

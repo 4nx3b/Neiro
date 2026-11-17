@@ -328,6 +328,14 @@ object AppSettings {
      */
     val keepCpuAwake = MutableStateFlow(false)
 
+    /**
+     * Whether the queue survives an app restart. Ported from ArchiveTune's
+     * persistent queue: on, the last queue and position are saved as the app
+     * leaves them and restored when it opens; off, every launch starts empty
+     * and the snapshot on disk is cleared rather than left stale.
+     */
+    val persistentQueue = MutableStateFlow(true)
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -1231,6 +1239,7 @@ object AppSettings {
         permanentShuffle.value = prefs.getBoolean(KEY_PERMANENT_SHUFFLE, false)
         autoSkipOnError.value = prefs.getBoolean(KEY_AUTO_SKIP_ON_ERROR, true)
         keepCpuAwake.value = prefs.getBoolean(KEY_KEEP_CPU_AWAKE, false)
+        persistentQueue.value = prefs.getBoolean(KEY_PERSISTENT_QUEUE, true)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1647,6 +1656,11 @@ object AppSettings {
     fun setKeepCpuAwake(value: Boolean) {
         keepCpuAwake.value = value
         prefs.edit().putBoolean(KEY_KEEP_CPU_AWAKE, value).apply()
+    }
+
+    fun setPersistentQueue(value: Boolean) {
+        persistentQueue.value = value
+        prefs.edit().putBoolean(KEY_PERSISTENT_QUEUE, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2915,6 +2929,7 @@ object AppSettings {
     private const val KEY_PERMANENT_SHUFFLE = "permanent_shuffle"
     private const val KEY_AUTO_SKIP_ON_ERROR = "auto_skip_on_error"
     private const val KEY_KEEP_CPU_AWAKE = "keep_cpu_awake"
+    private const val KEY_PERSISTENT_QUEUE = "persistent_queue"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

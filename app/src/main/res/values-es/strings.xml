@@ -1663,4 +1663,7 @@
     <string name="auto_skip_on_error_subtitle">Una pista que no se puede reproducir se omite cuando se agotan sus reintentos, para que la reproducción continúe</string>
     <string name="keep_cpu_awake">Mantener la CPU despierta durante la reproducción</string>
     <string name="keep_cpu_awake_subtitle">Mantiene un wake lock de CPU mientras suena música, para que el reposo profundo no corte la transmisión</string>
+
+    <string name="persistent_queue">Restaurar la última cola</string>
+    <string name="persistent_queue_subtitle">Restaura tu última cola al abrir la app</string>
 </resources>

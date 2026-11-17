@@ -6166,6 +6166,13 @@ class PlaybackService : MediaLibraryService() {
 
     /** Serialize only the bounded window needed for a future cold-start resume. */
     private fun saveQueueSnapshot(player: ExoPlayer) {
+        // Persistent queue off: every launch starts empty, and the snapshot on
+        // disk is cleared rather than left to restore a queue that predates
+        // the setting turning off.
+        if (!AppSettings.persistentQueue.value) {
+            LastPlayed.clear()
+            return
+        }
         if (ListenTogether.state.value.inParty) return
         if (player.mediaItemCount == 0) {
             persistedQueueStart = 0
@@ -6263,6 +6270,7 @@ class PlaybackService : MediaLibraryService() {
 
     /** Restore the bounded queue without preparing or resolving a stream. */
     private fun restoreLastQueue(player: ExoPlayer): Boolean {
+        if (!AppSettings.persistentQueue.value) return false
         val last = LastPlayed.load() ?: return false
         persistedQueueStart = 0
         player.setMediaItems(last.songs.map { it.toMediaItem() }, last.index, last.positionMs)
@@ -6274,6 +6282,7 @@ class PlaybackService : MediaLibraryService() {
      * LastPlayed physical snapshot when the new record is absent or unsafe.
      */
     private fun restoreBoundedQueueOrLast(player: ExoPlayer): Boolean {
+        if (!AppSettings.persistentQueue.value) return false
         val persisted = BoundedContextPersistence.load()
         if (persisted != null && restoreBoundedQueue(player, persisted)) return true
         if (persisted != null) BoundedContextPersistence.clearImmediately()

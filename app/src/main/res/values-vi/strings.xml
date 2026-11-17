@@ -1608,4 +1608,7 @@
     <string name="auto_skip_on_error_subtitle">Bài hát không thể phát sẽ bị bỏ qua sau khi hết số lần thử lại, để việc phát nhạc tiếp tục</string>
     <string name="keep_cpu_awake">Giữ CPU tỉnh trong khi phát nhạc</string>
     <string name="keep_cpu_awake_subtitle">Giữ khóa đánh thức CPU khi nhạc đang phát, để chế độ ngủ sâu không cắt luồng</string>
+
+    <string name="persistent_queue">Khôi phục hàng đợi cuối</string>
+    <string name="persistent_queue_subtitle">Khôi phục hàng đợi cuối của bạn khi ứng dụng khởi động</string>
 </resources>

@@ -1564,4 +1564,7 @@
     <string name="auto_skip_on_error_subtitle">A track nobody can play is skipped past once its retries are spent, so playback carries on</string>
     <string name="keep_cpu_awake">Keep CPU awake during playback</string>
     <string name="keep_cpu_awake_subtitle">Holds a CPU wake lock while music plays, so deep doze cannot cut the stream</string>
+
+    <string name="persistent_queue">Restore your last queue</string>
+    <string name="persistent_queue_subtitle">Restore your last queue when the app starts</string>
 </resources>

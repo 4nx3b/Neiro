@@ -1668,4 +1668,7 @@
     <string name="auto_skip_on_error_subtitle">Lagu yang tak bisa diputar dilewati setelah percobaannya habis, agar pemutaran tetap berlanjut</string>
     <string name="keep_cpu_awake">Jaga CPU tetap terjaga selama pemutaran</string>
     <string name="keep_cpu_awake_subtitle">Menahan wake lock CPU saat musik diputar, agar doze mendalam tidak memutus aliran</string>
+
+    <string name="persistent_queue">Pulihkan antrean terakhir</string>
+    <string name="persistent_queue_subtitle">Memulihkan antrean terakhir Anda saat aplikasi dimulai</string>
 </resources>

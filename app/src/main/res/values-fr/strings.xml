@@ -1692,4 +1692,7 @@
     <string name="auto_skip_on_error_subtitle">Une piste injouable est passée une fois ses tentatives épuisées, pour que la lecture continue</string>
     <string name="keep_cpu_awake">Garder le CPU éveillé pendant la lecture</string>
     <string name="keep_cpu_awake_subtitle">Tient un verrou de réveil CPU pendant la musique, pour que la veille profonde ne coupe pas le flux</string>
+
+    <string name="persistent_queue">Restaurer la dernière file</string>
+    <string name="persistent_queue_subtitle">Restaure ta dernière file au démarrage de l'app</string>
 </resources>
