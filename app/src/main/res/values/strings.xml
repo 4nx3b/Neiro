@@ -1099,6 +1099,70 @@
     <string name="swipe_plays_next">Swiping a song plays it next</string>
     <string name="swipe_adds_to_queue">When disabled, swiping adds the song to the end of the queue</string>
     <string name="import_backup_warning">This replaces this device’s settings and listening history with the contents of the file. Export the current data first if you want to keep it.</string>
+    <string name="backup_scheduled_section" translatable="false">Scheduled auto backup</string>
+    <string name="backup_scheduled_enabled" translatable="false">Enable scheduled backup</string>
+    <string name="backup_scheduled_running" translatable="false">Backups run automatically using the schedule below.</string>
+    <string name="backup_scheduled_paused" translatable="false">Automatic backups are paused.</string>
+    <string name="backup_schedule" translatable="false">Backup schedule</string>
+    <string name="backup_schedule_subtitle" translatable="false">Choose how often a backup is created.</string>
+    <string name="backup_schedule_custom_next" translatable="false">Next backup: %1$s</string>
+    <string name="backup_frequency_daily" translatable="false">Daily</string>
+    <string name="backup_frequency_weekly" translatable="false">Weekly</string>
+    <string name="backup_frequency_monthly" translatable="false">Monthly</string>
+    <string name="backup_frequency_custom" translatable="false">Custom</string>
+    <string name="backup_custom_date_title" translatable="false">Choose backup date</string>
+    <string name="backup_directory" translatable="false">Backup directory</string>
+    <string name="backup_directory_unset" translatable="false">Choose a folder to enable scheduled backups.</string>
+    <string name="backup_overwrite" translatable="false">Overwrite existing backup</string>
+    <string name="backup_overwrite_subtitle" translatable="false">Keep one current backup instead of creating a dated history.</string>
+    <string name="backup_cloud_section" translatable="false">Cloud storage sync</string>
+    <string name="backup_cloud_info" translatable="false">A cloud storage app (Google Drive, Dropbox, Nextcloud, or OneDrive) must be installed on this phone for backups to reach the cloud. Without one, the system folder picker only shows local storage and backups stay on this device.</string>
+    <string name="backup_cloud_folder" translatable="false">Drive folder</string>
+    <string name="backup_cloud_folder_unset" translatable="false">Not set — tap to pick a Drive folder</string>
+    <string name="backup_cloud_enabled" translatable="false">Enable cloud sync</string>
+    <string name="backup_cloud_running" translatable="false">Auto-sync to Google Drive is running.</string>
+    <string name="backup_cloud_paused" translatable="false">Auto-sync to Google Drive is paused.</string>
+    <string name="backup_cloud_schedule_hint" translatable="false">Choose a Drive folder, or use My Drive root.</string>
+    <string name="backup_cloud_overwrite" translatable="false">Overwrite existing Drive backup</string>
+    <string name="backup_cloud_sync_now" translatable="false">Sync now</string>
+    <string name="backup_cloud_last_sync_never" translatable="false">Never synced</string>
+    <string name="backup_cloud_last_sync" translatable="false">Last synced %1$s</string>
+    <string name="backup_internal_section" translatable="false">Internal service</string>
+    <string name="backup_action_backup" translatable="false">Backup</string>
+    <string name="backup_action_backup_desc" translatable="false">Export library, settings, and account details.</string>
+    <string name="backup_action_restore" translatable="false">Restore</string>
+    <string name="backup_action_restore_desc" translatable="false">Select a backup file to restore.</string>
+    <string name="backup_import_m3u" translatable="false">Import a \"m3u\" playlists</string>
+    <string name="backup_import_m3u_desc" translatable="false">M3U audio playlist</string>
+    <string name="backup_import_csv" translatable="false">Import a \"csv\" playlists</string>
+    <string name="backup_import_csv_desc" translatable="false">CSV playlist file</string>
+    <string name="backup_export_csv" translatable="false">Export playlist as CSV</string>
+    <string name="backup_export_csv_desc" translatable="false">Choose a playlist and save its songs as a CSV file</string>
+    <string name="backup_export_picker_title" translatable="false">Choose a playlist</string>
+    <string name="backup_created" translatable="false">Backup created successfully</string>
+    <string name="backup_create_failed" translatable="false">Backup failed: %1$s</string>
+    <string name="backup_restored" translatable="false">Restored %1$s from v%2$s</string>
+    <string name="backup_restore_failed" translatable="false">Restore failed: %1$s</string>
+    <string name="backup_restore_failed_title" translatable="false">Restore failed</string>
+    <string name="backup_restore_confirm_title" translatable="false">Restore this backup?</string>
+    <string name="backup_restore_invalid" translatable="false">The selected file is not a valid backup archive.</string>
+    <string name="backup_restore_corrupted" translatable="false">The backup file appears to be corrupted and could not be read.</string>
+    <string name="backup_restore_missing" translatable="false">The backup archive does not contain any restorable data.</string>
+    <string name="backup_restore_newer" translatable="false">That backup was written by a newer version of BitChord.</string>
+    <string name="backup_restore_meta" translatable="false">Backup made %1$s with %2$s.</string>
+    <string name="backup_restore_legacy" translatable="false">This is an older single-file backup; it will be restored as-is.</string>
+    <string name="backup_import_created" translatable="false">%1$d songs imported into “%2$s”.</string>
+    <string name="backup_import_empty" translatable="false">No songs found. Invalid file, or perhaps no song matches were found.</string>
+    <string name="backup_import_default_title" translatable="false">Imported playlist</string>
+    <string name="backup_export_done" translatable="false">Playlist exported as CSV</string>
+    <string name="backup_export_failed" translatable="false">Unable to export playlist: %1$s</string>
+    <string name="backup_export_none" translatable="false">No non-empty playlists are available</string>
+    <string name="backup_sync_done" translatable="false">Backup synced to the Drive folder</string>
+    <string name="backup_sync_failed" translatable="false">Sync failed: %1$s</string>
+    <plurals name="backup_playlist_song_count" translatable="false">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
     <string name="youtube_music_account">YouTube Music account</string>
     <string name="tap_to_sign_in_google">Tap to sign in with Google</string>
     <string name="export_succeeded">Exported settings and %1$s</string>

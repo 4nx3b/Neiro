@@ -86,13 +86,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.rememberDatePickerState
 import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -133,6 +137,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
 import com.music.bitchord.AppIcon
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -182,7 +187,12 @@ import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
 import com.music.bitchord.data.settings.AppFont
 import com.music.bitchord.data.settings.PlayerTheme
-import com.music.bitchord.data.stats.Backup
+import com.music.bitchord.data.backup.BackupArchive
+import com.music.bitchord.data.backup.PlaylistTransfer
+import com.music.bitchord.data.backup.ScheduledBackup
+import com.music.bitchord.data.backup.ScheduledBackupFrequency
+import com.music.bitchord.data.spotify.LocalPlaylist
+import com.music.bitchord.data.spotify.LocalPlaylistStore
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
 import kotlinx.coroutines.Dispatchers
@@ -190,6 +200,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
@@ -327,6 +343,17 @@ fun SettingsScreen(
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
     val filterNonMusicAudio by AppSettings.filterNonMusicAudio.collectAsStateWithLifecycle()
     val localMusicFolderUri by AppSettings.localMusicFolderUri.collectAsStateWithLifecycle()
+    val scheduledBackupEnabled by AppSettings.scheduledBackupEnabled.collectAsStateWithLifecycle()
+    val scheduledBackupFrequency by AppSettings.scheduledBackupFrequency.collectAsStateWithLifecycle()
+    val scheduledBackupCustomDateEpochDay by AppSettings.scheduledBackupCustomDateEpochDay.collectAsStateWithLifecycle()
+    val scheduledBackupDirectoryUri by AppSettings.scheduledBackupDirectoryUri.collectAsStateWithLifecycle()
+    val scheduledBackupDirectoryName by AppSettings.scheduledBackupDirectoryName.collectAsStateWithLifecycle()
+    val scheduledBackupOverwriteExisting by AppSettings.scheduledBackupOverwriteExisting.collectAsStateWithLifecycle()
+    val cloudSyncEnabled by AppSettings.cloudSyncEnabled.collectAsStateWithLifecycle()
+    val cloudSyncFolderUri by AppSettings.cloudSyncFolderUri.collectAsStateWithLifecycle()
+    val cloudSyncFolderName by AppSettings.cloudSyncFolderName.collectAsStateWithLifecycle()
+    val cloudSyncOverwriteExisting by AppSettings.cloudSyncOverwriteExisting.collectAsStateWithLifecycle()
+    val cloudSyncLastRunAt by AppSettings.cloudSyncLastRunAt.collectAsStateWithLifecycle()
     val highPerformanceMode by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
     val performanceRefreshRate by AppSettings.performanceRefreshRate.collectAsStateWithLifecycle()
     val currentDisplay = LocalView.current.display
@@ -363,13 +390,24 @@ fun SettingsScreen(
     // exactly as if the field weren't there.
     // Saveable so a search survives a trip into one of the pages it found.
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    // What the last export or import did, shown on the row that did it rather
+    // What the last backup or restore did, shown on the row that did it rather
     // than as a toast: a backup is the one action here whose outcome nobody can
-    // check by looking at the app afterwards. Held per direction, or an import's
-    // result reports itself under the word "Export".
-    var exportStatus by remember { mutableStateOf<String?>(null) }
-    var importStatus by remember { mutableStateOf<String?>(null) }
-    var confirmImport by remember { mutableStateOf(false) }
+    // check by looking at the app afterwards. Held per row, or one action's
+    // result reports itself under another's name.
+    var backupStatus by remember { mutableStateOf<String?>(null) }
+    var restoreStatus by remember { mutableStateOf<String?>(null) }
+    var playlistImportStatus by remember { mutableStateOf<String?>(null) }
+    var playlistExportStatus by remember { mutableStateOf<String?>(null) }
+    var syncStatus by remember { mutableStateOf<String?>(null) }
+    var showFrequencyDialog by remember { mutableStateOf(false) }
+    var showCustomDatePicker by remember { mutableStateOf(false) }
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+    var showRestoreInvalid by remember { mutableStateOf(false) }
+    var showPlaylistPicker by remember { mutableStateOf(false) }
+    var restoreError by remember { mutableStateOf("") }
+    var pendingRestore by remember { mutableStateOf<Uri?>(null) }
+    var pendingRestoreInfo by remember { mutableStateOf(BackupArchive.Validity()) }
+    var pendingExportPlaylist by remember { mutableStateOf<LocalPlaylist?>(null) }
     var confirmClearSongCache by remember { mutableStateOf(false) }
     var showPerformanceWarning by remember { mutableStateOf(false) }
     var showPerformanceConfirmation by remember { mutableStateOf(false) }
@@ -394,38 +432,96 @@ fun SettingsScreen(
     }
 
     /**
-     * Both halves go through the system document picker rather than a path of
-     * this app's own choosing. That is what puts the file somewhere the user can
-     * actually find it — Drive, Files, a folder they already back up — and it
-     * means neither direction needs a storage permission, since the grant
-     * arrives with the document they picked.
+     * The Backup and restore page's pickers, every one through the system
+     * document picker rather than a path of this app's own choosing. That is
+     * what puts the file somewhere the user can actually find it — Drive,
+     * Files, a folder they already back up — and it means none of them needs a
+     * storage permission, since the grant arrives with the document they
+     * picked.
      */
-    val exportPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json"),
+    val backupFileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { target ->
         if (target == null) return@rememberLauncherForActivityResult
         backupScope.launch {
-            exportStatus = Backup.exportTo(context, target).fold(
-                onSuccess = { months ->
-                    context.getString(R.string.export_succeeded, context.countOfMonths(months))
-                },
+            backupStatus = BackupArchive.create(context, target).fold(
+                onSuccess = { context.getString(R.string.backup_created) },
                 onFailure = {
-                    context.getString(R.string.export_failed, it.message ?: context.getString(R.string.unknown_error))
+                    context.getString(R.string.backup_create_failed, it.message ?: context.getString(R.string.unknown_error))
                 },
             )
         }
     }
-    val importPicker = rememberLauncherForActivityResult(
+    val restoreFileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { source ->
         if (source == null) return@rememberLauncherForActivityResult
         backupScope.launch {
-            importStatus = Backup.importFrom(context, source).fold(
+            val validity = BackupArchive.validate(context, source)
+            if (validity.isValid) {
+                pendingRestore = source
+                pendingRestoreInfo = validity
+                showRestoreConfirm = true
+            } else {
+                restoreError = context.getString(validity.errorRes ?: R.string.backup_restore_invalid)
+                showRestoreInvalid = true
+            }
+        }
+    }
+    val backupDirectoryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { folder ->
+        if (folder == null) return@rememberLauncherForActivityResult
+        ScheduledBackup.setDirectory(context, folder)
+    }
+    val cloudFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { folder ->
+        if (folder == null) return@rememberLauncherForActivityResult
+        ScheduledBackup.setCloudFolder(context, folder)
+    }
+    val importM3uLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { source ->
+        if (source == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            playlistImportStatus = PlaylistTransfer.importM3u(context, source).fold(
                 onSuccess = {
-                    context.getString(R.string.import_succeeded, context.countOfMonths(it.months), it.from)
+                    context.getString(R.string.backup_import_created, it.songCount, it.playlistTitle)
                 },
                 onFailure = {
-                    context.getString(R.string.import_failed, it.message ?: context.getString(R.string.unknown_error))
+                    it.message ?: context.getString(R.string.unknown_error)
+                },
+            )
+        }
+    }
+    val importCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { source ->
+        if (source == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            playlistImportStatus = PlaylistTransfer.importCsv(context, source).fold(
+                onSuccess = {
+                    context.getString(R.string.backup_import_created, it.songCount, it.playlistTitle)
+                },
+                onFailure = {
+                    it.message ?: context.getString(R.string.unknown_error)
+                },
+            )
+        }
+    }
+    val exportCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv"),
+    ) { target ->
+        if (target == null) return@rememberLauncherForActivityResult
+        val playlist = pendingExportPlaylist
+        pendingExportPlaylist = null
+        if (playlist == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            playlistExportStatus = PlaylistTransfer.exportCsv(context, target, playlist).fold(
+                onSuccess = { context.getString(R.string.backup_export_done) },
+                onFailure = {
+                    context.getString(R.string.backup_export_failed, it.message ?: context.getString(R.string.unknown_error))
                 },
             )
         }
@@ -1791,23 +1887,265 @@ fun SettingsScreen(
             }
         }
 
-        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.your_data)) {
-            val exportDataTitle = stringResource(R.string.export_data)
-            row(exportDataTitle, "backup") {
+        val backupFrequencyValue = scheduledFrequencyLabel(scheduledBackupFrequency)
+        val backupCustomDateLabel = scheduledBackupCustomDateEpochDay?.let { epochDay ->
+            LocalDate.ofEpochDay(epochDay).format(
+                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()),
+            )
+        }
+        val backupScheduleSubtitle = if (scheduledBackupFrequency == ScheduledBackupFrequency.CUSTOM && backupCustomDateLabel != null) {
+            stringResource(R.string.backup_schedule_custom_next, backupCustomDateLabel)
+        } else {
+            stringResource(R.string.backup_schedule_subtitle)
+        }
+
+        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.backup_scheduled_section)) {
+            val scheduledEnabledTitle = stringResource(R.string.backup_scheduled_enabled)
+            row(scheduledEnabledTitle, "backup", "schedule", "automatic") {
                 SettingsRow(
-                    icon = SfIcons.FileUpload,
-                    title = exportDataTitle,
-                    subtitle = exportStatus ?: stringResource(R.string.export_data_subtitle),
-                    onClick = { exportPicker.launch(Backup.suggestedName()) },
+                    icon = SfIcons.Clock,
+                    title = scheduledEnabledTitle,
+                    subtitle = if (scheduledBackupEnabled) {
+                        stringResource(R.string.backup_scheduled_running)
+                    } else {
+                        stringResource(R.string.backup_scheduled_paused)
+                    },
+                    trailing = {
+                        IosSwitch(
+                            checked = scheduledBackupEnabled,
+                            onCheckedChange = { enabled ->
+                                AppSettings.setScheduledBackupEnabled(enabled)
+                                ScheduledBackup.reschedule(context)
+                            },
+                        )
+                    },
+                    onClick = {
+                        AppSettings.setScheduledBackupEnabled(!scheduledBackupEnabled)
+                        ScheduledBackup.reschedule(context)
+                    },
                 )
             }
-            val importDataTitle = stringResource(R.string.import_data)
-            row(importDataTitle, "backup", "restore") {
+            val backupScheduleTitle = stringResource(R.string.backup_schedule)
+            row(backupScheduleTitle, "backup", "schedule", "frequency", "daily", "weekly", "monthly", "custom") {
+                SettingsRow(
+                    icon = SfIcons.Cached,
+                    title = backupScheduleTitle,
+                    subtitle = backupScheduleSubtitle,
+                    value = backupFrequencyValue,
+                    onClick = { showFrequencyDialog = true },
+                )
+            }
+            val backupDirectoryTitle = stringResource(R.string.backup_directory)
+            row(backupDirectoryTitle, "backup", "folder", "directory") {
+                SettingsRow(
+                    icon = SfIcons.Folder,
+                    title = backupDirectoryTitle,
+                    subtitle = scheduledBackupDirectoryName.ifBlank {
+                        stringResource(R.string.backup_directory_unset)
+                    },
+                    onClick = { backupDirectoryLauncher.launch(null) },
+                )
+            }
+            val backupOverwriteTitle = stringResource(R.string.backup_overwrite)
+            row(backupOverwriteTitle, "backup", "history", "versions") {
+                SettingsRow(
+                    icon = SfIcons.Storage,
+                    title = backupOverwriteTitle,
+                    subtitle = stringResource(R.string.backup_overwrite_subtitle),
+                    enabled = scheduledBackupDirectoryUri.isNotBlank(),
+                    trailing = {
+                        IosSwitch(
+                            checked = scheduledBackupOverwriteExisting,
+                            onCheckedChange = AppSettings::setScheduledBackupOverwriteExisting,
+                            enabled = scheduledBackupDirectoryUri.isNotBlank(),
+                        )
+                    },
+                    onClick = {
+                        AppSettings.setScheduledBackupOverwriteExisting(!scheduledBackupOverwriteExisting)
+                    },
+                )
+            }
+        }
+
+        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.backup_cloud_section)) {
+            row("cloud", "drive", "dropbox", "nextcloud", "onedrive") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ROW_INSET, vertical = 12.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Icon(
+                        imageVector = SfIcons.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(ICON_SIZE),
+                    )
+                    Spacer(Modifier.width(ICON_GAP))
+                    Text(
+                        text = stringResource(R.string.backup_cloud_info),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            val cloudFolderTitle = stringResource(R.string.backup_cloud_folder)
+            row(cloudFolderTitle, "cloud", "drive", "folder") {
+                SettingsRow(
+                    icon = SfIcons.Folder,
+                    title = cloudFolderTitle,
+                    subtitle = cloudSyncFolderName.ifBlank {
+                        stringResource(R.string.backup_cloud_folder_unset)
+                    },
+                    onClick = { cloudFolderLauncher.launch(null) },
+                )
+            }
+            val cloudEnabledTitle = stringResource(R.string.backup_cloud_enabled)
+            row(cloudEnabledTitle, "cloud", "sync", "drive", "backup") {
+                SettingsRow(
+                    icon = SfIcons.Cloud,
+                    title = cloudEnabledTitle,
+                    subtitle = if (cloudSyncEnabled && cloudSyncFolderUri.isNotBlank()) {
+                        stringResource(R.string.backup_cloud_running)
+                    } else {
+                        stringResource(R.string.backup_cloud_paused)
+                    },
+                    trailing = {
+                        IosSwitch(
+                            checked = cloudSyncEnabled,
+                            onCheckedChange = { enabled ->
+                                AppSettings.setCloudSyncEnabled(enabled)
+                                ScheduledBackup.reschedule(context)
+                            },
+                        )
+                    },
+                    onClick = {
+                        AppSettings.setCloudSyncEnabled(!cloudSyncEnabled)
+                        ScheduledBackup.reschedule(context)
+                    },
+                )
+            }
+            val cloudScheduleTitle = stringResource(R.string.backup_schedule)
+            row(cloudScheduleTitle, "cloud", "schedule", "frequency") {
+                SettingsRow(
+                    icon = SfIcons.Cached,
+                    title = cloudScheduleTitle,
+                    subtitle = if (cloudSyncFolderUri.isBlank()) {
+                        stringResource(R.string.backup_cloud_schedule_hint)
+                    } else {
+                        backupScheduleSubtitle
+                    },
+                    value = backupFrequencyValue,
+                    enabled = cloudSyncFolderUri.isNotBlank(),
+                    onClick = { showFrequencyDialog = true },
+                )
+            }
+            val cloudOverwriteTitle = stringResource(R.string.backup_cloud_overwrite)
+            row(cloudOverwriteTitle, "cloud", "overwrite", "history") {
+                SettingsRow(
+                    icon = SfIcons.CloudDone,
+                    title = cloudOverwriteTitle,
+                    subtitle = stringResource(R.string.backup_overwrite_subtitle),
+                    enabled = cloudSyncFolderUri.isNotBlank(),
+                    trailing = {
+                        IosSwitch(
+                            checked = cloudSyncOverwriteExisting,
+                            onCheckedChange = AppSettings::setCloudSyncOverwriteExisting,
+                            enabled = cloudSyncFolderUri.isNotBlank(),
+                        )
+                    },
+                    onClick = {
+                        AppSettings.setCloudSyncOverwriteExisting(!cloudSyncOverwriteExisting)
+                    },
+                )
+            }
+            val syncNowTitle = stringResource(R.string.backup_cloud_sync_now)
+            row(syncNowTitle, "cloud", "sync", "now", "drive", "backup") {
+                val lastSyncLabel = if (cloudSyncLastRunAt > 0L) {
+                    stringResource(
+                        R.string.backup_cloud_last_sync,
+                        DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+                            .format(Instant.ofEpochMilli(cloudSyncLastRunAt).atZone(ZoneId.systemDefault())),
+                    )
+                } else {
+                    stringResource(R.string.backup_cloud_last_sync_never)
+                }
+                SettingsRow(
+                    icon = SfIcons.Upload,
+                    title = syncNowTitle,
+                    subtitle = syncStatus ?: lastSyncLabel,
+                    enabled = cloudSyncFolderUri.isNotBlank(),
+                    onClick = {
+                        backupScope.launch {
+                            syncStatus = ScheduledBackup.syncNow(context).fold(
+                                onSuccess = { context.getString(R.string.backup_sync_done) },
+                                onFailure = {
+                                    context.getString(
+                                        R.string.backup_sync_failed,
+                                        it.message ?: context.getString(R.string.unknown_error),
+                                    )
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+        }
+
+        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.backup_internal_section)) {
+            val backupActionTitle = stringResource(R.string.backup_action_backup)
+            row(backupActionTitle, "backup", "export", "archive") {
+                SettingsRow(
+                    icon = SfIcons.FileUpload,
+                    title = backupActionTitle,
+                    subtitle = backupStatus ?: stringResource(R.string.backup_action_backup_desc),
+                    onClick = { backupFileLauncher.launch(BackupArchive.suggestedName(context)) },
+                )
+            }
+            val restoreActionTitle = stringResource(R.string.backup_action_restore)
+            row(restoreActionTitle, "restore", "import", "backup") {
                 SettingsRow(
                     icon = SfIcons.FileDownload,
-                    title = importDataTitle,
-                    subtitle = importStatus ?: stringResource(R.string.import_data_subtitle),
-                    onClick = { confirmImport = true },
+                    title = restoreActionTitle,
+                    subtitle = restoreStatus ?: stringResource(R.string.backup_action_restore_desc),
+                    onClick = {
+                        restoreFileLauncher.launch(
+                            arrayOf("application/octet-stream", "application/zip", "application/json", "text/plain", "*/*"),
+                        )
+                    },
+                )
+            }
+            val importM3uTitle = stringResource(R.string.backup_import_m3u)
+            row(importM3uTitle, "m3u", "playlist", "import", "backup") {
+                SettingsRow(
+                    icon = SfIcons.PlaylistPlay,
+                    title = importM3uTitle,
+                    subtitle = playlistImportStatus ?: stringResource(R.string.backup_import_m3u_desc),
+                    onClick = { importM3uLauncher.launch(arrayOf("audio/*")) },
+                )
+            }
+            val importCsvTitle = stringResource(R.string.backup_import_csv)
+            row(importCsvTitle, "csv", "playlist", "import", "backup") {
+                SettingsRow(
+                    icon = SfIcons.AddToPlaylist,
+                    title = importCsvTitle,
+                    subtitle = playlistImportStatus ?: stringResource(R.string.backup_import_csv_desc),
+                    onClick = { importCsvLauncher.launch(PlaylistTransfer.CSV_MIME_TYPES) },
+                )
+            }
+            val exportCsvTitle = stringResource(R.string.backup_export_csv)
+            row(exportCsvTitle, "csv", "playlist", "export", "backup") {
+                SettingsRow(
+                    icon = SfIcons.Share,
+                    title = exportCsvTitle,
+                    subtitle = playlistExportStatus ?: stringResource(R.string.backup_export_csv_desc),
+                    onClick = {
+                        if (LocalPlaylistStore.playlists.value.any { it.songs.isNotEmpty() }) {
+                            showPlaylistPicker = true
+                        } else {
+                            playlistExportStatus = context.getString(R.string.backup_export_none)
+                        }
+                    },
                 )
             }
         }
@@ -2142,26 +2480,263 @@ fun SettingsScreen(
         )
     }
 
-    // Asked before the picker opens rather than after a file is chosen: the
-    // thing being confirmed is that this device's own history is about to be
-    // thrown away, and that is true whichever file gets picked.
-    if (confirmImport) {
+    if (showFrequencyDialog) {
         GlassAlertDialog(
-            onDismissRequest = { confirmImport = false },
-            title = { Text(stringResource(R.string.import_backup_title)) },
+            onDismissRequest = { showFrequencyDialog = false },
+            title = { Text(stringResource(R.string.backup_schedule)) },
             text = {
-                Text(stringResource(R.string.import_backup_warning))
+                Column {
+                    ScheduledBackupFrequency.entries.forEach { frequency ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showFrequencyDialog = false
+                                    if (frequency == ScheduledBackupFrequency.CUSTOM) {
+                                        showCustomDatePicker = true
+                                    } else {
+                                        AppSettings.setScheduledBackupFrequency(frequency)
+                                        ScheduledBackup.reschedule(context)
+                                    }
+                                }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = scheduledFrequencyLabel(frequency),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (frequency == scheduledBackupFrequency) {
+                                Icon(
+                                    imageVector = SfIcons.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmImport = false
-                    importPicker.launch(arrayOf("application/json", "text/plain", "*/*"))
-                }) {
-                    Text(stringResource(R.string.choose_file))
+                TextButton(onClick = { showFrequencyDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showCustomDatePicker) {
+        val todayEpochDay = remember { LocalDate.now().toEpochDay() }
+        val initialEpochDay = scheduledBackupCustomDateEpochDay?.coerceAtLeast(todayEpochDay) ?: todayEpochDay + 1
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = LocalDate
+                .ofEpochDay(initialEpochDay)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli(),
+            selectableDates = remember(todayEpochDay) {
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                        Instant
+                            .ofEpochMilli(utcTimeMillis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toEpochDay() >= todayEpochDay
+                }
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showCustomDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selectedMillis = datePickerState.selectedDateMillis ?: return@TextButton
+                        val epochDay = Instant
+                            .ofEpochMilli(selectedMillis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toEpochDay()
+                        showCustomDatePicker = false
+                        AppSettings.setScheduledBackupCustomDate(epochDay)
+                        ScheduledBackup.reschedule(context)
+                    },
+                    enabled = datePickerState.selectedDateMillis != null,
+                ) {
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmImport = false }) {
+                TextButton(onClick = { showCustomDatePicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        ) {
+            DatePicker(
+                state = datePickerState,
+                title = { Text(stringResource(R.string.backup_custom_date_title)) },
+                showModeToggle = false,
+            )
+        }
+    }
+
+    // Asked after the file is chosen and read: the thing being confirmed is
+    // that this device's own history is about to be replaced by what that
+    // file holds, which the picker alone could not have said.
+    if (showRestoreConfirm) {
+        val source = pendingRestore
+        val info = pendingRestoreInfo
+        if (source != null && info.isValid) {
+            val madeAtLabel = remember(info) {
+                runCatching {
+                    DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+                        .format(Instant.parse(info.madeAt).atZone(ZoneId.systemDefault()))
+                }.getOrNull() ?: info.madeAt.orEmpty()
+            }
+            GlassAlertDialog(
+                onDismissRequest = {
+                    showRestoreConfirm = false
+                    pendingRestore = null
+                },
+                title = { Text(stringResource(R.string.backup_restore_confirm_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.import_backup_warning))
+                        val metaLine = when {
+                            info.legacy -> stringResource(R.string.backup_restore_legacy)
+                            !info.madeAt.isNullOrEmpty() && !info.appVersion.isNullOrEmpty() ->
+                                stringResource(R.string.backup_restore_meta, madeAtLabel, info.appVersion)
+                            else -> null
+                        }
+                        if (metaLine != null) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = metaLine,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showRestoreConfirm = false
+                            pendingRestore = null
+                            backupScope.launch {
+                                restoreStatus = BackupArchive.restore(context, source).fold(
+                                    onSuccess = { restored ->
+                                        context.getString(
+                                            R.string.backup_restored,
+                                            context.countOfMonths(restored.months),
+                                            restored.versionName,
+                                        )
+                                    },
+                                    onFailure = {
+                                        context.getString(
+                                            R.string.backup_restore_failed,
+                                            it.message ?: context.getString(R.string.unknown_error),
+                                        )
+                                    },
+                                )
+                                // A restore rewrites the schedule's own
+                                // settings, so the work on record is re-armed
+                                // from whatever the file left behind.
+                                ScheduledBackup.reschedule(context)
+                            }
+                        },
+                    ) {
+                        Text(stringResource(R.string.backup_action_restore))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showRestoreConfirm = false
+                            pendingRestore = null
+                        },
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                },
+            )
+        }
+    }
+
+    if (showRestoreInvalid) {
+        GlassAlertDialog(
+            onDismissRequest = { showRestoreInvalid = false },
+            title = { Text(stringResource(R.string.backup_restore_failed_title)) },
+            text = { Text(restoreError) },
+            confirmButton = {
+                TextButton(onClick = { showRestoreInvalid = false }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+        )
+    }
+
+    if (showPlaylistPicker) {
+        val playlists by LocalPlaylistStore.playlists.collectAsStateWithLifecycle()
+        GlassAlertDialog(
+            onDismissRequest = { showPlaylistPicker = false },
+            title = { Text(stringResource(R.string.backup_export_picker_title)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    playlists
+                        .filter { it.songs.isNotEmpty() }
+                        .asReversed()
+                        .forEach { playlist ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showPlaylistPicker = false
+                                        pendingExportPlaylist = playlist
+                                        exportCsvLauncher.launch(PlaylistTransfer.suggestedCsvName(playlist.title))
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = playlist.title,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = pluralStringResource(
+                                            R.plurals.backup_playlist_song_count,
+                                            playlist.songs.size,
+                                            playlist.songs.size,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Icon(
+                                    imageVector = SfIcons.Share,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPlaylistPicker = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
@@ -2335,6 +2910,17 @@ private fun Context.countOfMonths(months: Int): String = if (months == 0) {
 } else {
     resources.getQuantityString(R.plurals.listening_month_count, months, months)
 }
+
+/** The word the Backup schedule rows and their dialog say for each frequency. */
+@Composable
+private fun scheduledFrequencyLabel(frequency: ScheduledBackupFrequency): String = stringResource(
+    when (frequency) {
+        ScheduledBackupFrequency.DAILY -> R.string.backup_frequency_daily
+        ScheduledBackupFrequency.WEEKLY -> R.string.backup_frequency_weekly
+        ScheduledBackupFrequency.MONTHLY -> R.string.backup_frequency_monthly
+        ScheduledBackupFrequency.CUSTOM -> R.string.backup_frequency_custom
+    },
+)
 
 @Composable
 internal fun AudioQuality.localizedLabel(): String = stringResource(

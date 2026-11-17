@@ -981,3 +981,102 @@ Stage Summary:
   driven by the app's lyrics offset through the negated bridge with the
   per-view leads gone, and the vendored BitChord strip live at last.
   Compile verification is CI's (never local); the orchestrator commits.
+
+## Task 3-a: Backup and restore ported into the Your data page
+
+Task ID: 3-a
+Agent: Super Z (sub agent, session task-3a)
+
+Task: Port ArchiveTune's Backup and restore page (scheduled auto backup,
+cloud storage sync, internal service with m3u/csv playlist import and CSV
+export) into Neiro's Your data settings page, replacing the old
+Export/Import data rows, with the archive adapted to Neiro's data rather
+than ArchiveTune's SQLite zip.
+
+Work Log:
+- New engine under `app/src/main/java/com/music/bitchord/data/backup/`:
+  - `BackupArchive.kt`: the `.backup` file — a zip of `manifest.json`
+    (app tag `bitchord`, format version, created date, app version),
+    `settings.json` (AppSettings.exportPrefs() through Backup.PrefValue's
+    typed codec, secrets and device-local keys already excluded), and
+    `history.json` (ListeningStats.exportAll()'s buckets). Restore
+    validates the manifest first, then applies settings through
+    AppSettings.importPrefs() and history through ListeningStats.importAll()
+    — the existing import paths, not new ones. A picked file whose first two
+    bytes are not "PK" is one of the old single-file JSON exports and
+    restores through Backup.importFrom() as-is (Validity.legacy, the confirm
+    dialog says so); zip validation answers invalid / corrupted / missing /
+    newer-format with its own string.
+  - `ScheduledBackup.kt`: ScheduledBackupFrequency (DAILY/WEEKLY/MONTHLY/
+    CUSTOM) plus the scheduler, both channels — `scheduled_auto_backup` for
+    the device folder and `scheduled_auto_backup_cloud` for the cloud
+    folder — periodic work at 1/7/30 days with the initial delay landing on
+    the next 02:00 after one period (the reference's nextRunAt), custom as a
+    one-time request on the picked date at 02:00; constraints
+    battery-not-low + storage-not-low; setDirectory/setCloudFolder take the
+    persistable READ|WRITE tree grant and resolve the display name the way
+    ArchiveTune's repository did; syncNow() writes one dated-or-overwrite
+    backup into the Drive folder and stamps cloudSyncLastRunAt;
+    rescheduleAfterRun() advances a custom date by whole months to the next
+    future occurrence and re-arms that one channel only (re-arming periodic
+    work would reset its delay every run).
+  - `ScheduledBackupWorker.kt`: the CoroutineWorker — reads its channel's
+    settings fresh at run time, writes the zip through
+    ScheduledBackup.createDestination (DocumentsContract.createDocument,
+    dated `<app>_yyyyMMdd.backup`, overwrite mode finds the fixed
+    `<app>.backup` child doc and truncates it), stamps the cloud last-run,
+    re-arms; a lost grant fails the run, anything else retries.
+  - `PlaylistTransfer.kt`: readCsvRecords ported verbatim (the
+    PushbackReader state machine, quote handling, CRLF); the CSV header
+    detection (title/artist aliases, artist split on `;` and `|`); the m3u
+    #EXTM3U/#EXTINF parse; imported rows become a LocalPlaylistStore
+    playlist named after the file; exportCsv writes the ArchiveTune column
+    set (Title, Artist, Album, Duration — Duration instead of Media ID,
+    which is a YouTube id Neiro rows don't always have) with the BOM,
+    always-quoted fields and the spreadsheet-formula escape.
+- `AppSettings.kt`: eleven new flows and keys in the house pattern —
+  scheduledBackupEnabled/Frequency/CustomDateEpochDay/DirectoryUri/
+  DirectoryName/OverwriteExisting and cloudSyncEnabled/FolderUri/FolderName/
+  OverwriteExisting/LastRunAt — read in readAll(), written by setters, the
+  frequency enum parsed like the other enum settings. The two folder URIs,
+  their names and the cloud last-run are added to DEVICE_LOCAL (a SAF tree
+  grant means this phone), so a restore keeps this device's folders and
+  never exports them.
+- `SettingsSheet.kt`, Your data page: the old Export/Import data rows, their
+  two launchers, their status vars and the pre-picker confirm dialog are
+  replaced by the ported structure —
+  - "Scheduled auto backup": enable switch (running/paused subtitle),
+    Backup schedule row (frequency value chip, opens the Daily/Weekly/
+    Monthly/Custom dialog; Custom opens a Material3 DatePicker with past
+    dates disabled), Backup directory row (OpenDocumentTree, shows the
+    folder name), Overwrite switch gated on a directory being set.
+  - "Cloud storage sync": the info banner row (the owner's wording about
+    cloud apps and the system picker), Drive folder row, Enable cloud sync
+    switch (paused/running subtitle), the shared Backup schedule row gated
+    on a folder, Overwrite existing Drive backup switch, Sync now row
+    showing "Never synced"/"Last synced …" and running the backup inline.
+  - "Internal service": Backup row (CreateDocument octet-stream,
+    `<app>_yyyyMMddHHmmss.backup`), Restore row (OpenDocument, validate,
+    confirm dialog showing what the file holds, restore, then the schedule
+    re-armed from the restored settings), Import a "m3u" playlists, Import a
+    "csv" playlists, Export playlist as CSV (playlist picker dialog →
+    CreateDocument text/csv).
+  All rows ride SettingsRow/SearchableSettingsGroup with the page's own
+  spacing and search keywords; the frequency dialog, restore dialogs and
+  playlist picker are GlassAlertDialogs; a `scheduledFrequencyLabel`
+  composable maps the enum to the row's value.
+- `strings.xml`: 60 `backup_*` strings plus one plural added
+  `translatable="false"` — the repo's standing way to ship English-first
+  keys (32 existing ones already do) so LocaleStringsTest keeps passing
+  until the localization task translates them; no existing key removed.
+- No dependency added: `androidx.work:work-runtime-ktx:2.10.1` is already
+  declared (PlaylistSync's line), which is the 2.10.x the task asked for.
+  MainActivity untouched — the launchers live in SettingsScreen, where the
+  export/import pickers already lived.
+
+Stage Summary:
+- Your data is now the Backup and restore page: one schedule engine behind
+  two folders, an own-format zip archive with legacy JSON restore, and the
+  playlist import/export pair — every row backed by the engine, every
+  setting persisted in AppSettings, every schedule in WorkManager.
+  Compile verification is CI's (never local); the orchestrator commits.
