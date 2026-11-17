@@ -1080,3 +1080,141 @@ Stage Summary:
   playlist import/export pair — every row backed by the engine, every
   setting persisted in AppSettings, every schedule in WorkManager.
   Compile verification is CI's (never local); the orchestrator commits.
+
+---
+
+## Task 3-b: Music Together — the full Listen Together port, verified and completed
+
+Task ID: 3-b
+Agent: Super Z (sub agent, session task-3b-continue)
+
+Task: Verify and complete the interrupted port of ArchiveTune's Music
+Together feature (embedded LAN server, online relay host, guest socket,
+room-state protocol with chat) into Neiro, keeping the old Listen Together
+facade alive for every existing caller, and fix all breakage left in the
+working tree.
+
+Work Log:
+- The port itself (in-flight from the previous agent, verified file by
+  file): `app/.../data/together/` — `TogetherMessages.kt` (the
+  `type`-discriminated sealed protocol: hello/welcome, room state, control
+  and add-track requests, join decisions, heartbeats, host transfer, kick/
+  ban, and the chat pair `ChatSendRequest`/`ChatMessage`),
+  `TogetherModels.kt` (track/participant/room-settings/room-state + the
+  session-state sealed class), `TogetherServer.kt` (the host IS the server —
+  embedded Ktor CIO on 0.0.0.0, `/together` WebSocket, session-key +
+  protocol-version handshake, approval gating, authority/handoff, chat
+  rate-limit 10 per 5s), `TogetherOnlineEndpoint.kt` (relay base resolved
+  from `NeiroKoiverseServer.txt` on the fork's dev branch, 6h cache, falls
+  back to the cached copy), `TogetherOnlineApi.kt` (`/v1/together/sessions`
+  create/resolve/end over the Bearer token, retry on transient IO),
+  `TogetherOnlineHost.kt` (the host's relay WebSocket client, relays guest
+  chat back), `TogetherClient.kt` (the guest socket: ws→wss retry,
+  hello/welcome, events as a shared flow), `TogetherClock.kt` (NTP-style
+  offset over heartbeat pongs), `TogetherPlaybackSync.kt` (the sync rules:
+  500ms broadcast, stale-frame drop, queue rebuild on hash mismatch, seek
+  thresholds paused 150ms / LAN playing 700ms / online playing 1200ms),
+  `TogetherGuestPlaybackPlanner.kt`, `TogetherJson.kt`, `TogetherLink.kt`
+  (deep-link encode/decode + `TogetherDeepLink` pending-join store), and
+  `TogetherEngine.kt` (the single object every surface reads — session and
+  room state flows, host broadcast loop, guest control/add planning with
+  dedupe and fallback-start, focus-loss dropout, host transfer, inactivity
+  room close, the room-events notification channel, chat buffer of 200).
+- The compatibility layer: `data/listentogether/ListenTogether.kt` rewritten
+  as a facade over the engine — the old `State` shape (`code`/`you`/
+  `members`/`playback`/`queue`/`inParty`/`controlsLocked`/`hostOnlyControl`)
+  mapped from the session+room state, `awaitingStart` from Joining*, the
+  nickname backed by `togetherDisplayName` with one-time migration from the
+  legacy party prefs, and `queueAdd` split into the host's local append and
+  a guest's `AddTrackRequest`s. Every external caller verified against it:
+  MainActivity (transport, refusedByHost, party queue context, version
+  swap, onboarding name), PlaybackService (AutoPlay election, queue echo
+  wait, all `inParty` gates), Autoplay/DirectSourceGate/MusicOnlyPlayback/
+  CrossfadeController/TrackAnalyzer/AndroidPlayerHost/SettingsSheet/
+  SourcesScreen, and sharedUi through `PartyUi` — all unchanged, all still
+  compiling against the facade.
+- `playback/PartySync.kt` rewritten as the service-side door set
+  (`start`/`stop`, debounced `onLocalIntent` → guest control/add requests,
+  `onPlayWhenReadyChanged` audio-focus dropout, `onLockedTransport`,
+  `shouldDeferPlay` with the engine's fallback-start, queue-drag flushing,
+  the personal-queue stash on enter/leave) — PlaybackService is untouched
+  and every existing door call matches the new signatures.
+- The UI: `ui/screens/MusicTogetherScreen.kt` replaces ListenTogetherScreen/
+  Sheets/PartyServerEditor — status, current playback, host controls
+  (LAN/online segmented, display name, port, the three permission toggles),
+  join by link or code, participants with approve/reject/transfer/kick/ban,
+  the chat card, the activity log, the welcome dialog, all in the settings
+  page idiom (SettingsGroup/SettingsRow/SegmentedControl/GlassAlertDialog/
+  IosSwitch). MainActivity dispatches it at the Listen Together route, the
+  settings row and MiniPlayer badge ride the facade, and the party-server
+  top-bar status UI is gone with the server it described.
+- Completion fixes made while finishing the port:
+  - `app/build.gradle.kts` + `tv/build.gradle.kts`: added
+    `io.ktor:ktor-server-{core,cio,websockets}:3.5.2` beside the client set
+    (TogetherServer's imports), added the `TOGETHER_BEARER_TOKEN`
+    BuildConfig field in the localProps/env pattern (default "" — an empty
+    token is the "online sessions aren't available in this build" state),
+    and removed the now-dead `LISTEN_TOGETHER_SERVER` val + field (nothing
+    in app/tv Kotlin reads it any more; grep-verified). tv needs both
+    because it compiles the phone app's sources — without them `assembleDev
+    Debug` fails at :tv.
+  - CI (`check.yml`, `android.yml`, `tv.yml`, `diag-pr.yml`): the
+    local.properties seeding swaps `LISTEN_TO_GETHER_SERVER` for
+    `TOGETHER_BEARER_TOKEN`, so the owner sets one repo secret and every
+    pipeline builds online sessions with it.
+  - Manifest (app + tv): the dead `bitchord.kushagrasingh.in/invite/……`
+    autoVerify filter and the `bitchord://party` custom-scheme filter are
+    replaced by the together filter — `bitchord://together` with
+    ACTION_VIEW + DEFAULT + BROWSABLE; `TogetherDeepLink.consume` (already
+    wired in MainActivity's onCreate/onNewIntent) parks the join info and
+    the screen auto-joins with the saved display name.
+  - `NeiroKoiverseServer.txt` at the repo root: one line,
+    `https://archivetune-api.koiiverse.cloud`, matching the raw.githubusercontent
+    URL TogetherOnlineEndpoint fetches (ArchiveTune's own
+    ArchiveTuneKoiverseServer.txt content, verbatim).
+  - `strings.xml`: 105 keys added `translatable="false"` (the repo's
+    standing English-first pattern until the locale task) — the full
+    together_* set ported from ArchiveTune's wording (welcome, status,
+    host/join sections, permissions, participants, moderation confirms,
+    playback pills, chat, activity log, notifications/errors) plus the
+    generic actions the screen shares (start/join_session, session
+    link/code, join/joined/leave/loading/connecting/copied/copy_link/
+    dismiss/invalid link/code/not allowed/network unavailable). No
+    duplicate keys; LocaleStringsTest exempts them.
+  - The facade's state combine rewrote as nested combines (5+2) — the
+    single 7-flow combine relied on an arity kotlinx.coroutines does not
+    offer, which would not have compiled.
+  - TogetherEngine's scope gained a logging CoroutineExceptionHandler:
+    a failed host bind (port already taken) was an uncaught coroutine
+    crash; the reference swallows it silently, this logs it instead.
+  - `TvActivity.kt` consumes `TogetherDeepLink` instead of the deleted
+    `JamInviteLink`; `SignatureApiEditor.kt`'s doc reference to the deleted
+    `PartyServerEditor` rewritten in place.
+  - Deleted the two dead test files that no longer compiled:
+    `JamInviteLinkTest.kt` (tested the deleted invite parser and the old
+    server-URL machinery) and `ListenTogetherIdleHealthTest.kt` (tested
+    the deleted idle health-probe gate). `PartyHostOnlyControlTest`,
+    `PartyAutoplayTest` and `PartyQueueMoveTest` still compile and pass
+    against the facade and the shared party models.
+  - AGENTS.md gained the Music Together invariant (engine shape, facade,
+  doors, token, tv's duplicate deps, cleartext posture, the untouched Go
+  backend).
+- Engine wiring traced end to end (read-the-code verification, no local
+  compile): host LAN Start → server bound on 0.0.0.0:port → 500ms
+  buildRoomState-from-player broadcasts to every guest socket; host online
+  → endpoint fetch → create session (Bearer) → relay ws → same broadcasts;
+  guest → hello/welcome → room states → hash-rebuild/seek under the
+  thresholds, local intents out as ControlRequest/AddTrackRequest when
+  the room's permissions allow; chat → ChatSendRequest relayed by both the
+  LAN server and the online host → ChatMessage broadcast → the chat card.
+
+Stage Summary:
+- Listen Together is now Music Together: one protocol package with chat,
+  an embedded Ktor server, an online relay stack, the compatibility
+  facade, the PartySync door rewrite, the settings-page screen, the
+  `bitchord://together` deep link, the together settings keys, and every
+  string the surface references. All deleted-symbol references across
+  app/tv are resolved, the two module builds carry the server stack and
+  the token, and the relay endpoint file the engine fetches exists at the
+  exact URL it reads. Compile verification is CI's (never local); the
+  orchestrator commits.

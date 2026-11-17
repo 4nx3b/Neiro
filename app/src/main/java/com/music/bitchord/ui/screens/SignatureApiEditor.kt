@@ -19,8 +19,9 @@ import kotlinx.coroutines.launch
  * The artist-signature API's address, on the card an addon is added with.
  *
  * **Mounted from [MainActivity][com.music.bitchord.MainActivity], not from the
- * settings sheet, and it has to stay that way** — see [PartyServerEditor] for why
- * a haze card cannot live inside a screen.
+ * settings sheet, and it has to stay that way.** The card underneath is a haze
+ * effect reading the app's own backdrop layer, and it covers the window with a
+ * scrim — neither of which a composable inside the settings sheet can do.
  *
  * Saves only once `GET /v1/health` answers 2xx; saving a blank address forgets
  * the provider.

@@ -1306,6 +1306,112 @@
     <string name="listen_together_status_all_offline">Both custom server and default server are offline</string>
     <string name="listen_together_top_bar_fallback">Fallback · %1$s</string>
 
+    <string name="together_lan" translatable="false">LAN</string>
+    <string name="together_online" translatable="false">Online</string>
+    <string name="together_host_section" translatable="false">Host</string>
+    <string name="together_join_section" translatable="false">Join</string>
+    <string name="together_status" translatable="false">Status</string>
+    <string name="together_idle" translatable="false">Not in a session</string>
+    <string name="together_hosting" translatable="false">Hosting session</string>
+    <string name="together_joining" translatable="false">Joining session</string>
+    <string name="together_connected" translatable="false">Connected</string>
+    <string name="together_error_state" translatable="false">Error</string>
+    <string name="together_waiting_approval" translatable="false">Waiting for approval</string>
+    <string name="together_display_name" translatable="false">Display name</string>
+    <string name="together_display_name_placeholder" translatable="false">Your name</string>
+    <string name="together_port" translatable="false">Session port</string>
+    <string name="together_allow_guests_add" translatable="false">Guests can add songs</string>
+    <string name="together_allow_guests_control" translatable="false">Guests can control playback</string>
+    <string name="together_require_approval" translatable="false">Require approval</string>
+    <string name="together_participants" translatable="false">Participants</string>
+    <string name="together_connected_count" translatable="false">%1$d connected</string>
+    <string name="together_participants_empty" translatable="false">No participants yet</string>
+    <string name="together_participants_empty_body" translatable="false">People who join this session will appear here.</string>
+    <string name="together_role_host" translatable="false">Host</string>
+    <string name="together_role_guest" translatable="false">Guest</string>
+    <string name="together_pending_approval" translatable="false">Pending approval</string>
+    <string name="together_unknown_participant" translatable="false">Someone</string>
+    <string name="together_approve" translatable="false">Approve</string>
+    <string name="together_reject" translatable="false">Reject</string>
+    <string name="together_kick" translatable="false">Kick</string>
+    <string name="together_ban" translatable="false">Ban</string>
+    <string name="together_transfer_host" translatable="false">Transfer host</string>
+    <string name="together_kick_confirm" translatable="false">Kick %1$s?</string>
+    <string name="together_ban_confirm" translatable="false">Ban %1$s?</string>
+    <string name="together_transfer_host_confirm" translatable="false">Transfer host ownership to %1$s?</string>
+    <string name="together_current_playback" translatable="false">Current playback</string>
+    <string name="together_playback_empty" translatable="false">Nothing playing</string>
+    <string name="together_playback_playing" translatable="false">Playing</string>
+    <string name="together_playback_paused" translatable="false">Paused</string>
+    <string name="together_queue_count" translatable="false">%1$d in queue</string>
+    <string name="together_queue_position" translatable="false">%1$d of %2$d</string>
+    <string name="together_shuffle_on" translatable="false">Shuffle on</string>
+    <string name="together_shuffle_off" translatable="false">Shuffle off</string>
+    <string name="together_repeat_mode" translatable="false">Repeat %1$d</string>
+    <string name="together_join_link" translatable="false">Link</string>
+    <string name="together_join_code" translatable="false">Code</string>
+    <string name="together_join_link_hint" translatable="false">Paste a join link or code</string>
+    <string name="together_join_code_hint" translatable="false">Enter a session code</string>
+    <string name="together_online_not_configured" translatable="false">Online sessions aren\'t configured</string>
+    <string name="together_token_missing" translatable="false">Online sessions aren\'t available in this build</string>
+    <string name="together_server_unreachable" translatable="false">Server unreachable</string>
+    <string name="together_connection_timed_out" translatable="false">Connection timed out</string>
+    <string name="together_session_not_found" translatable="false">Session not found</string>
+    <string name="together_server_error" translatable="false">Server error, please try again later</string>
+    <string name="together_invalid_ws_url" translatable="false">Invalid server websocket URL</string>
+    <string name="together_host_left_session" translatable="false">Host left the session</string>
+    <string name="together_song_change_failed" translatable="false">Song change not applied. Please try again.</string>
+    <string name="together_participant_joined_notification" translatable="false">%1$s joined the room</string>
+    <string name="together_participant_left_notification" translatable="false">%1$s left the room</string>
+    <string name="together_room_closed_inactivity_notification" translatable="false">Room closed because no one joined for 10 minutes</string>
+    <string name="together_room_events_channel_name" translatable="false">Music Together</string>
+    <string name="together_room_events_channel_description" translatable="false">People joining and leaving your session</string>
+    <string name="together_chat" translatable="false">Chat</string>
+    <string name="together_chat_empty" translatable="false">No messages yet</string>
+    <string name="together_chat_empty_body" translatable="false">Messages sent in this session appear here.</string>
+    <string name="together_chat_input_hint" translatable="false">Message the room</string>
+    <string name="together_chat_send" translatable="false">Send</string>
+    <string name="together_activity_log" translatable="false">Activity log</string>
+    <string name="together_activity_log_subtitle" translatable="false">Session and playback events</string>
+    <string name="together_activity_log_empty" translatable="false">No activity yet</string>
+    <string name="together_activity_log_empty_body" translatable="false">Session events will appear here as they happen.</string>
+    <string name="together_activity_session_started" translatable="false">Session started</string>
+    <string name="together_activity_joining_session" translatable="false">Joining session</string>
+    <string name="together_activity_join_requested" translatable="false">%1$s requested to join</string>
+    <string name="together_activity_host_transferred" translatable="false">Host transferred to %1$s</string>
+    <string name="together_activity_playback_paused" translatable="false">%1$s paused playback</string>
+    <string name="together_activity_playback_resumed" translatable="false">%1$s resumed playback</string>
+    <string name="together_activity_song_changed" translatable="false">%1$s changed the song to %2$s</string>
+    <string name="together_activity_song_skipped" translatable="false">%1$s skipped to %2$s</string>
+    <string name="together_activity_queue_updated" translatable="false">%1$s changed the queue</string>
+    <string name="together_activity_playback_state_changed" translatable="false">%1$s changed playback state</string>
+    <string name="together_activity_error" translatable="false">Error: %1$s</string>
+    <string name="together_dont_show_again" translatable="false">Don\'t show this again</string>
+    <string name="together_welcome_title" translatable="false">Welcome to Neiro Music Together</string>
+    <string name="together_welcome_body" translatable="false">Music Together lets multiple devices share a live session with a synced queue and playback.</string>
+    <string name="together_welcome_host_title" translatable="false">Host a session</string>
+    <string name="together_welcome_host_body" translatable="false">Tap Start session, then share the session link. Keep Neiro open in the background while hosting.</string>
+    <string name="together_welcome_join_title" translatable="false">Join from another device</string>
+    <string name="together_welcome_join_body" translatable="false">Open the shared link, or enter code and tap Join. Your queue and playback will follow the host.</string>
+    <string name="together_welcome_permissions_title" translatable="false">Permissions and safety</string>
+    <string name="together_welcome_permissions_body" translatable="false">Hosts can decide whether guests can add songs, control playback, or require approval to join.</string>
+    <string name="start_session" translatable="false">Start session</string>
+    <string name="join_session" translatable="false">Join session</string>
+    <string name="session_link" translatable="false">Session link</string>
+    <string name="session_code" translatable="false">Session code</string>
+    <string name="leave" translatable="false">Leave</string>
+    <string name="join" translatable="false">Join</string>
+    <string name="joined" translatable="false">Joined</string>
+    <string name="loading" translatable="false">Loading</string>
+    <string name="connecting" translatable="false">Connecting</string>
+    <string name="copied" translatable="false">Copied to clipboard</string>
+    <string name="copy_link" translatable="false">Copy link</string>
+    <string name="dismiss" translatable="false">Dismiss</string>
+    <string name="invalid_link" translatable="false">Invalid link</string>
+    <string name="invalid_code" translatable="false">Invalid code</string>
+    <string name="not_allowed" translatable="false">Not allowed</string>
+    <string name="network_unavailable" translatable="false">Network unavailable</string>
+
     <string name="vietnamese">Vietnamese</string>
 
     <string name="miscellaneous_footer">When enabled, closing the app from the recent apps screen will also stop music playback.</string>
