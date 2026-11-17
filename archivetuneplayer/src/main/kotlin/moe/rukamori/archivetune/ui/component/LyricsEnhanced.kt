@@ -145,7 +145,7 @@ import moe.rukamori.archivetune.db.entities.LyricsEntity.Companion.LYRICS_NOT_FO
 import moe.rukamori.archivetune.lyrics.AiLyricsRomanization
 import moe.rukamori.archivetune.lyrics.LyricsEntry
 import moe.rukamori.archivetune.lyrics.LyricsRomanizationPreferences
-import moe.rukamori.archivetune.lyrics.LyricsUtils.hasTrueWordSync
+import moe.rukamori.archivetune.lyrics.LyricsUtils.hasWordSyncedLyrics
 import moe.rukamori.archivetune.lyrics.LyricsUtils.isLineSyncedLrc
 import moe.rukamori.archivetune.lyrics.LyricsUtils.isTtml
 import moe.rukamori.archivetune.lyrics.LyricsUtils.parseLyrics
@@ -330,7 +330,7 @@ fun LyricsEnhanced(
         }
 
     val isSynced = remember(lyrics) { lyrics != null && (isLineSyncedLrc(lyrics!!) || isTtml(lyrics!!)) }
-    val isTtmlFormat = remember(lyrics) { lyrics != null && isTtml(lyrics!!) }
+    val isWordSyncedFormat = remember(lyrics) { lyrics != null && hasWordSyncedLyrics(lyrics!!) }
 
     var parsedEntries by remember(lyrics) { mutableStateOf<List<LyricsEntry>?>(null) }
     LaunchedEffect(lyrics) {
@@ -388,7 +388,7 @@ fun LyricsEnhanced(
         stringResource(R.string.written_by, composerWritersRaw)
             .takeIf { composerWritersRaw.isNotBlank() }
 
-    var karaokeBuild by remember(lyrics, isTtmlFormat) {
+    var karaokeBuild by remember(lyrics, isWordSyncedFormat) {
         mutableStateOf(KaraokeBuild(SyncedLyrics(emptyList()), emptyMap(), generation = 0))
     }
     val syncedLyrics = karaokeBuild.lyrics
@@ -433,6 +433,7 @@ fun LyricsEnhanced(
                     lyrics =
                         buildSyncedLyrics(
                             entries = lyricsEntries,
+                            isWordSynced = isWordSyncedFormat,
                             romanizationMap = romanization,
                             providerHeader = lyricsProviderLabel,
                             composerFooter = composerFooterLabel,
@@ -512,7 +513,7 @@ fun LyricsEnhanced(
         }
     }
 
-    val leadMs = if (isTtmlFormat) TTML_LEAD_MS else LRC_LEAD_MS
+    val leadMs = if (isWordSyncedFormat) TTML_LEAD_MS else LRC_LEAD_MS
 
     val latestSliderPositionProvider = rememberUpdatedState(sliderPositionProvider)
     val latestLyricsSyncOffset = rememberUpdatedState(lyricsSyncOffset)
@@ -1686,6 +1687,7 @@ private fun distributePhonetics(
 
 private fun buildSyncedLyrics(
     entries: List<LyricsEntry>,
+    isWordSynced: Boolean,
     romanizationMap: Map<Int, List<String?>>,
     providerHeader: String?,
     composerFooter: String? = null,
@@ -1710,7 +1712,7 @@ private fun buildSyncedLyrics(
         if (entry.isInstrumental) return@forEachIndexed
         if (entry.text.isBlank() && entry.words.isNullOrEmpty()) return@forEachIndexed
 
-        if (entry.words != null && hasTrueWordSync(entry)) {
+        if (isWordSynced && entry.words != null) {
             val translation = providedTranslationTextForEntry(entry)
             val mainWords = entry.words!!.filter { !it.isBackground }
             val bgWords = entry.words!!.filter { it.isBackground }
