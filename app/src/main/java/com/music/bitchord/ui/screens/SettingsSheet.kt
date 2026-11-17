@@ -162,6 +162,7 @@ import com.music.bitchord.ui.performance.supportedPerformanceRefreshRates
 import com.music.bitchord.data.model.Account
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.NerdStats
+import com.music.bitchord.data.NetPolicy
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
@@ -186,6 +187,7 @@ import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -208,6 +210,8 @@ fun SettingsScreen(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     onAccountScrobbling: () -> Unit,
+    onIntegration: () -> Unit,
+    onInternet: () -> Unit,
     onEqualizer: () -> Unit,
     onOpenReplay: () -> Unit,
     onLyricsSources: () -> Unit,
@@ -496,11 +500,8 @@ fun SettingsScreen(
             )
 
             SearchableSettingsGroup(search) {
-                val accountTitle = stringResource(R.string.account_integrations)
-                // What the row opens is the scrobbling screen, so the services it
-                // signs into are worth typing at this field even though none of
-                // them is named on the row itself.
-                row(accountTitle, "scrobbling", "last.fm", "listenbrainz") {
+                val accountTitle = stringResource(R.string.account)
+                row(accountTitle, "account", "profile") {
                     val avatarUrl = account?.thumbnailUrl?.takeIf { signedIn }
                     SettingsRow(
                         icon = SfIcons.Person,
@@ -518,6 +519,40 @@ fun SettingsScreen(
                         subtitle = account?.email?.takeIf { it.isNotBlank() }
                             ?: stringResource(if (signedIn) R.string.signed_in else R.string.not_signed_in),
                         onClick = onAccountScrobbling,
+                    )
+                }
+                // The services the app talks to, gathered on the page ArchiveTune
+                // gathers them on — Discord, the music sources, Spotify and the
+                // scrobblers. The services it signs into are worth typing at this
+                // field even though none of them is named on the row itself.
+                val integrationTitle = stringResource(R.string.integration)
+                row(
+                    integrationTitle,
+                    "integration", "scrobbling", "last.fm", "listenbrainz", "discord",
+                    "spotify", "tidal", "deezer", "qobuz", "soundcloud", "libre.fm",
+                ) {
+                    SettingsRow(
+                        icon = SfIcons.Extension,
+                        title = integrationTitle,
+                        subtitle = stringResource(R.string.settings_integration_subtitle),
+                        onClick = onIntegration,
+                    )
+                }
+                // Ported from ArchiveTune's Internet page: the region YouTube Music
+                // requests pin themselves to, DNS over HTTPS, and a proxy the whole
+                // shared client routes through — a page rather than rows, because
+                // each of those is a group of its own once it is open.
+                val internetTitle = stringResource(R.string.internet)
+                row(
+                    internetTitle,
+                    "internet", "network", "proxy", "vpn", "socks", "dns", "doh",
+                    "region", "country", "geo", "spoof", "tor",
+                ) {
+                    SettingsRow(
+                        icon = SfIcons.Wifi,
+                        title = internetTitle,
+                        subtitle = stringResource(R.string.settings_internet_subtitle),
+                        onClick = onInternet,
                     )
                 }
                 // Sits with the account rather than with Playback: a party is up to
@@ -3324,6 +3359,8 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
     BEHAVIOR_PERFORMANCE(R.string.performance),
     /** The player's own design — the whole layout of the now-playing screen. */
     PLAYER_DESIGN(R.string.player_design_style),
+    /** The country YouTube Music requests pin themselves to — the Internet page's picker. */
+    YT_MUSIC_REGION(R.string.youtube_music_region),
 }
 
 /** The main page's list of categories: a glyph and a name each, and a chevron into it. */
@@ -3477,6 +3514,37 @@ fun SettingsChoicePage(
             }
 
             SettingsChoiceKind.AOD -> AodSettingsPage()
+
+            // The Internet page's region picker — a page rather than upstream's
+            // dialog, because thirty-six countries is a list to scroll, not an
+            // alert to fit. A pick restarts the app: the visitor data and every
+            // cached response belong to the region they were minted in.
+            SettingsChoiceKind.YT_MUSIC_REGION -> {
+                val selected by AppSettings.ytMusicRegion.collectAsStateWithLifecycle()
+                val context = LocalContext.current
+                val scope = rememberCoroutineScope()
+                ChoiceGroup(
+                    options = listOf(NetPolicy.SYSTEM_DEFAULT) + YT_MUSIC_REGIONS.keys.toList(),
+                    selected = selected,
+                    label = { code ->
+                        if (code == NetPolicy.SYSTEM_DEFAULT) {
+                            stringResource(R.string.system_default)
+                        } else {
+                            YT_MUSIC_REGIONS[code] ?: code
+                        }
+                    },
+                    footer = stringResource(R.string.youtube_music_region_desc),
+                ) { code ->
+                    AppSettings.setYtMusicRegion(code)
+                    onChosen()
+                    scope.launch {
+                        // Long enough for the pick to land and the page to settle
+                        // under the toast that says why the app is about to go.
+                        delay(400)
+                        restartForRegionChange(context)
+                    }
+                }
+            }
 
             SettingsChoiceKind.NAVIGATION_BAR -> NavigationBarSettingsPage()
 
