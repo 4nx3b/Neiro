@@ -1176,16 +1176,6 @@ private fun SourceRow(
     }
 }
 
-@Composable
-private fun AudioQuality.localizedLabel(): String = stringResource(
-    when (this) {
-        AudioQuality.LOW -> R.string.low
-        AudioQuality.MEDIUM -> R.string.medium
-        AudioQuality.HIGH -> R.string.high
-        AudioQuality.LOSSLESS -> R.string.lossless
-    },
-)
-
 /** The second line of a row: what this source is, or what is wrong with it. */
 @Composable
 private fun SourceConfig.statusLine(health: SourceHealth?): String = when {

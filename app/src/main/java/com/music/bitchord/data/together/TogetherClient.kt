@@ -41,11 +41,11 @@ sealed interface TogetherClientEvent {
     ) : TogetherClientEvent
 
     data class JoinDecision(
-        val decision: JoinDecision,
+        val decision: com.music.bitchord.data.together.JoinDecision,
     ) : TogetherClientEvent
 
     data class HostTransferred(
-        val transfer: HostTransferred,
+        val transfer: com.music.bitchord.data.together.HostTransferred,
     ) : TogetherClientEvent
 
     data class ControlRequested(
@@ -71,7 +71,7 @@ sealed interface TogetherClientEvent {
     ) : TogetherClientEvent
 
     data class HeartbeatPong(
-        val pong: HeartbeatPong,
+        val pong: com.music.bitchord.data.together.HeartbeatPong,
         val receivedAtElapsedRealtimeMs: Long,
     ) : TogetherClientEvent
 

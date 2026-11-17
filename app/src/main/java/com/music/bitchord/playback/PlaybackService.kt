@@ -3615,7 +3615,7 @@ class PlaybackService : MediaLibraryService() {
         // it is about the like, not about which surface drew it. The track the
         // notification names is the one playing, which [toSong] answers.
         if (target == LikeStatus.LIKE) {
-            exoPlayer.currentMediaItem?.toSong()?.let { song ->
+            player?.currentMediaItem?.toSong()?.let { song ->
                 Downloads.autoDownloadOnLike(this, song, true)
             }
         }

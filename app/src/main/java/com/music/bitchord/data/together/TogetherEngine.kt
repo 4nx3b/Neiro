@@ -1022,7 +1022,8 @@ object TogetherEngine {
                         )
                     _roomState.value = initial
                     lastAppliedSentAtElapsedMs = 0L
-                    startHeartbeat(sessionId)
+                    val guestClient = client ?: return
+                    startHeartbeat(sessionId, guestClient)
                 }
             }
 

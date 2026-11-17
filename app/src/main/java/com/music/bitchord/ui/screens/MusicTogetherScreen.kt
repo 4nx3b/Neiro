@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Logout
@@ -156,7 +157,7 @@ fun MusicTogetherScreen(
             is TogetherSessionState.HostingOnline,
             -> true
 
-            is TogetherSessionState.Joined -> sessionState.role is TogetherRole.Host
+            is TogetherSessionState.Joined -> (sessionState as TogetherSessionState.Joined).role is TogetherRole.Host
             else -> false
         }
     val isJoinedAsGuest = sessionState is TogetherSessionState.Joined &&
@@ -168,8 +169,8 @@ fun MusicTogetherScreen(
                 ?.isPending == true
     val isCreatingSessionLoading =
         when (sessionState) {
-            is TogetherSessionState.Hosting -> sessionState.roomState == null
-            is TogetherSessionState.HostingOnline -> sessionState.roomState == null
+            is TogetherSessionState.Hosting -> (sessionState as TogetherSessionState.Hosting).roomState == null
+            is TogetherSessionState.HostingOnline -> (sessionState as TogetherSessionState.HostingOnline).roomState == null
             else -> false
         }
     val isJoining =
@@ -225,8 +226,8 @@ fun MusicTogetherScreen(
 
     val sessionShare: Pair<Int, String>? =
         when (sessionState) {
-            is TogetherSessionState.Hosting -> R.string.session_link to sessionState.joinLink
-            is TogetherSessionState.HostingOnline -> R.string.session_code to sessionState.code
+            is TogetherSessionState.Hosting -> R.string.session_link to (sessionState as TogetherSessionState.Hosting).joinLink
+            is TogetherSessionState.HostingOnline -> R.string.session_code to (sessionState as TogetherSessionState.HostingOnline).code
             else -> null
         }
 
@@ -236,7 +237,7 @@ fun MusicTogetherScreen(
             is TogetherSessionState.HostingOnline,
             -> TogetherEngine.HOST_PARTICIPANT_ID
 
-            is TogetherSessionState.Joined -> sessionState.selfParticipantId
+            is TogetherSessionState.Joined -> (sessionState as TogetherSessionState.Joined).selfParticipantId
             else -> null
         }
     val onlineRoom = sessionState is TogetherSessionState.HostingOnline || TogetherEngine.onlineRoom

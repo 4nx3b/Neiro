@@ -7,6 +7,7 @@ import com.music.bitchord.data.together.TogetherEngine
 import com.music.bitchord.data.together.TogetherRole
 import com.music.bitchord.data.together.TogetherRoomState
 import com.music.bitchord.data.together.TogetherSessionState
+import com.music.bitchord.data.together.isConnectedToSession
 import com.music.bitchord.data.together.sessionIdOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

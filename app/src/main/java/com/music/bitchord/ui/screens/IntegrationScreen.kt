@@ -74,7 +74,7 @@ fun IntegrationScreen(
             footer = stringResource(R.string.rich_presence_footer),
         ) {
             SettingsRow(
-                icon = androidx.compose.ui.graphics.vector.ImageVector.vectorResource(R.drawable.ic_discord),
+                icon = androidx.compose.ui.res.vectorResource(R.drawable.ic_discord),
                 title = "Discord",
                 subtitle = when {
                     discordToken.isEmpty() -> stringResource(R.string.tap_to_connect)

@@ -38,7 +38,7 @@ object ExternalDownloader {
             ?: return LaunchResult.NOT_CONFIGURED
         val url = watchUrlOf(song) ?: return LaunchResult.NOT_CONFIGURED
         val uri = Uri.parse(url)
-        val intents = listOf(
+        val intents = listOfNotNull(
             Intent(Intent.ACTION_VIEW, uri).apply {
                 setPackage(packageName)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

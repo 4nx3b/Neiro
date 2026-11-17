@@ -1604,3 +1604,52 @@ Stage Summary:
   satisfied across all seventeen offered languages (0 missing keys per
   locale, 1674 base keys). No commit was made; the work sits in the
   working tree for the owner's review.
+
+## Task 6: the first CI round — the port's compile fixes
+
+Task ID: 6
+Agent: Super Z (orchestrator, session task-6)
+
+Task: The first Check run after the port (7d3a38c) failed
+:app:compileDevDebugKotlin with 35 resolution/type errors; fix every one
+without local compilation, per Rule 1.
+
+Work Log:
+- TogetherClient's event wrappers shadowed their own wire types — the
+  three nested classes named exactly like the protocol messages
+  (JoinDecision, HostTransferred, HeartbeatPong) declared their payloads
+  as their own type. Their parameter types are now fully qualified to
+  the wire classes, which fixes both the client's emissions and every
+  engine read off them (participantId, sessionId, approved, the pong
+  clock fields).
+- TogetherEngine's Welcome branch called startHeartbeat(sessionId)
+  against a two-parameter signature; the guest client is now resolved
+  from the engine's own reference first.
+- The isConnectedToSession extension needed imports in the facade
+  (ListenTogether) and PartySync — both same-package-different-module
+  callers got them; the cascade of inference errors below those two
+  lines went with the missing imports.
+- CanvasCache.sizeBytes() asked SimpleCache for a cacheSize Kotlin
+  property media3 1.11 does not expose; it now sums cached spans per
+  key exactly the way AudioCache's own accounting does.
+- ExternalDownloader built a List<Intent> with a nullable
+  getLaunchIntentForPackage element; listOfNotNull now carries it.
+- PlaybackService's notification favorite referenced an exoPlayer that
+  exists only inside a listener method two thousand lines up; the
+  service's own player property answers it, the same call
+  onIsPlayingChanged already makes.
+- IntegrationScreen's Discord row called vectorResource as a member
+  of ImageVector; it is a top-level androidx.compose.ui.res function.
+- MusicTogetherScreen: the Icons accessor object was unimported while
+  its icon extensions were, and six when-branches relied on smart
+  casts of the delegated sessionState property — explicit casts now,
+  matching the casts the same file already used elsewhere.
+- SourcesScreen carried a private AudioQuality.localizedLabel()
+  that the reorganization's internal twin in SettingsSheet made a
+  conflicting overload; the private duplicate is gone and both
+  callers resolve to the internal one.
+
+Stage Summary:
+- Every error the run listed is addressed by name; brace balance on
+  all touched files is byte-identical to the pushed tree. The next
+  push runs the loop again.

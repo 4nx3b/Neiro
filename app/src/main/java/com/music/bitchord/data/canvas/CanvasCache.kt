@@ -87,7 +87,12 @@ object CanvasCache {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
     /** How much of the disk the clips are holding right now, in bytes. */
-    fun sizeBytes(): Long = cache.cacheSize
+    fun sizeBytes(): Long =
+        cache.keys.sumOf { key ->
+            runCatching {
+                cache.getCachedSpans(key).filter { it.isCached && it.file?.exists() == true }.sumOf { it.length }
+            }.getOrDefault(0L)
+        }
 
     /** Drops every cached clip. The listener asked; no grace period. */
     fun clear(onComplete: () -> Unit = {}) {
