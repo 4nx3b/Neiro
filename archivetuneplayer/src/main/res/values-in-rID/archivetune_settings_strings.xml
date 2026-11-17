@@ -6,7 +6,6 @@
     <string name="lyrics_line_blur">Blur baris lirik</string>
     <string name="manage_playlist_tags">Tag Playlist</string>
     <string name="manage_playlist_tags_desc">Buat dan kelola tag untuk mengatur playlist</string>
-    <string name="hide_player_thumbnail_desc">Ganti sampul album dengan logo aplikasi di pemutar</string>
     <string name="crop_thumbnail_to_square">Pangkas thumbnail menjadi 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Tampilkan thumbnail YouTube dalam format persegi, bukan 16:9</string>
     <string name="show_home_category_chips">Tampilkan chip kategori beranda</string>
@@ -19,17 +18,11 @@
     <string name="follow_theme">Ikuti tema</string>
     <string name="gradient">Gradien</string>
     <string name="player_design_style">Gaya desain pemutar</string>
-    <string name="player_design_v4">Sinematik</string>
-    <string name="player_design_v5">Mungil</string>
-    <string name="player_design_v7">Immersive</string>
     <string name="player_design_v9">Material</string>
     <string name="player_background_blur">Blur</string>
     <string name="coloring">Warnai</string>
     <string name="blur_gradient">Blur Gradien</string>
     <string name="glow">Glow</string>
-    <string name="player_buttons_style">Warna tombol pemutar</string>
-    <string name="default_style">Bawaan</string>
-    <string name="secondary_color_style">Sekunder</string>
     <string name="enable_swipe_thumbnail">Aktifkan gesek untuk mengubah lagu</string>
     <string name="swipe_song_to_add">Gesek lagu ke kiri untuk menambahkannya ke antrean atau ke kanan untuk memutarnya berikutnya</string>
     <string name="lyrics_click_change">Ubah lirik saat diklik</string>
@@ -148,11 +141,9 @@
     <string name="dark_theme">Tema gelap</string>
     <string name="dark_theme_on">Nyala</string>
     <string name="dark_theme_off">Mati</string>
-    <string name="corner_radius">Radius sudut: %1$d</string>
     <string name="adjust_radius">Sesuaikan radius sudut</string>
     <string name="cancel_button">Batalkan</string>
     <string name="ok_button">Oke</string>
-    <string name="custom_radius">Sesuaikan radius sudut thumbnail</string>
     <string name="custom">Kustom</string>
     <string name="customized_background">Latar belakang yang disesuaikan</string>
     <string name="customize_background_title">Sesuaikan latar belakang</string>
@@ -171,7 +162,6 @@
     <string name="blur_intensity">Intensitas blur</string>
     <string name="blur_intensity_value">%1$d dp</string>
     <string name="player">Pemutar</string>
-    <string name="player_slider_style">Gaya slider pemutar</string>
     <string name="misc">Lain-lain</string>
     <string name="default_open_tab">Tab terbuka bawaan</string>
     <string name="lyrics_animation_style">Gaya animasi lirik</string>

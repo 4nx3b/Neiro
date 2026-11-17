@@ -200,12 +200,8 @@ fun FloatingBottomBar(
     val glassSpec: AnimationSpec<Float> = if (reduceAnimation) snap() else GlassSpring
 
     // ---- The navigation bar settings, ported from ArchiveTune's page ----
-    // Frosted, tint and Liquid Glass are the three surfaces the standard bar
-    // can wear, one at a time; the dimensions are the user's own while the
-    // glass bar's fixed shape is not the one in force.
-    val navBarFrosted by AppSettings.navBarFrosted.collectAsStateWithLifecycle()
-    val navBarTint by AppSettings.navBarTint.collectAsStateWithLifecycle()
-    val liquidGlassNavBar by AppSettings.liquidGlassNavBar.collectAsStateWithLifecycle()
+    // The bar wears the theme's own surface under the Liquid Glass master
+    // switch; the dimensions are the user's own.
     val navBarWidth by AppSettings.navBarWidth.collectAsStateWithLifecycle()
     val navBarHeight by AppSettings.navBarHeight.collectAsStateWithLifecycle()
     val navBarOpacity by AppSettings.navBarOpacity.collectAsStateWithLifecycle()
@@ -216,27 +212,16 @@ fun FloatingBottomBar(
     val navBarShowLabels by AppSettings.navBarShowLabels.collectAsStateWithLifecycle()
     val navBarLabelSpacing by AppSettings.navBarLabelSpacing.collectAsStateWithLifecycle()
 
-    val glassStyle = useGlass && liquidGlassNavBar
-    val dimensionsEnabled = !glassStyle
-    // The glass bar's own geometry is a half-height pill whatever the radius
-    // dial says — and so is the stock one, which is the shape the shipped 28
-    // stands for. Anything else on the dial is drawn as itself.
-    val pillShape = if (abs(navBarCornerRadius - 28f) < 0.01f || !dimensionsEnabled) {
+    // The shipped 28 is drawn as the bar's own half-height pill, which is the
+    // shape the app has always had; anything else on the dial is drawn as itself.
+    val pillShape = if (abs(navBarCornerRadius - 28f) < 0.01f) {
         RoundedCornerShape(percent = 50)
     } else {
         RoundedCornerShape(navBarCornerRadius.dp)
     }
-    // The surface's fill, thinned by the transparency dial — the frosted tint
-    // is blended the same way so the dial breathes through the frost too.
+    // The surface's fill, thinned by the transparency dial.
     val surfaceAlpha = (navBarOpacity * (1f - navBarTransparency)).coerceIn(0.05f, 1f)
     val light = MaterialTheme.colorScheme.surface.luminance() > 0.5f
-    // The tint style's colors, ported from ArchiveTune: a deep tinted dark in
-    // the dark theme, a light pastel in the light one.
-    val tintBase = if (light) {
-        lerp(Color.White, MaterialTheme.colorScheme.primary, 0.26f)
-    } else {
-        lerp(Color.Black, MaterialTheme.colorScheme.primary, 0.30f)
-    }
     val glassGlowStrength by animateFloatAsState(
         targetValue = if (navBarGlassGlow) navBarGlassGlowIntensity else 0f,
         animationSpec = tween(420),
@@ -302,22 +287,15 @@ fun FloatingBottomBar(
             .windowInsetsPadding(floatingBarInsets)
             .padding(horizontal = NAV_BAR_GUTTER)
             .padding(bottom = NAV_BAR_LIFT)
-            .fillMaxWidth((if (dimensionsEnabled) navBarWidth else 1f).coerceIn(0.5f, 1f))
+            .fillMaxWidth(navBarWidth.coerceIn(0.5f, 1f))
             .clip(pillShape)
             .then(
                 when {
                     // "Reduce dynamic blur" keeps the bar's shape and answers
                     // with the plain surface, as every glassy thing here does.
                     reduceDynamicBlur -> Modifier.background(container.copy(alpha = surfaceAlpha))
-                    // The tinted bar: no blur, the accent washed over it.
-                    navBarTint -> Modifier.background(tintBase.copy(alpha = surfaceAlpha))
-                    // The glass bar: the lens itself, at its own fixed geometry.
-                    glassStyle -> Modifier.liquidGlass(shape = pillShape)
-                    // The frosted bar this app has always drawn — the default.
-                    navBarFrosted -> Modifier.optimizedHazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.regular(container.copy(alpha = surfaceAlpha)),
-                    )
+                    // The standard bar's own surface — the theme's, thinned by
+                    // the transparency dial.
                     else -> Modifier.background(container.copy(alpha = surfaceAlpha))
                 },
             )
@@ -402,24 +380,15 @@ fun FloatingBottomBar(
             // Echo's floating nav bar uses for its own liquid glass.
             val glassTint = glassContentColor()
             val adaptiveTint = if (useGlass) glassTint else null
-            val itemVerticalPadding = if (dimensionsEnabled) TAB_VERTICAL_PADDING * navBarHeight else TAB_VERTICAL_PADDING
+            val itemVerticalPadding = TAB_VERTICAL_PADDING * navBarHeight
             tabs.forEachIndexed { index, tab ->
                 BottomBarItem(
                     tab = tab,
                     selected = index == selectedIndex,
                     glassSpec = glassSpec,
-                    selectedTint = if (navBarTint && !useGlass) {
-                        if (light) lerp(MaterialTheme.colorScheme.primary, Color.Black, 0.55f)
-                        else lerp(Color.White, MaterialTheme.colorScheme.primary, 0.45f)
-                    } else {
-                        adaptiveTint
-                    },
-                    unselectedTint = if (navBarTint && !useGlass) {
-                        (if (light) Color.Black else Color.White).copy(alpha = 0.62f)
-                    } else {
-                        adaptiveTint?.copy(alpha = 0.65f)
-                    },
-                    labelSpacing = if (dimensionsEnabled) navBarLabelSpacing.dp else TAB_ICON_LABEL_GAP,
+                    selectedTint = adaptiveTint,
+                    unselectedTint = adaptiveTint?.copy(alpha = 0.65f),
+                    labelSpacing = navBarLabelSpacing.dp,
                     showLabel = navBarShowLabels,
                     verticalPadding = itemVerticalPadding,
                     onClick = { onTabSelected(index) },

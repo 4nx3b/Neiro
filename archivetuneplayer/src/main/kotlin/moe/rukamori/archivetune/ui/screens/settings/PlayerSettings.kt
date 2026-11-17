@@ -133,7 +133,7 @@ import moe.rukamori.archivetune.ui.component.SettingsPageTopBar
 fun PlayerSettings(navController: NavController, scrollTo: String? = null) {
     val playerDesignStyle by rememberEnumPreference(
         key = PlayerDesignStyleKey,
-        defaultValue = PlayerDesignStyle.V4,
+        defaultValue = PlayerDesignStyle.APPLE_MUSIC,
     )
 
     val (persistentQueue, onPersistentQueueChange) =

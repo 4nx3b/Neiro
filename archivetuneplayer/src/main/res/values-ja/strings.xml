@@ -103,11 +103,6 @@
   <string name="repeat_mode_all">キューをリピート</string>
   <string name="queue_continue_playing">再生を続ける</string>
   <string name="queue_autoplaying_similar">似ている音楽を自動再生中</string>
-  <string name="slider_style_standard">標準</string>
-  <string name="slider_style_wavy">波形</string>
-  <string name="slider_style_thick">太め</string>
-  <string name="slider_style_circular">円形</string>
-  <string name="slider_style_simple">シンプル</string>
   <string name="login">ログイン</string>
   <string name="playback_confirmation_required">再生確認が必要</string>
   <string name="playback_requires_youtube_music_confirmation">YouTube Musicで再生を確認してからArchiveTuneに戻ってね。</string>

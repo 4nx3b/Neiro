@@ -150,13 +150,8 @@ import moe.rukamori.archivetune.ui.utils.resize
 import moe.rukamori.archivetune.utils.rememberPreference
 import moe.rukamori.archivetune.viewmodels.LyricsMenuViewModel
 import moe.rukamori.archivetune.LocalAnimationsDisabled
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyle
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyleKey
 import moe.rukamori.archivetune.constants.LyricsMode
 import moe.rukamori.archivetune.constants.LyricsModeKey
-import moe.rukamori.archivetune.constants.PlayerBackgroundStyle
-import moe.rukamori.archivetune.constants.PlayerBackgroundStyleKey
-import moe.rukamori.archivetune.ui.player.StyledLyricsBackground
 import moe.rukamori.archivetune.utils.rememberEnumPreference
 import moe.rukamori.archivetune.ui.component.LyricsEnhanced
 import moe.rukamori.archivetune.ui.component.LyricsV2
@@ -640,14 +635,8 @@ fun BitChordPlayerContent(
     var dismissBandBottom by remember { mutableFloatStateOf(0f) }
     val dismissBandSpace = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
-    val meshColors = rememberArtworkColors(artUrl)
     val artMesh = rememberArtworkMesh(artUrl)
     var meshSeamPx by remember { mutableFloatStateOf(0f) }
-
-    val lyricsBackgroundStylePref by rememberEnumPreference(LyricsBackgroundStyleKey, LyricsBackgroundStyle.DEFAULT)
-    val playerBackgroundStylePref by rememberEnumPreference(PlayerBackgroundStyleKey, PlayerBackgroundStyle.DEFAULT)
-    val resolvedLyricsBackground = lyricsBackgroundStylePref.resolveFor(playerBackgroundStylePref)
-    val lyricsUseStyledBackground = lyricsOpen && resolvedLyricsBackground != LyricsBackgroundStyle.DEFAULT
 
     val onPlayPause = {
         if (player.isPlaying) player.pause() else player.play()
@@ -662,20 +651,12 @@ fun BitChordPlayerContent(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (lyricsUseStyledBackground) {
-            StyledLyricsBackground(
-                style = resolvedLyricsBackground,
-                mediaMetadata = mediaMetadata,
-                gradientColors = meshColors.colors,
-            )
-        } else {
-            val meshSeam = with(density) { meshSeamPx.toDp() }
-            ArtworkMeshBackdrop(
-                mesh = artMesh,
-                seam = meshSeam,
-                reduceAnimation = reduceAnimations,
-            )
-        }
+        val meshSeam = with(density) { meshSeamPx.toDp() }
+        ArtworkMeshBackdrop(
+            mesh = artMesh,
+            seam = meshSeam,
+            reduceAnimation = reduceAnimations,
+        )
 
         if (heroHeight > 0.dp) {
             if (heroMode && (p < 0.5f || heroVisible > 0.001f)) {

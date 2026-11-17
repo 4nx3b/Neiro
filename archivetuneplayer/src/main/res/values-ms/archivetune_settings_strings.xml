@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Tanda senarai main</string>
     <string name="manage_playlist_tags_desc">Cipta dan urus tanda untuk susun senarai main</string>
-    <string name="hide_player_thumbnail_desc">Tukar muka album dengan logo aplikasi pada pemain</string>
     <string name="show_tags_in_library">Tunjuk tanda dalam pustaka</string>
     <string name="album_backdrop">Kabus latar belakang</string>
     <string name="album_backdrop_desc">Tunjukkan karya seni sebagai latar belakang kabur pada pemain</string>

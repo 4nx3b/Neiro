@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Теги плейліста</string>
     <string name="manage_playlist_tags_desc">Створюйте теги та керуйте ними для упорядкування плейлістів</string>
-    <string name="hide_player_thumbnail_desc">Замінити обкладинку альбому на логотип програми в програвачі</string>
     <string name="crop_thumbnail_to_square">Обрізати мініатюри до формату 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Відображати мініатюри YouTube у квадратному форматі замість 16:9</string>
     <string name="show_home_category_chips">Показати вкладки домашньої категорії</string>
@@ -16,15 +15,10 @@
     <string name="follow_theme">Дотримуватися теми</string>
     <string name="gradient">Градієнт</string>
     <string name="player_design_style">Стиль дизайну програвача</string>
-    <string name="player_design_v4">Кінематографічний</string>
-    <string name="player_design_v5">Маленький</string>
     <string name="player_background_blur">Розмиття</string>
     <string name="coloring">Розфарбовування</string>
     <string name="blur_gradient">Розмиття градієнту</string>
     <string name="glow">Сяйво</string>
-    <string name="player_buttons_style">Кольори кнопок програвача</string>
-    <string name="default_style">За замовчуванням</string>
-    <string name="secondary_color_style">Вторинний</string>
     <string name="enable_swipe_thumbnail">Увімкнути перемикання пісень свайпом</string>
     <string name="swipe_song_to_add">Проведіть пальцем по пісні вліво, щоб додати її до черги, або вправо, щоб відтворити її наступною</string>
     <string name="lyrics_click_change">Зміна тексту пісні одним кліком</string>
@@ -37,7 +31,6 @@
     <string name="lyrics_romanize_korean">Транслітерація текстів пісень корейською</string>
     <string name="general">Загальне</string>
     <string name="history_duration">Тривалість історії</string>
-    <string name="player_design_v7">Занурення</string>
     <string name="lyrics_romanize_chinese">Транскрибувати тексти пісень на китайській мові</string>
     <string name="lyrics_romanize_hindi">Транскрибувати тексти пісень на хінді</string>
     <string name="lyrics_romanize_other_languages">Переписати інші тексти пісень, що не містять латинських літер</string>
@@ -149,11 +142,9 @@
     <string name="dark_theme">Темна тема</string>
     <string name="dark_theme_on">Увімкнено</string>
     <string name="dark_theme_off">Вимкнено</string>
-    <string name="corner_radius">Радіус кутів: %1$d</string>
     <string name="adjust_radius">Налаштувати радіус кутів</string>
     <string name="cancel_button">Скасувати</string>
     <string name="ok_button">ОК</string>
-    <string name="custom_radius">Налаштувати радіус кутів мініатюр</string>
     <string name="custom">Власний</string>
     <string name="customized_background">Власний фон</string>
     <string name="customize_background_title">Налаштувати фон</string>
@@ -168,7 +159,6 @@
     <string name="blur_intensity">Інтенсивність розмиття</string>
     <string name="blur_intensity_value">%1$d dp</string>
     <string name="player">Плеєр</string>
-    <string name="player_slider_style">Стиль повзунка плеєра</string>
     <string name="misc">Різне</string>
     <string name="default_open_tab">Стандартна вкладка</string>
     <string name="lyrics_animation_style">Стиль анімації текстів пісень</string>

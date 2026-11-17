@@ -197,6 +197,15 @@ object AudioCache {
     /** How many upcoming tracks are worth gathering for [prefetchQueue] — the caller doesn't need to know why. */
     const val QUEUE_DEPTH = QUEUE_LOOKAHEAD + 1
 
+    /**
+     * The dial that widens the URL warm-up half, ported from ArchiveTune's
+     * preload songs: the queue the caller hands [prefetchQueue] is gathered
+     * to this many tracks, and the light resolve loop warms this many of
+     * their URLs — never the full-byte half, which stays at its tuned one
+     * track whatever the dial says.
+     */
+    fun preloadDepth(): Int = AppSettings.preloadSongsCount.value.coerceAtLeast(0)
+
     private lateinit var cache: SimpleCache
 
     private lateinit var appContext: Context
@@ -1460,7 +1469,10 @@ object AudioCache {
                 }
                 launch {
                     delay(PREFETCH_DELAY_MS)
-                    for (id in videoIds.take(QUEUE_LOOKAHEAD + 1).let { if (cacheBytes) it.drop(1) else it }) {
+                    // The preload-songs dial: as many URL warm-ups as it says,
+                    // the first dropped when the full-byte half is on — that
+                    // track's URL is resolved by the bytes fetch itself.
+                    for (id in videoIds.take(preloadDepth()).let { if (cacheBytes) it.drop(1) else it }) {
                         // A track already pinned to another source has no use
                         // for a YouTube URL: nothing will ask for one, and
                         // minting it spends a client walk to fill a cache entry

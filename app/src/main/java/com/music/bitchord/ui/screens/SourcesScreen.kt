@@ -78,6 +78,10 @@ import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceHealth
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.data.deezer.DeezerAccountStore
+import com.music.bitchord.data.qobuz.QobuzAccountStore
+import com.music.bitchord.data.soundcloud.SoundCloudAccountStore
+import com.music.bitchord.data.tidal.TidalAccountStore
 import com.music.bitchord.ui.components.AddonEditorAlert
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
@@ -125,6 +129,22 @@ fun SourcesScreen(
     onEditSmb: () -> Unit,
     /** Opens the full-window warning before JioSaavn is opted into. */
     onConfirmJioSaavn: () -> Unit,
+    /** Opens the Tidal account sign-in screen, raised for the same reason as [onEditSource]. */
+    onSignInTidal: () -> Unit,
+    /** Opens the sign-out confirmation, raised for the same reason. */
+    onSignOutTidal: () -> Unit,
+    /** Opens the Deezer account sign-in screen, raised for the same reason. */
+    onSignInDeezer: () -> Unit,
+    /** Opens the Deezer sign-out confirmation, raised for the same reason. */
+    onSignOutDeezer: () -> Unit,
+    /** Opens the Qobuz account sign-in screen, raised for the same reason. */
+    onSignInQobuz: () -> Unit,
+    /** Opens the Qobuz sign-out confirmation, raised for the same reason. */
+    onSignOutQobuz: () -> Unit,
+    /** Opens the SoundCloud account sign-in screen, raised for the same reason. */
+    onSignInSoundCloud: () -> Unit,
+    /** Opens the SoundCloud sign-out confirmation, raised for the same reason. */
+    onSignOutSoundCloud: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -150,10 +170,11 @@ fun SourcesScreen(
     // was any good, and the only place a manifest that fails validation gets to
     // say why. Except an addon waiting on a lossless output: it is not to be
     // contacted at all until one is connected, and connecting one re-runs this.
-    val probeKey = configs.filter { it.kind.needsServer }
+    val probeKey = configs.filter { it.kind.needsServer || it.kind == SourceKind.TIDAL }
         .joinToString { "${it.id}@${it.baseUrl}@${it.checkValidLossless}" } + "@${losslessOutput.capable}"
     LaunchedEffect(probeKey) {
-        configs.filter { it.kind.needsServer && it.isComplete && !it.awaitsLosslessOutput }.forEach { config ->
+        configs.filter { (it.kind.needsServer || it.kind == SourceKind.TIDAL) && it.isComplete && !it.awaitsLosslessOutput }
+            .forEach { config ->
             val source = SourceRegistry.instance(config.id) ?: return@forEach
             health[config.id] = withContext(Dispatchers.IO) {
                 runCatching { source.health() }
@@ -300,6 +321,117 @@ fun SourcesScreen(
             RowDivider()
             AddSourceRow(
                 onClick = { onEditSource(SourceConfig(kind = SourceKind.ADDON)) },
+            )
+
+            // Direct Source Stream, moved here from the main settings page:
+            // it qualifies the whole card above rather than being a setting
+            // of its own — the fetch policy every source in the list answers
+            // to, drawn like the animated-cover cellular line (no icon).
+            // Off for the length of a party: holding every fetch until a
+            // track is about to play would leave this phone behind the
+            // others at each sync — see [DirectSourceGate.isActive].
+            val party by com.music.bitchord.data.listentogether.ListenTogether.state.collectAsStateWithLifecycle()
+            val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
+            RowDivider()
+            SettingsSubRow(
+                title = stringResource(R.string.direct_source_stream),
+                checked = directSourceStream && !party.inParty,
+                onCheckedChange = AppSettings::setDirectSourceStream,
+                subtitle = stringResource(R.string.direct_source_stream_in_party).takeIf { party.inParty },
+                enabled = !party.inParty,
+            )
+        }
+
+        // The Tidal account, which the row above streams through. Raised to
+        // the activity like every other full-screen interaction: the sign-in
+        // WebView cannot live inside this haze-sampling subtree.
+        val tidalSession by TidalAccountStore.session.collectAsStateWithLifecycle()
+        val tidalSignedIn = tidalSession != null
+        SettingsGroup(
+            header = stringResource(R.string.tidal_account),
+            footer = stringResource(R.string.tidal_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.Waves,
+                title = stringResource(R.string.tidal_account),
+                subtitle = tidalSession?.username
+                    ?: stringResource(R.string.tidal_not_signed_in),
+                value = when (tidalSession?.flow) {
+                    TidalAccountStore.FLOW_PKCE -> stringResource(R.string.tidal_full_access)
+                    null -> null
+                    else -> stringResource(R.string.tidal_session_limited)
+                },
+                onClick = if (tidalSignedIn) onSignOutTidal else onSignInTidal,
+            )
+        }
+
+        // The Deezer account, one tier down from Tidal for the same reason the
+        // source ranks sit that way — both hold the recording, and Tidal's
+        // FLAC is the copy this fork has shipped the longest.
+        val deezerAccount by DeezerAccountStore.account.collectAsStateWithLifecycle()
+        val deezerSignedIn = deezerAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.deezer_account),
+            footer = stringResource(R.string.deezer_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.MusicNote,
+                title = stringResource(R.string.deezer_account),
+                subtitle = deezerAccount?.name
+                    ?: stringResource(R.string.deezer_not_signed_in),
+                value = if (deezerAccount?.lossless == true) {
+                    stringResource(R.string.deezer_lossless_account)
+                } else {
+                    null
+                },
+                onClick = if (deezerSignedIn) onSignOutDeezer else onSignInDeezer,
+            )
+        }
+
+        // The Qobuz account, same tier as the two above. Its lossless rungs go
+        // past everyone else's — MAX and Hi-Res are 24-bit — which is why its
+        // quality picker is the only one with more than three tiers.
+        val qobuzAccount by QobuzAccountStore.account.collectAsStateWithLifecycle()
+        val qobuzSignedIn = qobuzAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.qobuz_account),
+            footer = stringResource(R.string.qobuz_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.SurroundSound,
+                title = stringResource(R.string.qobuz_account),
+                subtitle = qobuzAccount?.label
+                    ?: stringResource(R.string.qobuz_not_signed_in),
+                value = if (qobuzAccount?.premium == true) {
+                    stringResource(R.string.qobuz_lossless_account)
+                } else {
+                    null
+                },
+                onClick = if (qobuzSignedIn) onSignOutQobuz else onSignInQobuz,
+            )
+        }
+
+        // The SoundCloud account — optional, unlike the three above: search
+        // and streams work anonymously, and the sign-in only widens what the
+        // account can play. Its row sits under the source switch, which is
+        // the opt-in that actually gates whether SoundCloud is asked at all.
+        val soundCloudAccount by SoundCloudAccountStore.account.collectAsStateWithLifecycle()
+        val soundCloudSignedIn = soundCloudAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.soundcloud_account),
+            footer = stringResource(R.string.soundcloud_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.Cloud,
+                title = stringResource(R.string.soundcloud_account),
+                subtitle = soundCloudAccount?.username
+                    ?: stringResource(R.string.soundcloud_not_signed_in),
+                value = if (soundCloudSignedIn) {
+                    stringResource(R.string.soundcloud_signed_in_value)
+                } else {
+                    null
+                },
+                onClick = if (soundCloudSignedIn) onSignOutSoundCloud else onSignInSoundCloud,
             )
         }
 
@@ -817,6 +949,10 @@ private fun SourceRow(
                 SourceKind.ADDON -> SfIcons.Extension
                 SourceKind.CUSTOM_MODULE -> SfIcons.Extension
                 SourceKind.MODULE -> SfIcons.Extension
+                SourceKind.TIDAL -> SfIcons.Waves
+                SourceKind.DEEZER -> SfIcons.MusicNote
+                SourceKind.QOBUZ -> SfIcons.SurroundSound
+                SourceKind.SOUNDCLOUD -> SfIcons.Cloud
                 SourceKind.JIOSAAVN -> SfIcons.GraphicEq // or some other icon
                 SourceKind.YOUTUBE -> SfIcons.PlayCircle
             },
@@ -844,7 +980,7 @@ private fun SourceRow(
             // the label's length, so it adds the same height to every addon;
             // the full label is in the list it opens.
             val quality = config.activeQuality
-            if (config.kind == SourceKind.ADDON && config.isComplete && quality != null) {
+            if ((config.kind == SourceKind.ADDON || config.kind == SourceKind.TIDAL) && config.isComplete && quality != null) {
                 Row(
                     modifier = Modifier
                         .clickable(

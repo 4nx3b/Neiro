@@ -11,7 +11,7 @@ Generated from the ported pages (`archivetuneplayer/.../ui/screens/settings/`) b
   - **local**: it persists in the module's own DataStore and the ported stack reads it there.
   - **dead**: nothing in this port reads it. The switch is stored, but changes nothing.
 
-Totals: 44 bridged, 29 local, 40 dead.
+Totals: 38 bridged, 29 local, 40 dead.
 
 Pure black: Neiro has no pure-black setting, so `ArchiveTunePlayerHost(pureBlack = false)` in MainActivity stays as it is
 until one exists.
@@ -58,7 +58,6 @@ until one exists.
 | `EnableUnisonLyricsKey` | LyricsSettings | — | — | dead |
 | `EnableVideoPlaybackKey` | PlayerSettings | Player | — | local |
 | `EnableYouLyPlusLyricsKey` | LyricsSettings | — | — | dead |
-| `EnhancedLyricsStyleKey` | LyricsSettings | LyricsEnhanced | — | local |
 | `FlamingoBackgroundEffectKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.movingBlur` | **bridge** |
 | `FlamingoHideSlideBarKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.hideSlideBar` | **bridge** |
 | `FlamingoShowVolumeBarKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.!hideVolumeBar` | **bridge** |
@@ -68,7 +67,6 @@ until one exists.
 | `HideLikedSongsCardKey` | AppearanceExtrasSettings | — | — | dead |
 | `HideLocalFilesCardKey` | AppearanceExtrasSettings | — | — | dead |
 | `HideOfflineCardKey` | AppearanceExtrasSettings | — | — | dead |
-| `HidePlayerThumbnailKey` | AppearanceSettings | Thumbnail | `AppSettings.hidePlayerThumbnail` | **bridge** |
 | `HideScrollbarKey` | AppearanceSettings | — | — | dead |
 | `HideStatusBarKey` | AppearanceSettings | — | `AppSettings.hideStatusBar` | **bridge** |
 | `HideTop50CardKey` | AppearanceExtrasSettings | — | — | dead |
@@ -83,7 +81,6 @@ until one exists.
 | `LiquidGlassRefractionHeightKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassRefractionHeight` | **bridge** |
 | `LiquidGlassShadowDepthKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassShadowDepth` | **bridge** |
 | `LiquidGlassTintOpacityKey` | LiquidGlassSettings | LiquidGlass | `AppSettings.liquidGlassTintOpacity` | **bridge** |
-| `LyricsBackgroundStyleKey` | AppearanceSettings | BitChordPlayer, LyricsScreen, SimpMusicFullscreenLyricsSheet | `AppSettings.lyricsBackgroundStyle (CUSTOM → DEFAULT)` | **bridge** |
 | `LyricsClickKey` | LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
 | `LyricsLineBlurKey` | LyricsSettings | LyricsEnhanced, LyricsV2 | `AppSettings.lyricsBlur` | **bridge** |
 | `LyricsLineSpacingKey` | LyricsSettings | LyricsV2 | — | local |
@@ -95,13 +92,11 @@ until one exists.
 | `LyricsRomanizeOtherLanguagesKey` | LyricsRomanisationSettings, LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
 | `LyricsScrollKey` | LyricsSettings | LyricsV2 | — | local |
 | `LyricsTextSizeKey` | LyricsSettings | LyricsEnhanced, LyricsV2 | — | local |
-| `MiniPlayerBackgroundStyleKey` | AppearanceSettings | MiniPlayer | `AppSettings.miniPlayerBackgroundStyle` | **bridge** |
 | `MinimalHomeModeKey` | AppearanceSettings | — | `AppSettings.minimalHomeMode` | **bridge** |
 | `PauseOnDeviceMuteKey` | PlayerSettings | — | — | dead |
 | `PermanentShuffleKey` | PlayerSettings | — | — | dead |
 | `PersistentQueueKey` | PlayerSettings | — | — | dead |
 | `PlayerBackgroundStyleKey` | AppearanceSettings | BitChordPlayer, LyricsEnhanced, LyricsScreen, LyricsV2 … | Neiro's `playerTheme` is a different enum (its own sleeve backgrounds) | local |
-| `PlayerButtonsStyleKey` | AppearanceSettings | Player | `AppSettings.playerButtonsStyle` | **bridge** |
 | `PlayerCustomBlurKey` | CustomizeBackground | LyricsScreen, Player, StyledLyricsBackground | — | local |
 | `PlayerCustomBrightnessKey` | CustomizeBackground | LyricsScreen, Player, StyledLyricsBackground | — | local |
 | `PlayerCustomContrastKey` | CustomizeBackground | LyricsScreen, Player, StyledLyricsBackground | — | local |
@@ -117,14 +112,12 @@ until one exists.
 | `ShowPlayerVolumeBarKey` | AppearanceSettings | Player | `AppSettings.!hideVolumeBar` | **bridge** |
 | `ShowTagsInLibraryKey` | AppearanceExtrasSettings | — | — | dead |
 | `SkipSilenceKey` | PlayerSettings | — | `AppSettings.skipSilence` | **bridge** |
-| `SliderStyleKey` | AppearanceSettings | InlineVideoPlayer, Player | `AppSettings.playerSliderStyle` | **bridge** |
 | `SpotifyCanvasKey` | CanvasSettingsScreen | Player, PlayerMenu | — | local |
 | `StopMusicOnTaskClearKey` | PlayerSettings | — | `AppSettings.stopOnTaskRemoved` | **bridge** |
 | `SwipeSensitivityKey` | PlayerSettings | MiniPlayer | — | local |
 | `SwipeThumbnailKey` | PlayerSettings | MiniPlayer, Thumbnail | — | local |
 | `SwipeToSongKey` | PlayerSettings | Items | — | local |
 | `TabletModeEnabledKey` | AppearanceSettings | — | `AppSettings.tabletMode` | **bridge** |
-| `ThumbnailCornerRadiusKey` | AppearanceSettings | Player, Thumbnail, ThumbnailCornerRadiusSelector | `AppSettings.thumbnailCornerRadius` | **bridge** |
 | `TidalArtworkFallbackEnabledKey` | CanvasSettingsScreen | — | — | dead |
 | `TidalEnabledKey` | CanvasSettingsScreen | — | — | dead |
 | `TikTokMainLyricsEnabledKey` | AppearanceSettings | TikTokMainLyrics, TikTokSongPage | `AppSettings.tikTokMainLyrics` | **bridge** |

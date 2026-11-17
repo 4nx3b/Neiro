@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Thẻ Danh sách phát</string>
     <string name="manage_playlist_tags_desc">Tạo và quản lý thẻ để sắp xếp danh sách phát</string>
-    <string name="hide_player_thumbnail_desc">Thay thế artwork album bằng logo ứng dụng trong trình phát</string>
     <string name="crop_thumbnail_to_square">Cắt hình thu nhỏ thành 1:1</string>
     <string name="crop_thumbnail_to_square_desc">Hiển thị hình thu nhỏ YouTube ở định dạng vuông thay vì 16:9</string>
     <string name="show_tags_in_library">Hiển thị thẻ trong thư viện</string>
@@ -14,14 +13,10 @@
     <string name="follow_theme">Theo giao diện</string>
     <string name="gradient">Gradient</string>
     <string name="player_design_style">Kiểu thiết kế trình phát</string>
-    <string name="player_design_v4">Điện ảnh</string>
     <string name="player_background_blur">Làm mờ</string>
     <string name="coloring">Tô màu</string>
     <string name="blur_gradient">Gradient làm mờ</string>
     <string name="glow">Phát sáng</string>
-    <string name="player_buttons_style">Màu sắc nút trình phát</string>
-    <string name="default_style">Mặc định</string>
-    <string name="secondary_color_style">Phụ</string>
     <string name="enable_swipe_thumbnail">Bật vuốt để thay đổi bài hát</string>
     <string name="swipe_song_to_add">Vuốt sang trái để thêm vào Queue, sang phải để phát tiếp theo</string>
     <string name="lyrics_click_change">Thay đổi lời bài hát khi nhấp</string>
@@ -56,13 +51,11 @@
     <string name="theme_editor_hex">Hex</string>
     <string name="theme_editor_hex_input">Giá trị hex (#RRGGBB hoặc #AARRGGBB)</string>
     <string name="theme_presets_title">Cài đặt sẵn</string>
-    <string name="player_design_v5">Little</string>
     <string name="audio_crossfade_title">Crossfade</string>
     <string name="audio_crossfade_description">Chồng âm bài hát sau lên bài trước trong khi bài trước tắt dần.</string>
     <string name="audio_crossfade_dialog_title">Thời lượng Crossfade</string>
     <string name="show_home_category_chips">Hiển thị danh mục chip ở trang chủ</string>
     <string name="show_home_category_chips_desc">Hiển thị các chip lọc danh mục trên màn hình chính</string>
-    <string name="player_design_v7">Đắm chìm</string>
     <string name="lyrics_romanize_chinese">Romanize lời bài hát Trung Quốc</string>
     <string name="lyrics_romanize_hindi">Romanize lời bài hát Ấn Độ</string>
     <string name="lyrics_romanize_other_languages">Romanize các lời bài hát không phải ký tự latin</string>
@@ -73,7 +66,6 @@
     <string name="aod_customize_title">Tùy chỉnh AOD</string>
     <string name="aod_customize_entry_desc">Tùy chỉnh màn hình trình phát luôn bật</string>
     <string name="player_design_v9">Material Extended</string>
-    <string name="mini_player_background_style">Kiểu nền trình phát mini</string>
     <string name="settings_lyrics_subtitle">Nhà cung cấp lời bài hát, tải trước và dịch thuật</string>
     <string name="history_duration_desc">Thời gian phát tối thiểu để tính là đã nghe</string>
     <string name="history_duration_seconds">%1$s giây</string>
@@ -156,11 +148,9 @@
     <string name="dark_theme">Giao diện tối</string>
     <string name="dark_theme_on">Bật</string>
     <string name="dark_theme_off">Tắt</string>
-    <string name="corner_radius">Bán kính góc: %1$d</string>
     <string name="adjust_radius">Điều chỉnh bán kính góc</string>
     <string name="cancel_button">Hủy</string>
     <string name="ok_button">OK</string>
-    <string name="custom_radius">Tùy chỉnh bán kính góc ảnh thumbnail</string>
     <string name="custom">Tùy chỉnh</string>
     <string name="customized_background">Nền được tùy chỉnh</string>
     <string name="customize_background_title">Tùy chỉnh nền</string>
@@ -175,7 +165,6 @@
     <string name="disable_blur">Tắt hiệu ứng làm mờ</string>
     <string name="disable_blur_desc">Tắt hiệu ứng làm mờ trong toàn bộ ứng dụng</string>
     <string name="player">Trình phát</string>
-    <string name="player_slider_style">Kiểu thanh trượt trình phát</string>
     <string name="misc">Khác</string>
     <string name="default_open_tab">Tab mặc định mở</string>
     <string name="lyrics_animation_style">Kiểu hoạt hình lời bài hát</string>
@@ -213,7 +202,7 @@
     <string name="disable_animations_desc">Vô hiệu hóa hầu hết các hoạt ảnh ứng dụng. Được đề xuất cho các thiết bị cấu hình thấp</string>
     <string name="app_icon">Biểu tượng ứng dụng</string>
     <string name="display">Màn hình</string>
-    <string name="player_background_style_v8_v9_desc">Không khả dụng với kiểu trình phát V8 và V9</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="romanization">Latinh hóa</string>
     <string name="album_backdrop">Mờ nền</string>
     <string name="album_backdrop_desc">Hiển thị ảnh nghệ thuật dưới dạng nền mờ trên trình phát</string>
@@ -230,6 +219,6 @@
     <string name="device_mute_recovery_volume">Tăng âm lượng từ 0</string>
     <string name="device_mute_recovery_volume_disabled">Đã tắt</string>
     <string name="show_player_volume_bar">Hiện thanh âm lượng</string>
-    <string name="player_volume_bar_v7_v8_only">Chỉ khả dụng với kiểu trình phát V7 và V8</string>
+    <string name="player_volume_bar_v7_v8_only">Not available with the current player style</string>
     <string name="app_icon_description">Chọn biểu tượng trình khởi động</string>
 </resources>

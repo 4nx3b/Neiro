@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerInputChange
@@ -57,8 +56,6 @@ import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
-import com.music.bitchord.ui.theme.rememberArtworkPalette
 import com.music.bitchord.sharedui.resources.Res as SharedRes
 import com.music.bitchord.sharedui.resources.ic_player_next
 import com.music.bitchord.ui.components.thumbnailBorder
@@ -376,60 +373,16 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    // The bar's surface, ported from ArchiveTune's mini player background
-    // style: the frosted pill this app has always drawn, the theme's own
-    // colour, a gradient of the artwork's colours, a glow of them, or the
-    // Liquid Glass lens — which, as in ArchiveTune, falls back to the theme's
-    // surface wherever the glass itself can't run. The frosted surface stays
-    // the one under "reduce dynamic blur" — that setting's whole point is to
-    // stop the blur.
-    val miniPlayerBackground by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
-    val glassMiniPlayer by AppSettings.glassMiniPlayer.collectAsStateWithLifecycle()
-    val miniPlayerGlass = miniPlayerBackground == MiniPlayerBackgroundStyle.LIQUID_GLASS &&
-        LocalLiquidGlassEnabled.current && glassMiniPlayer && isGlassSupported()
-    val palette = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.GRADIENT, MiniPlayerBackgroundStyle.GLOW ->
-            rememberArtworkPalette(rememberRemoteArtworkUrl(song))
-        else -> null
-    }
-    val surfaceModifier = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.THEME ->
-            Modifier.background(MaterialTheme.colorScheme.surface)
-        MiniPlayerBackgroundStyle.GRADIENT -> Modifier.background(
-            Brush.horizontalGradient(
-                listOf(
-                    palette?.background ?: MaterialTheme.colorScheme.surface,
-                    MaterialTheme.colorScheme.surface,
-                ),
-            ),
+    // The bar's surface: the frosted pill this app has always drawn — or the
+    // plain surface under "reduce dynamic blur", that setting's whole point
+    // being to stop the blur.
+    val surfaceModifier = if (reduceDynamicBlur) {
+        Modifier.background(MaterialTheme.colorScheme.surface)
+    } else {
+        Modifier.optimizedHazeEffect(
+            state = hazeState,
+            style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
         )
-        MiniPlayerBackgroundStyle.GLOW -> Modifier
-            .background(MaterialTheme.colorScheme.surface)
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(
-                        (palette?.background ?: MaterialTheme.colorScheme.surface),
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                    ),
-                ),
-            )
-        // The Liquid Glass lens — or the theme surface wherever it can't run,
-        // exactly as ArchiveTune's picker falls back.
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> if (miniPlayerGlass) {
-            Modifier.liquidGlass(shape = RoundedCornerShape(percent = 50))
-        } else {
-            Modifier.background(MaterialTheme.colorScheme.surface)
-        }
-        // Frosted: the haze the bar has always drawn — or the plain surface
-        // under "reduce dynamic blur", exactly as before the styles arrived.
-        else -> if (reduceDynamicBlur) {
-            Modifier.background(MaterialTheme.colorScheme.surface)
-        } else {
-            Modifier.optimizedHazeEffect(
-                state = hazeState,
-                style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
-            )
-        }
     }
     val haptics = rememberHaptics()
     // percent rather than a dp figure, so the corner stays exactly half the

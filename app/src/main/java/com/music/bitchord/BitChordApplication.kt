@@ -145,6 +145,14 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // The per-app language picker, which YouTube Music's `hl` follows.
         // Full tag (zh-Hant / zh-Hans preserved); Innertube maps to hl/gl.
         Innertube.appLanguage = { AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag() }
+        // The Internet page's region pin, read per request so a change taken
+        // with the app restart that follows it is honoured from the first
+        // request after it. SYSTEM_DEFAULT, the sentinel, derives the region
+        // from the locale instead.
+        Innertube.regionOverride = {
+            AppSettings.ytMusicRegion.value
+                .takeUnless { it == com.music.bitchord.data.NetPolicy.SYSTEM_DEFAULT || it.isBlank() }
+        }
         migrateScriptOnlyAppLocale()
         LyricsTranslation.cacheDir = cacheDir
         // PlaybackService shares this process, so seeding the cookie here means
@@ -159,6 +167,14 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // nothing that runs after startup can see any of them half open.
         val backgroundInit = thread(name = "startup-init") {
             SourceRegistry.init(this)
+            // The Tidal source's manifest directory and session store: opened
+            // beside the registry's own encrypted store, after AuthStore, for
+            // the same master-key reason that thread exists at all.
+            com.music.bitchord.data.tidal.TidalService.init(this)
+            com.music.bitchord.data.tidal.TidalAccountStore.init(this)
+            com.music.bitchord.data.deezer.DeezerAccountStore.init(this)
+            com.music.bitchord.data.qobuz.QobuzAccountStore.init(this)
+            com.music.bitchord.data.soundcloud.SoundCloudAccountStore.init(this)
             AndroidStreamHooks.initInnerTubeX(this)
             // Its own directory: canvas clips are looping video, not audio, and
             // belong in a cache AudioCache's own limit and eviction policy were
@@ -349,8 +365,13 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         val sessionKey = AppSettings.lastfmSessionKey.value
         if (sessionKey.isBlank()) return
         val endpoint = AppSettings.lastfmEndpoint.value.ifBlank { LastFM.DEFAULT_API_ENDPOINT }
-        val apiKey = AppSettings.lastfmApiKey.value.trim()
-        val secret = AppSettings.lastfmSecret.value.trim()
+        val (apiKey, secret) = LastFM.credentialsFor(
+            endpoint = endpoint,
+            storedApiKey = AppSettings.lastfmApiKey.value.trim(),
+            storedSecret = AppSettings.lastfmSecret.value.trim(),
+            defaultApiKey = BuildConfig.LASTFM_API_KEY,
+            defaultSecret = BuildConfig.LASTFM_SECRET,
+        )
         if (apiKey.isBlank() || secret.isBlank()) return
         LastFM.configure(
             endpoint = endpoint,

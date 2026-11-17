@@ -140,6 +140,10 @@ import com.music.bitchord.ui.screens.labelRes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
+import com.music.bitchord.auth.TidalLoginScreen
+import com.music.bitchord.auth.DeezerLoginScreen
+import com.music.bitchord.auth.QobuzLoginScreen
+import com.music.bitchord.auth.SoundCloudLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
@@ -193,6 +197,12 @@ import com.music.bitchord.ui.screens.SettingsChoicePage
 import com.music.bitchord.ui.components.SpotifyImportAlert
 import com.music.bitchord.ui.screens.WearOsScreen
 import com.music.bitchord.ui.screens.AccountAndScrobblingScreen
+import com.music.bitchord.ui.screens.IntegrationScreen
+import com.music.bitchord.ui.screens.InternetDialog
+import com.music.bitchord.ui.screens.InternetDialogHost
+import com.music.bitchord.ui.screens.InternetScreen
+import com.music.bitchord.ui.screens.LyricsSettingsScreen
+import com.music.bitchord.ui.screens.SettingsChoiceKind
 import com.music.bitchord.ui.screens.DiscordDialog
 import com.music.bitchord.ui.screens.DiscordDialogHost
 import com.music.bitchord.ui.screens.DiscordScreen
@@ -294,6 +304,10 @@ import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.data.tidal.TidalAccountStore
+import com.music.bitchord.data.deezer.DeezerAccountStore
+import com.music.bitchord.data.qobuz.QobuzAccountStore
+import com.music.bitchord.data.soundcloud.SoundCloudAccountStore
 import com.music.bitchord.ui.components.ChoiceAlert
 import com.music.bitchord.ui.components.ListenBrainzTokenAlert
 import com.music.bitchord.ui.components.MiniPlayer
@@ -702,11 +716,9 @@ private fun BitChordApp(
         }
     }
     // Which bar stack is drawing: the all-in-one glass bar while Liquid Glass
-    // and its navigation-bar element are on — unless the ported glass style on
-    // the Navigation bar page has claimed the standard bar for its own lens.
+    // and its navigation-bar element are on.
     val glassNavBarElement by AppSettings.glassNavBar.collectAsStateWithLifecycle()
-    val liquidGlassNavBarStyle by AppSettings.liquidGlassNavBar.collectAsStateWithLifecycle()
-    val glassBarStack = glassActive && glassNavBarElement && !liquidGlassNavBarStyle
+    val glassBarStack = glassActive && glassNavBarElement
     // The tab the app opens on, ported from ArchiveTune's default open tab.
     // Read once — a change is about the *next* launch, not this one's layout.
     val defaultOpenTab = remember { AppSettings.defaultOpenTab.value }
@@ -836,6 +848,14 @@ private fun BitChordApp(
     /** An addon whose "Outdated addon" line was tapped; see [SourceConfig.needsAddonUpdate]. */
     var explainingOutdatedAddon by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
+    var showTidalLogin by remember { mutableStateOf(false) }
+    var confirmTidalSignOut by remember { mutableStateOf(false) }
+    var showDeezerLogin by remember { mutableStateOf(false) }
+    var confirmDeezerSignOut by remember { mutableStateOf(false) }
+    var showQobuzLogin by remember { mutableStateOf(false) }
+    var confirmQobuzSignOut by remember { mutableStateOf(false) }
+    var showSoundCloudLogin by remember { mutableStateOf(false) }
+    var confirmSoundCloudSignOut by remember { mutableStateOf(false) }
     var confirmBitPerfect by remember { mutableStateOf<BitPerfectMode?>(null) }
     var confirmFixedVolume by remember { mutableStateOf(false) }
     /** An addon search row tapped while the quality setting skips its addon; see [AddonBlockedAlert]. */
@@ -853,6 +873,7 @@ private fun BitChordApp(
     var showAccountSelector by remember { mutableStateOf(false) }
     var showListenBrainzLogin by remember { mutableStateOf(false) }
     var showLastfmLogin by remember { mutableStateOf(false) }
+    var choosingLastfmService by remember { mutableStateOf(false) }
     var showWebDavEditor by remember { mutableStateOf(false) }
     var showSmbEditor by remember { mutableStateOf(false) }
     // Discord Rich Presence: its own page under Account & integrations (a
@@ -863,6 +884,9 @@ private fun BitChordApp(
     var showDiscordLogin by remember { mutableStateOf(false) }
     var showSpotifyLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
+    // The Internet page's dialogs, one slot like Discord's — see
+    // [InternetDialogHost].
+    var internetDialog by remember { mutableStateOf<InternetDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
     var showLyricsOffset by remember { mutableStateOf(false) }
     /**
@@ -3039,6 +3063,7 @@ private fun BitChordApp(
         BackHandler(enabled = showListenBrainzLogin) { showListenBrainzLogin = false }
         BackHandler(enabled = showLastfmLogin) { showLastfmLogin = false }
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
+        BackHandler(enabled = internetDialog != null) { internetDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
         BackHandler(enabled = choosingSourceQuality != null) { choosingSourceQuality = null }
         BackHandler(enabled = explainingOutdatedAddon != null) { explainingOutdatedAddon = null }
@@ -3269,6 +3294,9 @@ private fun BitChordApp(
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.AccountScrobbling) {
+                            // Only the account rides here — the services the app
+                            // talks to moved to the Integration page, whose
+                            // host block below carries their sign-in handlers.
                             AccountAndScrobblingScreen(
                                 signedIn = signedIn,
                                 account = account,
@@ -3282,10 +3310,6 @@ private fun BitChordApp(
                                     showAccountSelector = true
                                 },
                                 onSignOut = { viewModel.signOut() },
-                                onOpenListenBrainzLogin = { showListenBrainzLogin = true },
-                                onOpenLastfmLogin = { showLastfmLogin = true },
-                                onOpenDiscord = { navigator.push(AppRoute.Discord) },
-                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Sources) {
@@ -3297,6 +3321,51 @@ private fun BitChordApp(
                                 onEditWebDav = { showWebDavEditor = true },
                                 onEditSmb = { showSmbEditor = true },
                                 onConfirmJioSaavn = { confirmJioSaavn = true },
+                                onSignInTidal = { showTidalLogin = true },
+                                onSignOutTidal = { confirmTidalSignOut = true },
+                                onSignInDeezer = { showDeezerLogin = true },
+                                onSignOutDeezer = { confirmDeezerSignOut = true },
+                                onSignInQobuz = { showQobuzLogin = true },
+                                onSignOutQobuz = { confirmQobuzSignOut = true },
+                                onSignInSoundCloud = { showSoundCloudLogin = true },
+                                onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
+                            )
+                        } else if (pageRoute == AppRoute.Integration) {
+                            IntegrationScreen(
+                                onOpenSources = { navigator.push(AppRoute.Sources) },
+                                onOpenDiscord = { navigator.push(AppRoute.Discord) },
+                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
+                                onOpenListenBrainzLogin = { showListenBrainzLogin = true },
+                                onOpenLastfmLogin = { showLastfmLogin = true },
+                                onChooseLastfmService = { choosingLastfmService = true },
+                                onSignInTidal = { showTidalLogin = true },
+                                onSignOutTidal = { confirmTidalSignOut = true },
+                                onSignInDeezer = { showDeezerLogin = true },
+                                onSignOutDeezer = { confirmDeezerSignOut = true },
+                                onSignInQobuz = { showQobuzLogin = true },
+                                onSignOutQobuz = { confirmQobuzSignOut = true },
+                                onSignInSoundCloud = { showSoundCloudLogin = true },
+                                onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
+                                contentPadding = listPadding,
+                            )
+                        } else if (pageRoute == AppRoute.Internet) {
+                            InternetScreen(
+                                onOpenRegion = {
+                                    navigator.push(AppRoute.SettingsChoice(SettingsChoiceKind.YT_MUSIC_REGION))
+                                },
+                                onOpenDialog = { internetDialog = it },
+                                contentPadding = listPadding,
+                            )
+                        } else if (pageRoute == AppRoute.Lyrics) {
+                            // The Lyrics sub-setting page under Playback: where
+                            // lyrics come from and what is done with them. Its
+                            // two dialogs stay raised at the activity — the
+                            // frosted pickers cannot be drawn from inside this
+                            // haze-sampling subtree.
+                            LyricsSettingsScreen(
+                                onLyricsSources = { showLyricsSources = true },
+                                onTranslationLanguage = { showTranslationLanguage = true },
+                                contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
@@ -3354,13 +3423,14 @@ private fun BitChordApp(
                                 },
                                 onSignOut = { viewModel.signOut() },
                                 onAccountScrobbling = { navigator.push(AppRoute.AccountScrobbling) },
+                                onIntegration = { navigator.push(AppRoute.Integration) },
+                                onInternet = { navigator.push(AppRoute.Internet) },
                                 onEqualizer = { navigator.push(AppRoute.Equalizer) },
                                 onOpenReplay = {
                                     replayLandingPage = ReplayStoryPage.INTRO
                                     navigator.push(AppRoute.Replay)
                                 },
-                                onLyricsSources = { showLyricsSources = true },
-                                onTranslationLanguage = { showTranslationLanguage = true },
+                                onLyricsSettings = { navigator.push(AppRoute.Lyrics) },
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
@@ -4045,8 +4115,11 @@ private fun BitChordApp(
                         is AppRoute.LibraryShowAll -> route.shelf.title
                         is AppRoute.ArtistShelf -> route.shelf.title
                         AppRoute.Moods -> stringResource(R.string.find_your_mood)
-                        AppRoute.AccountScrobbling -> stringResource(R.string.account_scrobbling)
+                        AppRoute.AccountScrobbling -> stringResource(R.string.account)
+                        AppRoute.Integration -> stringResource(R.string.integration)
+                        AppRoute.Internet -> stringResource(R.string.internet)
                         AppRoute.Sources -> stringResource(R.string.sources)
+                        AppRoute.Lyrics -> stringResource(R.string.lyrics)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)
@@ -6325,6 +6398,242 @@ private fun BitChordApp(
                     // menu, and each is a window of its own over this one. Drawn
                     // here, the alert opened behind whichever it was.
                     inOwnWindow = playerRaised || songActions != null || browseActions != null,
+                )
+            }
+            if (choosingLastfmService) {
+                val lastfmEndpoint by AppSettings.lastfmEndpoint.collectAsStateWithLifecycle()
+                val lastfmSessionKey by AppSettings.lastfmSessionKey.collectAsStateWithLifecycle()
+                val lastfmLabel = "Last.fm"
+                val libreLabel = stringResource(R.string.libre_fm)
+                val libreFmActive = lastfmEndpoint == LastFM.LIBREFM_API_ENDPOINT
+                ChoiceAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.scrobble_service),
+                    message = stringResource(R.string.scrobble_service_choice_message),
+                    options = listOf(lastfmLabel, libreLabel),
+                    selected = if (libreFmActive) libreLabel else lastfmLabel,
+                    label = { it },
+                    onSelect = { option ->
+                        val wantLibre = option == libreLabel
+                        if (wantLibre != libreFmActive) {
+                            AppSettings.setLastfmProvider(wantLibre)
+                            if (lastfmSessionKey.isNotBlank()) {
+                                AppSettings.setLastfmSessionKey("")
+                                AppSettings.setLastfmUsername("")
+                                AppSettings.setLastfmEnabled(false)
+                                AppSettings.setLastfmScrobbleEnabled(false)
+                                AppSettings.setLastfmNowPlaying(false)
+                            }
+                        }
+                        choosingLastfmService = false
+                    },
+                    onDismiss = { choosingLastfmService = false },
+                )
+            }
+
+            internetDialog?.let { which ->
+                InternetDialogHost(
+                    which = which,
+                    hazeState = hazeState,
+                    onDismiss = { internetDialog = null },
+                )
+            }
+
+            if (showTidalLogin) {
+                BackHandler { showTidalLogin = false }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = { showTidalLogin = false }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.tidal_sign_in),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        TidalLoginScreen(
+                            modifier = Modifier.navigationBarsPadding(),
+                            onConnected = { showTidalLogin = false },
+                        )
+                    }
+                }
+            }
+
+            if (showDeezerLogin) {
+                BackHandler { showDeezerLogin = false }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = { showDeezerLogin = false }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.deezer_sign_in),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        DeezerLoginScreen(
+                            modifier = Modifier.navigationBarsPadding(),
+                            onConnected = { showDeezerLogin = false },
+                        )
+                    }
+                }
+            }
+
+            if (showQobuzLogin) {
+                BackHandler { showQobuzLogin = false }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = { showQobuzLogin = false }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.qobuz_sign_in),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        QobuzLoginScreen(
+                            modifier = Modifier.navigationBarsPadding(),
+                            onConnected = { showQobuzLogin = false },
+                        )
+                    }
+                }
+            }
+
+            if (confirmQobuzSignOut) {
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.qobuz_sign_out_confirm_title),
+                    description = stringResource(R.string.qobuz_sign_out_confirm_message),
+                    confirmLabel = stringResource(R.string.qobuz_sign_out),
+                    onConfirm = {
+                        QobuzAccountStore.signOut()
+                        confirmQobuzSignOut = false
+                    },
+                    onDismiss = { confirmQobuzSignOut = false },
+                )
+            }
+
+            if (showSoundCloudLogin) {
+                BackHandler { showSoundCloudLogin = false }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = { showSoundCloudLogin = false }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.soundcloud_sign_in),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        SoundCloudLoginScreen(
+                            modifier = Modifier.navigationBarsPadding(),
+                            onConnected = { showSoundCloudLogin = false },
+                        )
+                    }
+                }
+            }
+
+            if (confirmSoundCloudSignOut) {
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.soundcloud_sign_out_confirm_title),
+                    description = stringResource(R.string.soundcloud_sign_out_confirm_message),
+                    confirmLabel = stringResource(R.string.soundcloud_sign_out),
+                    onConfirm = {
+                        SoundCloudAccountStore.signOut()
+                        confirmSoundCloudSignOut = false
+                    },
+                    onDismiss = { confirmSoundCloudSignOut = false },
+                )
+            }
+
+            if (confirmDeezerSignOut) {
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.deezer_sign_out_confirm_title),
+                    description = stringResource(R.string.deezer_sign_out_confirm_message),
+                    confirmLabel = stringResource(R.string.deezer_sign_out),
+                    onConfirm = {
+                        DeezerAccountStore.signOut()
+                        confirmDeezerSignOut = false
+                    },
+                    onDismiss = { confirmDeezerSignOut = false },
+                )
+            }
+
+            if (confirmTidalSignOut) {
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.tidal_sign_out_confirm_title),
+                    description = stringResource(R.string.tidal_sign_out_confirm_message),
+                    confirmLabel = stringResource(R.string.tidal_sign_out),
+                    onConfirm = {
+                        TidalAccountStore.signOut()
+                        confirmTidalSignOut = false
+                    },
+                    onDismiss = { confirmTidalSignOut = false },
+                )
+            }
+
+            confirmBitPerfect?.let { mode ->
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.bit_perfect_confirm_title),
+                    description = stringResource(R.string.bit_perfect_confirm_message),
+                    confirmLabel = stringResource(R.string.enable),
+                    onConfirm = {
+                        AppSettings.setBitPerfectMode(mode)
+                        confirmBitPerfect = null
+                    },
+                    onDismiss = { confirmBitPerfect = null },
                 )
             }
         }

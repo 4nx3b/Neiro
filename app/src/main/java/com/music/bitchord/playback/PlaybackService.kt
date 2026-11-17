@@ -1,8 +1,13 @@
 package com.music.bitchord.playback
 
 import android.app.PendingIntent
+import android.bluetooth.BluetoothClass
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
@@ -13,8 +18,11 @@ import android.net.Uri
 import android.widget.Toast
 import android.os.Bundle
 import android.os.Handler
+import android.os.PowerManager
 import android.os.SystemClock
+import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.TelemetryProvenance
+import com.music.bitchord.data.deezer.DeezerDecryptingDataSource
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import android.util.Log
@@ -36,7 +44,9 @@ import androidx.media3.common.audio.SonicAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.FileDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DecoderReuseEvaluation
@@ -52,7 +62,6 @@ import androidx.media3.exoplayer.audio.SilenceSkippingAudioProcessor
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.upstream.BandwidthMeter
@@ -538,6 +547,154 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private val audioManager by lazy { getSystemService(AudioManager::class.java) }
+
+    /**
+     * The CPU wake lock behind Keep CPU awake during playback. Created once in
+     * [onCreate] and never reference-counted — held while the setting is on and
+     * the session's player is actually playing, released the moment either
+     * stops being true, so a service that is paused or torn down never keeps
+     * the device's CPU standing for it.
+     */
+    private var playbackWakeLock: PowerManager.WakeLock? = null
+
+    /**
+     * The volume observer behind Pause when device volume is 0, ported from
+     * ArchiveTune's pause on device mute: registered only while the setting is
+     * on, watching the system settings' volume tree the way a ContentObserver
+     * on it must. It parks the player when the media stream hits zero — with
+     * [pausedForZeroVolume] remembering that this pause was the volume's
+     * doing — and plays again, exactly where it left off, when the volume
+     * comes back.
+     */
+    private var zeroVolumeObserver: android.database.ContentObserver? = null
+    private var pausedForZeroVolume = false
+
+    private fun musicVolume(): Int =
+        runCatching { audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: -1 }.getOrDefault(-1)
+
+    private fun updateZeroVolumePause() {
+        val observer = zeroVolumeObserver ?: return
+        val volume = musicVolume()
+        val sessionPlayer = player ?: return
+        if (volume == 0) {
+            val canPauseNow = sessionPlayer.currentMediaItem != null &&
+                sessionPlayer.playWhenReady &&
+                sessionPlayer.playbackState != Player.STATE_IDLE &&
+                sessionPlayer.playbackState != Player.STATE_ENDED
+            if (canPauseNow) {
+                sessionPlayer.pause()
+                pausedForZeroVolume = true
+            }
+        } else if (volume > 0 && pausedForZeroVolume) {
+            pausedForZeroVolume = false
+            sessionPlayer.play()
+        }
+    }
+
+    private fun observeZeroVolume() {
+        if (zeroVolumeObserver != null) return
+        val observer = object : android.database.ContentObserver(Handler(mainLooper)) {
+            override fun onChange(selfChange: Boolean) {
+                updateZeroVolumePause()
+            }
+        }
+        contentResolver.registerContentObserver(
+            android.provider.Settings.System.CONTENT_URI,
+            true,
+            observer,
+        )
+        zeroVolumeObserver = observer
+    }
+
+    private fun stopObservingZeroVolume() {
+        zeroVolumeObserver?.let { contentResolver.unregisterContentObserver(it) }
+        zeroVolumeObserver = null
+        pausedForZeroVolume = false
+    }
+
+    /**
+     * The receiver behind Auto-start on Bluetooth connect, ported from
+     * ArchiveTune: registered only while the setting is on, woken only by an
+     * ACL connection from an audio-shaped device, and it waits the fork's
+     * one-and-a-half seconds for the link to settle before it touches the
+     * player — playing when paused, or preparing and playing a restored-but-
+     * idle queue, and never starting a party the listener did not begin.
+     */
+    private var bluetoothStartReceiver: BroadcastReceiver? = null
+
+    private val bluetoothStartReceiverBody =
+        object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action != BluetoothDevice.ACTION_ACL_CONNECTED) return
+                @Suppress("DEPRECATION")
+                val device =
+                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+                val isAudioDevice =
+                    try {
+                        val majorClass = device.bluetoothClass?.majorDeviceClass
+                        majorClass == BluetoothClass.Device.Major.AUDIO_VIDEO ||
+                            majorClass == BluetoothClass.Device.Major.WEARABLE
+                    } catch (_: SecurityException) {
+                        true
+                    }
+                if (!isAudioDevice) return
+                scope.launch {
+                    kotlinx.coroutines.delay(1_500)
+                    handleBluetoothAutoStart()
+                }
+            }
+        }
+
+    private fun handleBluetoothAutoStart() {
+        val sessionPlayer = player ?: return
+        if (ListenTogether.state.value.inParty) return
+        if (sessionPlayer.currentMediaItem != null &&
+            sessionPlayer.playbackState != androidx.media3.common.Player.STATE_IDLE &&
+            sessionPlayer.playbackState != androidx.media3.common.Player.STATE_ENDED
+        ) {
+            if (!sessionPlayer.playWhenReady) sessionPlayer.play()
+            return
+        }
+        if (sessionPlayer.mediaItemCount > 0) {
+            sessionPlayer.prepare()
+            sessionPlayer.play()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun observeBluetoothAutoStart() {
+        if (bluetoothStartReceiver != null) return
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+            checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val filter = IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED)
+        val receiver = bluetoothStartReceiverBody
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(receiver, filter, android.content.Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(receiver, filter)
+        }
+        bluetoothStartReceiver = receiver
+    }
+
+    private fun stopBluetoothAutoStart() {
+        val receiver = bluetoothStartReceiver ?: return
+        runCatching { unregisterReceiver(receiver) }
+        bluetoothStartReceiver = null
+    }
+
+    private fun updatePlaybackWakeLock() {
+        val lock = playbackWakeLock ?: return
+        val shouldHold = AppSettings.keepCpuAwake.value && player?.isPlaying == true
+        if (shouldHold && !lock.isHeld) {
+            lock.acquire()
+        } else if (!shouldHold && lock.isHeld) {
+            lock.release()
+        }
+    }
+
     private val bluetoothTracker by lazy { BluetoothAudioTracker(this) }
     private var currentAudioInputFormat: Format? = null
     private val outputDeviceCallback = object : AudioDeviceCallback() {
@@ -889,6 +1046,9 @@ class PlaybackService : MediaLibraryService() {
                 consecutiveErrorSkips = 0
             }
             if (isPlaying) registerCurrentPlay()
+            // Whether the CPU wake lock is held follows this, and the setting
+            // can change under it — see [updatePlaybackWakeLock].
+            updatePlaybackWakeLock()
             // Nothing to read ahead for while paused, and a pause is often
             // the last thing that happens before the process goes idle.
             if (isPlaying) prefetchAround(exoPlayer) else cancelPrefetch()
@@ -1306,6 +1466,11 @@ class PlaybackService : MediaLibraryService() {
         measuredBitrateCache.clear()
         QualityUpgrade.forgetLastSession()
 
+        playbackWakeLock =
+            (getSystemService(Context.POWER_SERVICE) as PowerManager)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BitChord:Playback")
+                .also { it.setReferenceCounted(false) }
+
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider.Builder(this)
                 .setChannelId(CHANNEL_ID)
@@ -1717,11 +1882,23 @@ class PlaybackService : MediaLibraryService() {
         // well would not override that — OkHttpDataSource *appends* the
         // factory's agent after the request's, and the fetch would go out
         // carrying two contradictory User-Agent headers.
+        // Innermost, so it chunks the real googlevideo URL the resolver
+        // above has already substituted in — see [ChunkedDataSource] for
+        // why an open-ended read of one is worth avoiding.
+        val chunkedFactory = ChunkedDataSource.Factory(OkHttpDataSource.Factory(Http.client), STREAM_CHUNK_BYTES)
         val resolvingFactory = ResolvingDataSource.Factory(
-            // Innermost, so it chunks the real googlevideo URL the resolver
-            // above has already substituted in — see [ChunkedDataSource] for
-            // why an open-ended read of one is worth avoiding.
-            ChunkedDataSource.Factory(OkHttpDataSource.Factory(Http.client), STREAM_CHUNK_BYTES),
+            // A resolver answer can be a *local file* — a source whose manifest
+            // arrives inline (Tidal's base64 MPD, written to cache) hands back
+            // a file:// URL, which OkHttp would refuse. The router below sends
+            // those to FileDataSource and everything else to the chunked
+            // client, on the scheme the resolver left behind. Same shape as
+            // [SmbDataSource.RoutingFactory], one level down: it sits *under*
+            // the resolver rather than over it, which is the only place the
+            // resolved scheme exists at all.
+            object : DataSource.Factory {
+                override fun createDataSource(): DataSource =
+                    ResolvedFileRoutingDataSource(chunkedFactory.createDataSource(), chunkedFactory)
+            },
         ) { dataSpec ->
             // Wrapped rather than folded into the resolver above so the record
             // is made in one place for every branch of it, and made from what
@@ -3899,6 +4076,51 @@ class PlaybackService : MediaLibraryService() {
      * Everything else keeps the default behaviour, which is right: a shaped
      * response or a dropped connection is worth another go.
      */
+    /**
+     * Sends a resolved `file://` answer to [FileDataSource], a `deezer://`
+     * answer to [DeezerDecryptingDataSource], and everything else to the
+     * DataSource the resolver's answers always went to. Exists for the sources
+     * whose manifest arrives inline and is written to cache rather than served
+     * over HTTP — see the factory it is built in — and for Deezer, whose
+     * answers are Blowfish-striped at the CDN and decrypt on the fly.
+     */
+    private class ResolvedFileRoutingDataSource(
+        private val inner: DataSource,
+        deezerUpstream: DataSource.Factory,
+    ) : DataSource {
+        private val file = FileDataSource()
+
+        // A Deezer answer is a deezer://stream URI carrying the real CDN URL
+        // and the track id for the Blowfish stripe key. Decrypting here — under
+        // the resolver, over the same chunked client — means the cache above
+        // stores plain FLAC/MP3 bytes and downloads, seeking and quality
+        // upgrade need no Deezer-specific code of their own.
+        private val deezer = DeezerDecryptingDataSource(deezerUpstream)
+        private var active: DataSource = inner
+
+        override fun addTransferListener(transferListener: TransferListener) {
+            inner.addTransferListener(transferListener)
+            file.addTransferListener(transferListener)
+            deezer.addTransferListener(transferListener)
+        }
+
+        override fun open(dataSpec: DataSpec): Long {
+            active = when (dataSpec.uri.scheme) {
+                "file" -> file
+                "deezer" -> deezer
+                else -> inner
+            }
+            return active.open(dataSpec)
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+            active.read(buffer, offset, length)
+
+        override fun getUri(): Uri? = active.uri
+
+        override fun close() = active.close()
+    }
+
     private class PermanentAwareLoadErrorPolicy : DefaultLoadErrorHandlingPolicy() {
         override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
             if (isPermanent(loadErrorInfo.exception)) return C.TIME_UNSET
@@ -4430,6 +4652,12 @@ class PlaybackService : MediaLibraryService() {
         neverStarted: Boolean,
         attempts: Int,
     ): String? {
+        // The listener stopped on errors rather than skipped past them —
+        // ArchiveTune's other branch of the same setting. The recovery ladder
+        // has still run its retries; this only decides what happens once they
+        // are spent. The error stays on the player, which is what puts it in
+        // front of the listener rather than quietly moving the queue on.
+        if (!AppSettings.autoSkipOnError.value) return null
         if (verdict != null) return verdict
         if (!neverStarted) return null
         if (consecutiveErrorSkips >= MAX_CONSECUTIVE_SKIPS) {
@@ -6071,6 +6299,13 @@ class PlaybackService : MediaLibraryService() {
 
     /** Serialize only the bounded window needed for a future cold-start resume. */
     private fun saveQueueSnapshot(player: ExoPlayer) {
+        // Persistent queue off: every launch starts empty, and the snapshot on
+        // disk is cleared rather than left to restore a queue that predates
+        // the setting turning off.
+        if (!AppSettings.persistentQueue.value) {
+            LastPlayed.clear()
+            return
+        }
         if (ListenTogether.state.value.inParty) return
         if (player.mediaItemCount == 0) {
             persistedQueueStart = 0
@@ -6168,6 +6403,7 @@ class PlaybackService : MediaLibraryService() {
 
     /** Restore the bounded queue without preparing or resolving a stream. */
     private fun restoreLastQueue(player: ExoPlayer): Boolean {
+        if (!AppSettings.persistentQueue.value) return false
         val last = LastPlayed.load() ?: return false
         persistedQueueStart = 0
         player.setMediaItems(last.songs.map { it.toMediaItem() }, last.index, last.positionMs)
@@ -6179,6 +6415,7 @@ class PlaybackService : MediaLibraryService() {
      * LastPlayed physical snapshot when the new record is absent or unsafe.
      */
     private fun restoreBoundedQueueOrLast(player: ExoPlayer): Boolean {
+        if (!AppSettings.persistentQueue.value) return false
         val persisted = BoundedContextPersistence.load()
         if (persisted != null && restoreBoundedQueue(player, persisted)) return true
         if (persisted != null) BoundedContextPersistence.clearImmediately()
@@ -6411,7 +6648,8 @@ class PlaybackService : MediaLibraryService() {
         }
         val nextIndex = player.nextMediaItemIndex
         val upcomingSongs = if (nextIndex != C.INDEX_UNSET) {
-            val end = (nextIndex + AudioCache.QUEUE_DEPTH - 1).coerceAtMost(player.mediaItemCount - 1)
+            val end = (nextIndex + AudioCache.preloadDepth() - 1).coerceAtLeast(nextIndex - 1)
+                .coerceAtMost(player.mediaItemCount - 1)
             // A video about to be converted plays under another id, so every
             // byte warmed for it now would be wasted.
             (nextIndex..end).map(player::getMediaItemAt)
@@ -7229,6 +7467,26 @@ class PlaybackService : MediaLibraryService() {
 
     private fun observeSettings() {
         scope.launch {
+            AppSettings.keepCpuAwake.collect { updatePlaybackWakeLock() }
+        }
+        scope.launch {
+            AppSettings.pauseAtZeroVolume.collect { on ->
+                if (on) {
+                    observeZeroVolume()
+                    // A setting flipped on under an already-zero volume should
+                    // park the player now rather than at the next volume event.
+                    updateZeroVolumePause()
+                } else {
+                    stopObservingZeroVolume()
+                }
+            }
+        }
+        scope.launch {
+            AppSettings.autoStartOnBluetooth.collect { on ->
+                if (on) observeBluetoothAutoStart() else stopBluetoothAutoStart()
+            }
+        }
+        scope.launch {
             AppSettings.skipSilence.collect { on -> eachPlayer { it.skipSilenceEnabled = on } }
         }
         scope.launch {
@@ -7513,12 +7771,20 @@ class PlaybackService : MediaLibraryService() {
                     delaySeconds = values[10] as Int,
                 )
             }.collectLatest { snapshot ->
+                val endpoint = snapshot.endpoint.ifBlank { LastFM.DEFAULT_API_ENDPOINT }
+                val (apiKey, secret) = LastFM.credentialsFor(
+                    endpoint = endpoint,
+                    storedApiKey = snapshot.apiKey,
+                    storedSecret = snapshot.secret,
+                    defaultApiKey = BuildConfig.LASTFM_API_KEY,
+                    defaultSecret = BuildConfig.LASTFM_SECRET,
+                )
                 val shouldEnable = AppSettings.scrobblingAvailable &&
                     snapshot.lastfmEnabled &&
                     snapshot.scrobbleEnabled &&
                     snapshot.sessionKey.isNotBlank() &&
-                    snapshot.apiKey.isNotBlank() &&
-                    snapshot.secret.isNotBlank()
+                    apiKey.isNotBlank() &&
+                    secret.isNotBlank()
 
                 if (!shouldEnable) {
                     scrobbleManager?.destroy()
@@ -7527,9 +7793,9 @@ class PlaybackService : MediaLibraryService() {
                 }
 
                 LastFM.configure(
-                    endpoint = snapshot.endpoint.ifBlank { LastFM.DEFAULT_API_ENDPOINT },
-                    apiKey = snapshot.apiKey,
-                    secret = snapshot.secret,
+                    endpoint = endpoint,
+                    apiKey = apiKey,
+                    secret = secret,
                     sessionKey = snapshot.sessionKey,
                 )
                 val manager = scrobbleManager ?: ScrobbleManager(scope).also {
@@ -7821,6 +8087,9 @@ class PlaybackService : MediaLibraryService() {
 
 
     override fun onDestroy() {
+        if (playbackWakeLock?.isHeld == true) playbackWakeLock?.release()
+        stopObservingZeroVolume()
+        stopBluetoothAutoStart()
         WearBridge.attachStreams(null)
         WearBridge.releaseSpeaker()
         // Let go of the receiver's player but leave its session alone: a

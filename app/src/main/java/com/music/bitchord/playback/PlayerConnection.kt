@@ -120,7 +120,7 @@ suspend fun MediaController.playBoundedContext(
     startIndex: Int,
     source: QueueSource,
     continuationToken: String?,
-    shuffle: Boolean = QueueShuffle.enabled.value,
+    shuffle: Boolean = QueueShuffle.freshQueueShuffle(),
 ) {
     val token = BoundedContextRequests.put(
         BoundedContextRequests.Request(
@@ -873,8 +873,11 @@ suspend fun MediaController.playSongs(songs: List<Song>, startIndex: Int) {
     ).await()
     // A queue started while shuffle is on goes in shuffled rather than being
     // played out of order — see [QueueShuffle]. The track the user picked still
-    // leads, so it ends up at the top instead of at [startIndex].
-    val shuffled = QueueShuffle.enabled.value
+    // leads, so it ends up at the top instead of at [startIndex]. Whether
+    // shuffle counts as on for a queue that is starting is
+    // [QueueShuffle.freshQueueShuffle]'s to say: permanent shuffle carries it
+    // over, and without it the queue starts in order with shuffle off.
+    val shuffled = QueueShuffle.freshQueueShuffle()
     val items = withContext(Dispatchers.Default) {
         val songsWithIds = songs.map { song ->
             if (song.queueEntryId == null) song.copy(queueEntryId = java.util.UUID.randomUUID().toString()) else song

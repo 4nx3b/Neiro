@@ -40,8 +40,7 @@ keystore.properties
 .tmp_verify/
 .debug/
 
-# AI agent configuration
-AGENTS.md
+# AI agent session state (AGENTS.md and worklog.md ARE tracked in this fork — see rules.md)
 /output/
 
 # Built packages — release APKs/bundles are handed out, never committed

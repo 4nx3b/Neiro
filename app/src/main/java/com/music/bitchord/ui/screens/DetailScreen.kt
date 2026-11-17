@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.motion.releaseOrigin
 import com.music.bitchord.ui.components.trackArtSize
 import android.os.Build
 import com.music.bitchord.R
@@ -2255,6 +2256,7 @@ private fun TopReleaseCard(
             contentDescription = null,
             modifier = Modifier
                 .size(96.dp)
+                .releaseOrigin(item.browseId)
                 .clip(coverShape)
                 .border(1.dp, Color.White.copy(alpha = TOP_RELEASE_COVER_EDGE_ALPHA), coverShape)
                 .background(palette.elevated),
@@ -2368,6 +2370,7 @@ private fun SectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                .releaseOrigin(item.browseId)
                 .clip(RoundedCornerShape(10.dp))
                 .thumbnailBorder(RoundedCornerShape(10.dp))
                 .background(palette.elevated),

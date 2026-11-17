@@ -127,6 +127,97 @@ enum class SourceKind(
         rank = 1,
     ),
 
+    /**
+     * The listener's own Tidal account, signed into on the Sources screen.
+     *
+     * Sits above JioSaavn for the same reason an addon does: when both hold the
+     * recording, FLAC beats 320kbps AAC. Opt-in by the sign-in itself rather
+     * than by the row's switch — a signed-out Tidal answers nothing, so a
+     * switched-on-but-signed-out row would be a light that lies.
+     *
+     * `worthPrefetching` because the account API answers in a few hundred
+     * milliseconds — the same budget JioSaavn's prefetch judgement was measured
+     * against — unlike a module index whose walk takes seconds.
+     */
+    TIDAL(
+        label = "Tidal",
+        detail = "Your Tidal account: FLAC up to 24-bit/192 kHz, searched and streamed " +
+            "against the account you sign in with.",
+        labels = listOf("FLAC", "Lossless", "Hi-Res"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = 2,
+    ),
+
+    /**
+     * The listener's own Deezer account, signed into on the Sources screen.
+     *
+     * Same tier and the same reasoning as [TIDAL]: when both hold the
+     * recording, FLAC beats 320kbps AAC — and which of the two is asked
+     * first is decided by their order among the fixed kinds, not by a drag.
+     *
+     * The account is the `arl` session cookie deezer.com sets on a signed-in
+     * browser, so there is no refresh machinery: an ARL works until Deezer
+     * stands it down, and then the sources screen says sign in again. Streams
+     * the account mints are Blowfish-striped and decrypt in flight — see
+     * [DeezerDecryptingDataSource][com.music.bitchord.data.deezer.DeezerDecryptingDataSource].
+     */
+    DEEZER(
+        label = "Deezer",
+        detail = "Your Deezer account: FLAC and MP3 from the Deezer catalogue, " +
+            "searched and streamed against the account you sign in with.",
+        labels = listOf("FLAC", "Lossless", "320kbps"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = 2,
+    ),
+
+    /**
+     * The listener's own Qobuz account, signed into on the Sources screen.
+     *
+     * Same tier again. Qobuz is the one catalogue whose lossless rungs go
+     * past everyone else's — MAX and Hi-Res are 24-bit — so its quality
+     * picker carries tiers the others don't offer.
+     *
+     * The credentials are the web player's own X-User-Auth-Token plus the
+     * app id and app secret its bundle carries, captured from the sign-in
+     * WebView; streams are ordinary signed HTTPS URLs, no decryption layer.
+     */
+    QOBUZ(
+        label = "Qobuz",
+        detail = "Your Qobuz account: FLAC up to 24-bit from the Qobuz catalogue, " +
+            "searched and streamed against the account you sign in with.",
+        labels = listOf("FLAC", "Lossless", "Hi-Res", "MAX"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = 2,
+    ),
+
+    /**
+     * SoundCloud's own catalogue, searched anonymously through the web app's
+     * scraped client id.
+     *
+     * Opt-in like [JIOSAAVN] rather than on by default like the account
+     * sources above: the catalogue is user uploads, so a title match can be a
+     * remix, a cover or a sped-up edit of the recording asked for, and nothing
+     * above YouTube's own tier is on offer to pay for that risk — 160kbps AAC
+     * at best. The sign-in is optional and only widens what the account can
+     * play (geo- and login-gated uploads); search and streams work without it.
+     */
+    SOUNDCLOUD(
+        label = "SoundCloud",
+        detail = "SoundCloud's catalogue, up to 160 kbps AAC. Works without an " +
+            "account; signing in unlocks login-gated uploads.",
+        labels = listOf("160kbps", "User uploads"),
+        needsServer = false,
+        canServeLossless = false,
+        worthPrefetching = true,
+        rank = 3,
+    ),
+
     JIOSAAVN(
         label = "JioSaavn",
         detail = "Optional JioSaavn streams up to 320kbps AAC/MP4. Catalogue matching can select the wrong song.",
@@ -134,7 +225,7 @@ enum class SourceKind(
         needsServer = false,
         canServeLossless = false,
         worthPrefetching = true,
-        rank = 2,
+        rank = 3,
     ),
 
     /**
@@ -150,7 +241,7 @@ enum class SourceKind(
         labels = listOf("Lossy", "Full catalogue", "Radio"),
         needsServer = false,
         canServeLossless = false,
-        rank = 3,
+        rank = 4,
     ),
     ;
 

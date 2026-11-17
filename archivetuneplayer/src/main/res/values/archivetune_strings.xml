@@ -73,15 +73,12 @@
   <string name="close">Close</string>
   <string name="minimum_volume">Minimum Volume</string>
   <string name="maximum_volume">Maximum Volume</string>
-  <string name="hide_player_thumbnail">Hide Player Thumbnail</string>
   <plurals name="n_element">
     <item quantity="one">%d element</item>
     <item quantity="other">%d elements</item>
   </plurals>
   <string name="seek_forward_dynamic">+%1$d seconds forwards</string>
   <string name="seek_backward_dynamic">-%1$d seconds backwards</string>
-  <string name="simpmusic_move_up">Move up</string>
-  <string name="simpmusic_move_down">Move down</string>
   <string name="rich_synced">Rich Synced</string>
   <string name="line_synced">Line Synced</string>
   <string name="unsynced">Unsynced</string>
@@ -111,7 +108,6 @@
   <string name="video_fs_next">Next</string>
   <string name="video_fs_previous">Previous</string>
   <string name="video_overflow_menu">More video options</string>
-  <string name="video_slider_style">Slider style</string>
   <string name="video_playback_speed">Playback speed</string>
   <string name="video_playback_speed_value">%1$.2fx</string>
   <string name="video_playback_speed_normal">Normal</string>

@@ -137,7 +137,7 @@ import moe.rukamori.archivetune.lyrics.AiLyricsRomanization
 import moe.rukamori.archivetune.lyrics.LyricsEntry
 import moe.rukamori.archivetune.lyrics.LyricsRomanizationPreferences
 import moe.rukamori.archivetune.lyrics.LyricsUtils.findCurrentLineIndex
-import moe.rukamori.archivetune.lyrics.LyricsUtils.hasTrueWordSync
+import moe.rukamori.archivetune.lyrics.LyricsUtils.hasWordSyncedLyrics
 import moe.rukamori.archivetune.lyrics.LyricsUtils.insertInstrumentalBreaks
 import moe.rukamori.archivetune.lyrics.LyricsUtils.isLineSyncedLrc
 import moe.rukamori.archivetune.lyrics.LyricsUtils.isTtml
@@ -176,15 +176,16 @@ private const val V2_FIRST_FOCUS_TIMEOUT_MS = 400L
 
 private val HEAD_LYRICS_ENTRY = LyricsEntry(time = 0L, text = "")
 
-private class WordSyncCache {
+private class WordSyncCache(private val formatWordSynced: Boolean) {
     private val cache = HashMap<LyricsEntry, Boolean>()
 
     fun getOrCompute(entry: LyricsEntry): Boolean =
-        cache.getOrPut(entry) { hasTrueWordSync(entry) }
+        cache.getOrPut(entry) { formatWordSynced && entry.words != null }
 }
 
 @Composable
-private fun rememberWordSyncCache(): WordSyncCache = remember { WordSyncCache() }
+private fun rememberWordSyncCache(formatWordSynced: Boolean): WordSyncCache =
+    remember(formatWordSynced) { WordSyncCache(formatWordSynced) }
 
 private fun isRtlText(text: String): Boolean {
     for (ch in text) {
@@ -283,7 +284,7 @@ fun LyricsV2(
         }
 
     val isSynced = remember(lyrics) { lyrics != null && (isLineSyncedLrc(lyrics!!) || isTtml(lyrics!!)) }
-    val isTtmlFormat = remember(lyrics) { lyrics != null && isTtml(lyrics!!) }
+    val isWordSyncedFormat = remember(lyrics) { lyrics != null && hasWordSyncedLyrics(lyrics!!) }
 
     var parsedEntries by remember(lyrics) { mutableStateOf<List<LyricsEntry>?>(null) }
     LaunchedEffect(lyrics) {
@@ -316,7 +317,7 @@ fun LyricsV2(
 
     val entriesWithWords: List<LyricsEntry> = lyricsEntries
 
-    val wordSyncCache = rememberWordSyncCache()
+    val wordSyncCache = rememberWordSyncCache(isWordSyncedFormat)
 
     val aiRomanizationSessionKey =
         remember(mediaMetadata?.id, lyrics) { AiLyricsRomanization.sessionKey(mediaMetadata?.id, lyrics) }
@@ -394,9 +395,9 @@ fun LyricsV2(
         }
     }
 
-    val leadMs = if (isTtmlFormat) TTML_LEAD_MS else LRC_LEAD_MS
+    val leadMs = if (isWordSyncedFormat) TTML_LEAD_MS else LRC_LEAD_MS
 
-    val visualTuningMs = if (isTtmlFormat) 0L else LYRIC_VISUAL_TUNING_OFFSET_MS
+    val visualTuningMs = if (isWordSyncedFormat) 0L else LYRIC_VISUAL_TUNING_OFFSET_MS
     val currentPositionMsState = remember(lyrics) { mutableLongStateOf(0L) }
     var currentPositionMs by currentPositionMsState
     var playbackPositionMs by remember { mutableLongStateOf(0L) }
@@ -417,10 +418,10 @@ fun LyricsV2(
         val pollIntervalMs =
             when {
                 v2AnimationsDisabled -> 100L
-                isTtmlFormat -> 16L
+                isWordSyncedFormat -> 16L
                 else -> 50L
             }
-        val useFrameClock = !v2AnimationsDisabled && isTtmlFormat
+        val useFrameClock = !v2AnimationsDisabled && isWordSyncedFormat
         while (isActive) {
             if (useFrameClock && !playerSheetVisibleState.value) {
                 delay(250L)

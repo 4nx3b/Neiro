@@ -85,11 +85,9 @@
     <string name="dark_theme">深色主題</string>
     <string name="dark_theme_on">開啟</string>
     <string name="dark_theme_off">關閉</string>
-    <string name="corner_radius">圓角半徑：%1$d</string>
     <string name="adjust_radius">調整圓角半徑</string>
     <string name="cancel_button">取消</string>
     <string name="ok_button">確認</string>
-    <string name="custom_radius">自訂縮圖圓角半徑</string>
     <string name="custom">自訂</string>
     <string name="customized_background">自訂背景</string>
     <string name="customize_background_title">自訂背景</string>
@@ -100,7 +98,7 @@
     <string name="custom_value">自訂值</string>
     <string name="archivetune_canvas">ArchiveTune 畫布</string>
     <string name="archivetune_canvas_desc">播放時為專輯封面加入動畫效果（由 BetterLyrics 提供支援）</string>
-    <string name="player_background_style_v8_v9_desc">V8 和 V9 播放器樣式不支援此功能</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="dark_theme_follow_system">跟隨系統</string>
     <string name="disable_blur">停用模糊效果</string>
     <string name="disable_blur_desc">在整個應用程式中停用模糊效果</string>
@@ -113,7 +111,6 @@
     <string name="backdrop_blur_amount">背景模糊程度</string>
     <string name="backdrop_blur_amount_value">%1$d%%</string>
     <string name="player">播放器</string>
-    <string name="player_slider_style">播放器滑桿樣式</string>
     <string name="misc">其他</string>
     <string name="default_open_tab">預設開啟頁面</string>
     <string name="lyrics_animation_style">歌詞動畫樣式</string>
