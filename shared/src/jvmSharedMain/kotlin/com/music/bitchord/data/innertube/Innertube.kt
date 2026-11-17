@@ -65,6 +65,15 @@ object Innertube {
     @Volatile
     var appLanguage: () -> String? = { null }
 
+    /**
+     * The YouTube Music region the Internet page pinned, when it did. Null
+     * means derive it from the app locale. A country the listener picked is
+     * stronger intent than anything the locale implies, so it wins on every
+     * request — the same override ArchiveTune's region setting applies.
+     */
+    @Volatile
+    var regionOverride: () -> String? = { null }
+
     val currentLocaleTag: String
         get() {
             val raw = appLanguage()?.ifEmpty { null }
@@ -76,11 +85,13 @@ object Innertube {
         get() = com.music.bitchord.data.LocaleTags.ytHl(currentLocaleTag)
 
     val currentRegion: String
-        get() = com.music.bitchord.data.LocaleTags.ytGl(currentLocaleTag)
+        get() = regionOverride()?.ifEmpty { null }
+            ?: com.music.bitchord.data.LocaleTags.ytGl(currentLocaleTag)
 
     /** [currentRegion] for search, where null lets YouTube place us — see [LocaleTags.ytSearchGl]. */
     private val searchRegion: String?
-        get() = com.music.bitchord.data.LocaleTags.ytSearchGl(currentLocaleTag)
+        get() = regionOverride()?.ifEmpty { null }
+            ?: com.music.bitchord.data.LocaleTags.ytSearchGl(currentLocaleTag)
 
     private val acceptLanguageHeader: String
         get() = com.music.bitchord.data.LocaleTags.acceptLanguage(currentLocaleTag)

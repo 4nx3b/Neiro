@@ -252,11 +252,12 @@ object ArchiveTunePreferenceBridge {
     }
 
     // ---- Player design style: ArchiveTune's V-names ↔ Neiro's descriptive names.
+    // The V9 "Material Extended" style is gone on both sides of the bridge; a
+    // stored V9 preference read back by an older install lands on the default.
 
     fun toAt(style: PlayerDesignStyle): AtStyle =
         when (style) {
             PlayerDesignStyle.BITCHORD -> AtStyle.BITCHORD
-            PlayerDesignStyle.MATERIAL_EXTENDED -> AtStyle.V9
             PlayerDesignStyle.APPLE_MUSIC -> AtStyle.APPLE_MUSIC
             PlayerDesignStyle.TIKTOK -> AtStyle.TIKTOK
         }
@@ -264,7 +265,6 @@ object ArchiveTunePreferenceBridge {
     fun fromAt(style: AtStyle): PlayerDesignStyle =
         when (style) {
             AtStyle.BITCHORD -> PlayerDesignStyle.BITCHORD
-            AtStyle.V9 -> PlayerDesignStyle.MATERIAL_EXTENDED
             AtStyle.APPLE_MUSIC -> PlayerDesignStyle.APPLE_MUSIC
             AtStyle.TIKTOK -> PlayerDesignStyle.TIKTOK
         }

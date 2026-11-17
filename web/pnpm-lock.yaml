@@ -178,8 +178,8 @@ importers:
         specifier: ^3.14.19
         version: 3.14.19(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@uimaxbai/am-lyrics':
-        specifier: ^1.8.2
-        version: 1.8.2(@lit/react@1.0.8(@types/react@19.3.0))(react@19.3.1)
+        specifier: ^1.9.1
+        version: 1.9.1(@lit/react@1.0.8(@types/react@19.3.0))(react@19.3.1)
       bgutils-js:
         specifier: ^4.0.3
         version: 4.0.3
@@ -842,8 +842,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@uimaxbai/am-lyrics@1.8.2':
-    resolution: {integrity: sha512-3XJNyk06LkaAeCCCd/2fepFsgB/fLnPyXvoI5qGE6aajFFuvaRG8fEvYXT1O8YyZxKj1ZjWNSIiq2rWO55rdGA==}
+  '@uimaxbai/am-lyrics@1.9.1':
+    resolution: {integrity: sha512-i9dXqjVS5hamDfnUWj5QjxfnH7trSlBsHxreoGz41ysx2r/sjpEUJwXnA80BZnZ1o1yTyBiXLVVEdpOCz2TdKg==}
     peerDependencies:
       '@lit/react': ^1.0.0
       react: '>=17.0.0'
@@ -2153,7 +2153,7 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  '@uimaxbai/am-lyrics@1.8.2(@lit/react@1.0.8(@types/react@19.3.0))(react@19.3.1)':
+  '@uimaxbai/am-lyrics@1.9.1(@lit/react@1.0.8(@types/react@19.3.0))(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
       lit: 3.3.3

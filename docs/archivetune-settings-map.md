@@ -58,7 +58,6 @@ until one exists.
 | `EnableUnisonLyricsKey` | LyricsSettings | — | — | dead |
 | `EnableVideoPlaybackKey` | PlayerSettings | Player | — | local |
 | `EnableYouLyPlusLyricsKey` | LyricsSettings | — | — | dead |
-| `EnhancedLyricsStyleKey` | LyricsSettings | LyricsEnhanced | — | local |
 | `FlamingoBackgroundEffectKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.movingBlur` | **bridge** |
 | `FlamingoHideSlideBarKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.hideSlideBar` | **bridge** |
 | `FlamingoShowVolumeBarKey` | AppearanceSettings | FlamingoPlayer | `AppSettings.!hideVolumeBar` | **bridge** |

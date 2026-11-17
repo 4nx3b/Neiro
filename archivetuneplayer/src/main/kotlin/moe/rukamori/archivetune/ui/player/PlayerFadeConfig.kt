@@ -19,7 +19,6 @@ data class FadeThresholds(
 
 object PlayerFadeConfig {
     val forStyle: Map<PlayerDesignStyle, FadeThresholds> = mapOf(
-        PlayerDesignStyle.V9 to FadeThresholds(titleMinChars = 30, artistMinChars = 32),
         PlayerDesignStyle.APPLE_MUSIC to FadeThresholds(titleMinChars = 28, artistMinChars = 30),
     )
 

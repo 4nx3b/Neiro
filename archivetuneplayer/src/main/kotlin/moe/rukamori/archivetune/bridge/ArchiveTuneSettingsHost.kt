@@ -60,9 +60,7 @@ import moe.rukamori.archivetune.ui.screens.settings.CustomizeBackground
 import moe.rukamori.archivetune.ui.screens.settings.LiquidGlassSettings
 import moe.rukamori.archivetune.ui.screens.settings.LyricsRomanisationSettings
 import moe.rukamori.archivetune.ui.screens.settings.LyricsSettings
-import moe.rukamori.archivetune.ui.screens.settings.PalettePickerScreen
 import moe.rukamori.archivetune.ui.screens.settings.PlayerSettings
-import moe.rukamori.archivetune.ui.screens.settings.ThemeCreatorScreen
 import moe.rukamori.archivetune.utils.PreferenceStore
 
 /** The ported pages a host can open, each with ArchiveTune's own route. */
@@ -79,7 +77,6 @@ enum class ArchiveTuneSettingsPageId(
     BACKGROUND("customize_background", R.string.customize_background_title),
     LIQUID_GLASS("settings/appearance/liquid_glass", R.string.liquid_glass),
     CANVAS("settings/player/canvas", R.string.canvas_settings_title),
-    PALETTE("settings/appearance/palette_picker", R.string.color_palette),
     ;
 
     companion object {
@@ -101,8 +98,6 @@ internal val UnportedSettingsRoutes =
         "settings/player/audiophile",
         "settings/sources",
     )
-
-private const val THEME_CREATOR_ROUTE = "settings/appearance/theme_creator"
 
 /** Same setup ArchiveTunePlayerHost does, for a settings page mounted on its own. */
 fun ensureArchiveTuneSettingsReady(context: Context) {
@@ -147,8 +142,6 @@ fun ArchiveTuneSettingsPage(
                 composable(ArchiveTuneSettingsPageId.BACKGROUND.route) { CustomizeBackground(navController) }
                 composable(ArchiveTuneSettingsPageId.LIQUID_GLASS.route) { LiquidGlassSettings(navController = navController) }
                 composable(ArchiveTuneSettingsPageId.CANVAS.route) { CanvasSettingsScreen(navController = navController) }
-                composable(ArchiveTuneSettingsPageId.PALETTE.route) { PalettePickerScreen(navController) }
-                composable(THEME_CREATOR_ROUTE) { ThemeCreatorScreen(navController) }
                 UnportedSettingsRoutes.forEach { route ->
                     composable(route) { UnportedSettingsPage(onBack = { navController.navigateUp() }) }
                 }

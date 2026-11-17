@@ -27,8 +27,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import com.materialkolor.ktx.toHct
-import com.materialkolor.ktx.toColor
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
@@ -442,7 +440,9 @@ fun BottomSheetPlayer(
     val onBackgroundColor =
         when (playerBackground) {
             PlayerBackgroundStyle.DEFAULT -> {
-                MaterialTheme.colorScheme.secondary
+                // The host app's scheme has no meaningful secondary; onBackground
+                // is the tone its own player draws for default-background text.
+                MaterialTheme.colorScheme.onBackground
             }
 
             else -> {
@@ -562,8 +562,7 @@ fun BottomSheetPlayer(
                 playerBackground == PlayerBackgroundStyle.BLUR ||
                 playerBackground == PlayerBackgroundStyle.BLUR_GRADIENT ||
                 playerBackground == PlayerBackgroundStyle.GLOW ||
-                playerBackground == PlayerBackgroundStyle.GLOW_ANIMATED ||
-                playerDesignStyle == PlayerDesignStyle.V9
+                playerBackground == PlayerBackgroundStyle.GLOW_ANIMATED
         if (!wantsPalette) {
             gradientColors = emptyList()
             hasValidGradientPalette = false
@@ -648,7 +647,11 @@ fun BottomSheetPlayer(
 
     val changeBound = state.expandedBound / 3
 
-    val dominantColor = gradientColors.firstOrNull() ?: MaterialTheme.colorScheme.primary
+    // No colourScheme.primary read: the host app's primary is plain white on
+    // dark and black on light, so the fallback says so explicitly.
+    val dominantColor =
+        gradientColors.firstOrNull()
+            ?: if (useDarkTheme) Color.White else Color.Black
 
     val targetBgColor = remember(dominantColor, useDarkTheme) {
         val hsv = FloatArray(3)
@@ -707,45 +710,30 @@ fun BottomSheetPlayer(
     )
 
     val TextBackgroundColor =
-        if (playerDesignStyle == PlayerDesignStyle.V9) {
-            dynamicTextColor
-        } else {
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-                PlayerBackgroundStyle.BLUR -> Color.White
-                PlayerBackgroundStyle.GRADIENT -> Color.White
-                PlayerBackgroundStyle.COLORING -> Color.White
-                PlayerBackgroundStyle.BLUR_GRADIENT -> Color.White
-                PlayerBackgroundStyle.GLOW -> Color.White
-                PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
-                PlayerBackgroundStyle.CUSTOM -> Color.White
-            }
+        when (playerBackground) {
+            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
+            PlayerBackgroundStyle.BLUR -> Color.White
+            PlayerBackgroundStyle.GRADIENT -> Color.White
+            PlayerBackgroundStyle.COLORING -> Color.White
+            PlayerBackgroundStyle.BLUR_GRADIENT -> Color.White
+            PlayerBackgroundStyle.GLOW -> Color.White
+            PlayerBackgroundStyle.GLOW_ANIMATED -> Color.White
+            PlayerBackgroundStyle.CUSTOM -> Color.White
         }
 
     val icBackgroundColor =
-        if (playerDesignStyle == PlayerDesignStyle.V9) {
-            dynamicBgColor
-        } else {
-            when (playerBackground) {
-                PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
-                PlayerBackgroundStyle.BLUR -> Color.Black
-                PlayerBackgroundStyle.GRADIENT -> Color.Black
-                PlayerBackgroundStyle.COLORING -> Color.Black
-                PlayerBackgroundStyle.BLUR_GRADIENT -> Color.Black
-                PlayerBackgroundStyle.GLOW -> Color.Black
-                PlayerBackgroundStyle.GLOW_ANIMATED -> Color.Black
-                PlayerBackgroundStyle.CUSTOM -> Color.Black
-            }
+        when (playerBackground) {
+            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
+            PlayerBackgroundStyle.BLUR -> Color.Black
+            PlayerBackgroundStyle.GRADIENT -> Color.Black
+            PlayerBackgroundStyle.COLORING -> Color.Black
+            PlayerBackgroundStyle.BLUR_GRADIENT -> Color.Black
+            PlayerBackgroundStyle.GLOW -> Color.Black
+            PlayerBackgroundStyle.GLOW_ANIMATED -> Color.Black
+            PlayerBackgroundStyle.CUSTOM -> Color.Black
         }
 
-    val (textButtonColor, iconButtonColor) =
-        Pair(TextBackgroundColor, icBackgroundColor).let { (tb, ib) ->
-            if (playerDesignStyle == PlayerDesignStyle.V9) {
-                Pair(dynamicAccentColor, dynamicIconButtonColor)
-            } else {
-                Pair(tb, ib)
-            }
-        }
+    val (textButtonColor, iconButtonColor) = Pair(TextBackgroundColor, icBackgroundColor)
 
     val download by LocalDownloadUtil.current
         .getDownload(mediaMetadata?.id ?: "")
@@ -925,10 +913,6 @@ fun BottomSheetPlayer(
             playerDesignStyle == PlayerDesignStyle.TIKTOK
         ) {
             0.dp
-        } else if (playerDesignStyle == PlayerDesignStyle.V9) {
-            88.dp +
-                (if (showCodecOnPlayer) 24.dp else 0.dp) +
-                (if (sleepTimerEnabled) 42.dp else 0.dp)
         } else if (showCodecOnPlayer) {
             88.dp
         } else {
@@ -1261,19 +1245,15 @@ fun BottomSheetPlayer(
                 } else {
                     0f
                 }
-            when (playerDesignStyle) {
-                PlayerDesignStyle.V9 -> dynamicBgColor.copy(alpha = 1f - fadeProgress)
-                else ->
-                    when (playerBackground) {
-                        PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT ->
-                            sheetSurfaceColor.copy(alpha = 1f - fadeProgress)
+            when (playerBackground) {
+                PlayerBackgroundStyle.BLUR, PlayerBackgroundStyle.GRADIENT ->
+                    sheetSurfaceColor.copy(alpha = 1f - fadeProgress)
 
-                        else ->
-                            if (useBlackBackground) {
-                                Color.Black.copy(alpha = 1f - fadeProgress)
-                            } else {
-                                sheetSurfaceColor.copy(alpha = 1f - fadeProgress)
-                            }
+                else ->
+                    if (useBlackBackground) {
+                        Color.Black.copy(alpha = 1f - fadeProgress)
+                    } else {
+                        sheetSurfaceColor.copy(alpha = 1f - fadeProgress)
                     }
             }
         },
@@ -1351,9 +1331,8 @@ fun BottomSheetPlayer(
             canvasOptionsEnabled &&
                 (
                     playerDesignStyle == PlayerDesignStyle.APPLE_MUSIC ||
-                        playerDesignStyle == PlayerDesignStyle.V9 ||
                         playerDesignStyle == PlayerDesignStyle.BITCHORD
-                ) &&
+                    ) &&
                 !aodModeEnabled &&
                 !trackIsMusicVideo
         val shouldFetchV7Canvas = shouldUseV7Canvas && !lowDataModeActive
@@ -1589,48 +1568,6 @@ fun BottomSheetPlayer(
                             onSeekFinished = onSliderValueChangeFinished,
                         )
                     }
-} else if (playerDesignStyle == PlayerDesignStyle.V9) {
-                    enrichedMetadata?.let { metadata ->
-                        V9PlayerContent(
-                            mediaMetadata = metadata,
-                            playbackState = playbackState,
-                            isPlaying = isPlaying,
-                            isLoading = isLoading,
-                            canSkipPrevious = canSkipPrevious,
-                            canSkipNext = canSkipNext,
-                            sliderPosition = sliderPosition,
-                            position = position,
-                            duration = duration,
-                            playerConnection = playerConnection,
-                            navController = navController,
-                            state = state,
-                            textBackgroundColor = TextBackgroundColor,
-                            textButtonColor = textButtonColor,
-                            iconButtonColor = iconButtonColor,
-                            canvasSource = artworkCanvas?.inferredProvider(),
-                            canvasPrimaryUrl = artworkCanvas?.animated,
-                            canvasFallbackUrl = artworkCanvas?.videoUrl,
-                            gradientColors = gradientColors,
-                            onCollapseClick = { state.collapseSoft() },
-                            onQueueClick = openQueue,
-                            onLyricsClick = { isInlineLyricsOpen = !isInlineLyricsOpen },
-                            lyricsOpen = isInlineLyricsOpen,
-                            onCloseLyrics = { isInlineLyricsOpen = false },
-                            lyricsSyncOffset = lyricsSyncOffset,
-                            onLyricsSyncOffsetChange = { lyricsSyncOffset = it },
-                            onSliderValueChange = onSliderValueChange,
-                            onSliderValueChangeFinished = onSliderValueChangeFinished,
-                            landscape = true,
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .padding(bottom = queueSheetState.collapsedBound)
-                                    .windowInsetsPadding(
-                                        WindowInsets(top = LocalStableSystemBarsTopPadding.current)
-                                            .union(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)),
-                                    ).nestedScroll(state.preUpPostDownNestedScrollConnection),
-                        )
-                    }
                 } else if (playerDesignStyle == PlayerDesignStyle.APPLE_MUSIC) {
                     enrichedMetadata?.let { metadata ->
                         FlamingoPlayerContent(
@@ -1728,47 +1665,6 @@ fun BottomSheetPlayer(
 
                             onSeek = onSliderValueChange,
                             onSeekFinished = onSliderValueChangeFinished,
-                        )
-                    }
-} else if (playerDesignStyle == PlayerDesignStyle.V9) {
-                    enrichedMetadata?.let { metadata ->
-                        V9PlayerContent(
-                            mediaMetadata = metadata,
-                            playbackState = playbackState,
-                            isPlaying = isPlaying,
-                            isLoading = isLoading,
-                            canSkipPrevious = canSkipPrevious,
-                            canSkipNext = canSkipNext,
-                            sliderPosition = sliderPosition,
-                            position = position,
-                            duration = duration,
-                            playerConnection = playerConnection,
-                            navController = navController,
-                            state = state,
-                            textBackgroundColor = TextBackgroundColor,
-                            textButtonColor = textButtonColor,
-                            iconButtonColor = iconButtonColor,
-                            canvasSource = artworkCanvas?.inferredProvider(),
-                            canvasPrimaryUrl = artworkCanvas?.animated,
-                            canvasFallbackUrl = artworkCanvas?.videoUrl,
-                            gradientColors = gradientColors,
-                            onCollapseClick = { state.collapseSoft() },
-                            onQueueClick = openQueue,
-                            onLyricsClick = { isInlineLyricsOpen = !isInlineLyricsOpen },
-                            lyricsOpen = isInlineLyricsOpen,
-                            onCloseLyrics = { isInlineLyricsOpen = false },
-                            lyricsSyncOffset = lyricsSyncOffset,
-                            onLyricsSyncOffsetChange = { lyricsSyncOffset = it },
-                            onSliderValueChange = onSliderValueChange,
-                            onSliderValueChangeFinished = onSliderValueChangeFinished,
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .padding(bottom = queueSheetState.collapsedBound)
-                                    .windowInsetsPadding(
-                                        WindowInsets(top = LocalStableSystemBarsTopPadding.current)
-                                            .union(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)),
-                                    ).nestedScroll(state.preUpPostDownNestedScrollConnection),
                         )
                     }
                 } else if (playerDesignStyle == PlayerDesignStyle.APPLE_MUSIC) {

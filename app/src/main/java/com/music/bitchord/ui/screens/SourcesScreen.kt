@@ -322,6 +322,24 @@ fun SourcesScreen(
             AddSourceRow(
                 onClick = { onEditSource(SourceConfig(kind = SourceKind.ADDON)) },
             )
+
+            // Direct Source Stream, moved here from the main settings page:
+            // it qualifies the whole card above rather than being a setting
+            // of its own — the fetch policy every source in the list answers
+            // to, drawn like the animated-cover cellular line (no icon).
+            // Off for the length of a party: holding every fetch until a
+            // track is about to play would leave this phone behind the
+            // others at each sync — see [DirectSourceGate.isActive].
+            val party by com.music.bitchord.data.listentogether.ListenTogether.state.collectAsStateWithLifecycle()
+            val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
+            RowDivider()
+            SettingsSubRow(
+                title = stringResource(R.string.direct_source_stream),
+                checked = directSourceStream && !party.inParty,
+                onCheckedChange = AppSettings::setDirectSourceStream,
+                subtitle = stringResource(R.string.direct_source_stream_in_party).takeIf { party.inParty },
+                enabled = !party.inParty,
+            )
         }
 
         // The Tidal account, which the row above streams through. Raised to

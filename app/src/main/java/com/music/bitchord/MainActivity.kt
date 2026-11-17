@@ -197,6 +197,12 @@ import com.music.bitchord.ui.screens.SettingsChoicePage
 import com.music.bitchord.ui.components.SpotifyImportAlert
 import com.music.bitchord.ui.screens.WearOsScreen
 import com.music.bitchord.ui.screens.AccountAndScrobblingScreen
+import com.music.bitchord.ui.screens.IntegrationScreen
+import com.music.bitchord.ui.screens.InternetDialog
+import com.music.bitchord.ui.screens.InternetDialogHost
+import com.music.bitchord.ui.screens.InternetScreen
+import com.music.bitchord.ui.screens.LyricsSettingsScreen
+import com.music.bitchord.ui.screens.SettingsChoiceKind
 import com.music.bitchord.ui.screens.DiscordDialog
 import com.music.bitchord.ui.screens.DiscordDialogHost
 import com.music.bitchord.ui.screens.DiscordScreen
@@ -878,6 +884,9 @@ private fun BitChordApp(
     var showDiscordLogin by remember { mutableStateOf(false) }
     var showSpotifyLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
+    // The Internet page's dialogs, one slot like Discord's — see
+    // [InternetDialogHost].
+    var internetDialog by remember { mutableStateOf<InternetDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
     var showLyricsOffset by remember { mutableStateOf(false) }
     /**
@@ -3054,6 +3063,7 @@ private fun BitChordApp(
         BackHandler(enabled = showListenBrainzLogin) { showListenBrainzLogin = false }
         BackHandler(enabled = showLastfmLogin) { showLastfmLogin = false }
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
+        BackHandler(enabled = internetDialog != null) { internetDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
         BackHandler(enabled = choosingSourceQuality != null) { choosingSourceQuality = null }
         BackHandler(enabled = explainingOutdatedAddon != null) { explainingOutdatedAddon = null }
@@ -3284,6 +3294,9 @@ private fun BitChordApp(
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.AccountScrobbling) {
+                            // Only the account rides here — the services the app
+                            // talks to moved to the Integration page, whose
+                            // host block below carries their sign-in handlers.
                             AccountAndScrobblingScreen(
                                 signedIn = signedIn,
                                 account = account,
@@ -3297,11 +3310,6 @@ private fun BitChordApp(
                                     showAccountSelector = true
                                 },
                                 onSignOut = { viewModel.signOut() },
-                                onOpenListenBrainzLogin = { showListenBrainzLogin = true },
-                                onOpenLastfmLogin = { showLastfmLogin = true },
-                                onChooseLastfmService = { choosingLastfmService = true },
-                                onOpenDiscord = { navigator.push(AppRoute.Discord) },
-                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Sources) {
@@ -3321,6 +3329,43 @@ private fun BitChordApp(
                                 onSignOutQobuz = { confirmQobuzSignOut = true },
                                 onSignInSoundCloud = { showSoundCloudLogin = true },
                                 onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
+                            )
+                        } else if (pageRoute == AppRoute.Integration) {
+                            IntegrationScreen(
+                                onOpenSources = { navigator.push(AppRoute.Sources) },
+                                onOpenDiscord = { navigator.push(AppRoute.Discord) },
+                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
+                                onOpenListenBrainzLogin = { showListenBrainzLogin = true },
+                                onOpenLastfmLogin = { showLastfmLogin = true },
+                                onChooseLastfmService = { choosingLastfmService = true },
+                                onSignInTidal = { showTidalLogin = true },
+                                onSignOutTidal = { confirmTidalSignOut = true },
+                                onSignInDeezer = { showDeezerLogin = true },
+                                onSignOutDeezer = { confirmDeezerSignOut = true },
+                                onSignInQobuz = { showQobuzLogin = true },
+                                onSignOutQobuz = { confirmQobuzSignOut = true },
+                                onSignInSoundCloud = { showSoundCloudLogin = true },
+                                onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
+                                contentPadding = listPadding,
+                            )
+                        } else if (pageRoute == AppRoute.Internet) {
+                            InternetScreen(
+                                onOpenRegion = {
+                                    navigator.push(AppRoute.SettingsChoice(SettingsChoiceKind.YT_MUSIC_REGION))
+                                },
+                                onOpenDialog = { internetDialog = it },
+                                contentPadding = listPadding,
+                            )
+                        } else if (pageRoute == AppRoute.Lyrics) {
+                            // The Lyrics sub-setting page under Playback: where
+                            // lyrics come from and what is done with them. Its
+                            // two dialogs stay raised at the activity — the
+                            // frosted pickers cannot be drawn from inside this
+                            // haze-sampling subtree.
+                            LyricsSettingsScreen(
+                                onLyricsSources = { showLyricsSources = true },
+                                onTranslationLanguage = { showTranslationLanguage = true },
+                                contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
@@ -3378,13 +3423,14 @@ private fun BitChordApp(
                                 },
                                 onSignOut = { viewModel.signOut() },
                                 onAccountScrobbling = { navigator.push(AppRoute.AccountScrobbling) },
+                                onIntegration = { navigator.push(AppRoute.Integration) },
+                                onInternet = { navigator.push(AppRoute.Internet) },
                                 onEqualizer = { navigator.push(AppRoute.Equalizer) },
                                 onOpenReplay = {
                                     replayLandingPage = ReplayStoryPage.INTRO
                                     navigator.push(AppRoute.Replay)
                                 },
-                                onLyricsSources = { showLyricsSources = true },
-                                onTranslationLanguage = { showTranslationLanguage = true },
+                                onLyricsSettings = { navigator.push(AppRoute.Lyrics) },
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
@@ -4069,8 +4115,11 @@ private fun BitChordApp(
                         is AppRoute.LibraryShowAll -> route.shelf.title
                         is AppRoute.ArtistShelf -> route.shelf.title
                         AppRoute.Moods -> stringResource(R.string.find_your_mood)
-                        AppRoute.AccountScrobbling -> stringResource(R.string.account_scrobbling)
+                        AppRoute.AccountScrobbling -> stringResource(R.string.account)
+                        AppRoute.Integration -> stringResource(R.string.integration)
+                        AppRoute.Internet -> stringResource(R.string.internet)
                         AppRoute.Sources -> stringResource(R.string.sources)
+                        AppRoute.Lyrics -> stringResource(R.string.lyrics)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)
@@ -6379,6 +6428,14 @@ private fun BitChordApp(
                         choosingLastfmService = false
                     },
                     onDismiss = { choosingLastfmService = false },
+                )
+            }
+
+            internetDialog?.let { which ->
+                InternetDialogHost(
+                    which = which,
+                    hazeState = hazeState,
+                    onDismiss = { internetDialog = null },
                 )
             }
 

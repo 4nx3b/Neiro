@@ -31,15 +31,12 @@ enum class AudioQuality(
  * The full player's own design, ported from ArchiveTune's PlayerDesignStyle:
  * each value is a whole layout of the now-playing screen — its artwork
  * treatment, typography, slider shape and transport. [BITCHORD] is this app's
- * own player and stays exactly as it has always been; the other three are
+ * own player and stays exactly as it has always been; the other two are
  * ArchiveTune's, ported with their behaviors.
  */
 enum class PlayerDesignStyle {
     /** This app's own player — the sleeve, the deck, the mesh. Untouched. */
     BITCHORD,
-
-    /** ArchiveTune V9 "Material Extended": dynamic colour field, wavy slider, morphing pills. */
-    MATERIAL_EXTENDED,
 
     /** ArchiveTune "Apple Music": the shrink-on-pause album, the floating light. */
     APPLE_MUSIC,
