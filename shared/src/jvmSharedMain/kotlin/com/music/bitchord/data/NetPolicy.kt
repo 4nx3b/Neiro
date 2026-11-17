@@ -9,7 +9,7 @@ import java.net.URI
 import okhttp3.Authenticator
 import okhttp3.Credentials
 import okhttp3.Dns
-import okhttp3.DnsOverHttps
+import okhttp3.dnsoverhttps.DnsOverHttps
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 
@@ -90,7 +90,7 @@ object NetPolicy {
                 // the lookup would recurse through the policy it replaces.
                 runCatching {
                     DnsOverHttps
-                        .builder()
+                        .Builder()
                         .client(OkHttpClient())
                         .url(url.toHttpUrl())
                         .build()
