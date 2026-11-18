@@ -1389,56 +1389,6 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
                 )
             }
-            val fontTitle = stringResource(R.string.font)
-            row(fontTitle, "typeface", "sf pro", "legacy", "system", "custom") {
-                SettingsRow(
-                    icon = SfIcons.Font,
-                    title = fontTitle,
-                    subtitle = appFont.description(),
-                    value = appFont.localizedLabel(),
-                    onClick = { onOpenChoice(SettingsChoiceKind.FONT) },
-                )
-            }
-            // Ported from ArchiveTune: the file the Custom font choice loads.
-            // Only listed while Custom is the choice — nothing to pick for the
-            // built-in cuts.
-            if (appFont == AppFont.CUSTOM) {
-                val customFontTitle = stringResource(R.string.custom_font)
-                row(customFontTitle, "font", "ttf", "otf", "file", "typeface", divided = false) {
-                    var picking by remember { mutableStateOf(false) }
-                    val pickedFont by rememberUpdatedState(onCustomFontPicked)
-                    val fontPicker = rememberLauncherForActivityResult(
-                        ActivityResultContracts.OpenDocument(),
-                    ) { uri ->
-                        picking = false
-                        if (uri != null) pickedFont(uri)
-                    }
-                    SettingsRow(
-                        icon = SfIcons.FileDownload,
-                        title = customFontTitle,
-                        subtitle = customFontName.ifBlank {
-                            stringResource(R.string.custom_font_none_subtitle)
-                        },
-                        enabled = !picking,
-                        onClick = {
-                            picking = true
-                            fontPicker.launch(arrayOf("*/*"))
-                        },
-                    )
-                }
-            }
-            // Ported from ArchiveTune: the SF Pro browser — sf-pro.kouzu.in's
-            // catalog, previewed in its own type and applied with one tap.
-            val sfProTitle = stringResource(R.string.sf_pro_fonts)
-            row(sfProTitle, "sf pro", "font", "download", "typeface") {
-                SettingsRow(
-                    icon = SfIcons.Download,
-                    title = sfProTitle,
-                    subtitle = stringResource(R.string.sf_pro_fonts_subtitle),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.SF_PRO_FONTS) },
-                )
-            }
             // All of the Liquid Glass options live a page deep now, ported as
             // the "Liquid Glass" subpage the way ArchiveTune's own settings
             // page sits beside the switch: the master, the elements each with
@@ -1575,6 +1525,56 @@ fun SettingsScreen(
                     steps = 63,
                 )
             }
+            val fontTitle = stringResource(R.string.font)
+            row(fontTitle, "typeface", "sf pro", "legacy", "system", "custom") {
+                SettingsRow(
+                    icon = SfIcons.Font,
+                    title = fontTitle,
+                    subtitle = appFont.description(),
+                    value = appFont.localizedLabel(),
+                    onClick = { onOpenChoice(SettingsChoiceKind.FONT) },
+                )
+            }
+            // Ported from ArchiveTune: the file the Custom font choice loads.
+            // Only listed while Custom is the choice — nothing to pick for the
+            // built-in cuts.
+            if (appFont == AppFont.CUSTOM) {
+                val customFontTitle = stringResource(R.string.custom_font)
+                row(customFontTitle, "font", "ttf", "otf", "file", "typeface", divided = false) {
+                    var picking by remember { mutableStateOf(false) }
+                    val pickedFont by rememberUpdatedState(onCustomFontPicked)
+                    val fontPicker = rememberLauncherForActivityResult(
+                        ActivityResultContracts.OpenDocument(),
+                    ) { uri ->
+                        picking = false
+                        if (uri != null) pickedFont(uri)
+                    }
+                    SettingsRow(
+                        icon = SfIcons.FileDownload,
+                        title = customFontTitle,
+                        subtitle = customFontName.ifBlank {
+                            stringResource(R.string.custom_font_none_subtitle)
+                        },
+                        enabled = !picking,
+                        onClick = {
+                            picking = true
+                            fontPicker.launch(arrayOf("*/*"))
+                        },
+                    )
+                }
+            }
+            // Ported from ArchiveTune: the SF Pro browser — sf-pro.kouzu.in's
+            // catalog, previewed in its own type and applied with one tap.
+            val sfProTitle = stringResource(R.string.sf_pro_fonts)
+            row(sfProTitle, "sf pro", "font", "download", "typeface") {
+                SettingsRow(
+                    icon = SfIcons.Download,
+                    title = sfProTitle,
+                    subtitle = stringResource(R.string.sf_pro_fonts_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.SF_PRO_FONTS) },
+                )
+            }
             // Left out where the player won't honour it: a window too wide for
             // the player to fill and too narrow to stand a page beside it keeps
             // the sleeve either way. A docked pane is a phone's width, so it does
@@ -1614,6 +1614,10 @@ fun SettingsScreen(
                     onClick = { AppSettings.setFullBleedDetailArtwork(!fullBleedDetailArtwork) },
                 )
             }
+        }
+
+        // ---- The ported Player group, as ArchiveTune's Appearance page has it ----
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.player)) {
             // The player's own design, ported from ArchiveTune's PlayerDesignStyle
             // picker: a whole layout of the now-playing screen, three of them,
             // this app's own the default and first.
@@ -1686,10 +1690,6 @@ fun SettingsScreen(
                     }
                 }
             }
-        }
-
-        // ---- The ported Player group, as ArchiveTune's Appearance page has it ----
-        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.player)) {
             // Ported from ArchiveTune's moving blur: the blurred cover behind
             // the player drifts on its own, screen-saver slow.
             val movingBlurTitle = stringResource(R.string.moving_blur)
@@ -1724,6 +1724,16 @@ fun SettingsScreen(
                     },
                     onClick = { AppSettings.setHideSlideBar(!hideSlideBar) },
                 )
+            }
+            if (playerDesignStyle != PlayerDesignStyle.BITCHORD) {
+                val backdropTitle = stringResource(moe.rukamori.archivetune.R.string.album_backdrop)
+                row(backdropTitle, "backdrop", "blur", "artwork", "background", "album") {
+                    PortedBackdropRow()
+                }
+                val backdropAmountTitle = stringResource(moe.rukamori.archivetune.R.string.backdrop_blur_amount)
+                row(backdropAmountTitle, "backdrop", "blur", "amount") {
+                    PortedBackdropAmountRow()
+                }
             }
         }
 

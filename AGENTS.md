@@ -140,6 +140,18 @@ its own source system. Porting rules:
   When touching a BitChord file, leave its comments alone; when creating a new
   file, keep it comment-clean.
 
+- **iOS motion must survive merges**: `app/.../ui/motion/` (`PageMotion`,
+  `IosPageTransitions` — the page area's push/pop slide and the album zoom),
+  `sharedUi/.../ui/motion/ReleaseOrigin.kt`, and a `.releaseOrigin(browseId)`
+  on every release cover (Home/Library/Explore `ShelfCard`, Search rows, the
+  artist page's top release and discography cards, local album cards). A
+  cover that does not register falls back to the push, which is how the zoom
+  silently vanished once. `ReleaseOriginCoverageTest` fails the build when a
+  call site or the MainActivity wiring (`iosPageTransform`, `IosPageFrame`,
+  `pageMotion.onDestination`) goes missing; when adding a new release card,
+  tag its cover and add it to that test. Popups grow out of their anchor via
+  `ui/components/GlassMorph.kt` (`morphFrame`, tested by `GlassMorphTest`).
+
 ## Modules & submodules
 
 - Gradle modules: `:app` (Android phone), `:tv`, `:wearos`, `:shared` (plain JVM
