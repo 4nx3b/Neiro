@@ -753,7 +753,6 @@ fun ListenTogetherChatPopup(
             }
         }
     }
-}
 
 @Composable
 private fun ChatInputArea(
