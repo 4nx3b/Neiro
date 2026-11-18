@@ -74,14 +74,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.Upgrade
-import com.music.bitchord.data.listentogether.ServerConnectionState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -148,9 +146,9 @@ import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.LocalMediaRepository
-import com.music.bitchord.data.listentogether.JamInviteLink
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.listentogether.partyQueueIndexOf
+import com.music.bitchord.data.together.TogetherDeepLink
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.innertube.InnertubeParser
@@ -201,6 +199,7 @@ import com.music.bitchord.ui.screens.IntegrationScreen
 import com.music.bitchord.ui.screens.InternetDialog
 import com.music.bitchord.ui.screens.InternetDialogHost
 import com.music.bitchord.ui.screens.InternetScreen
+import com.music.bitchord.ui.screens.CanvasSettingsScreen
 import com.music.bitchord.ui.screens.LyricsSettingsScreen
 import com.music.bitchord.ui.screens.SettingsChoiceKind
 import com.music.bitchord.ui.screens.DiscordDialog
@@ -213,8 +212,7 @@ import com.music.bitchord.ui.screens.libraryDeviceItems
 import com.music.bitchord.ui.screens.SPOTIFY_BROWSE_ID
 import com.music.bitchord.ui.screens.libraryLinks
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
-import com.music.bitchord.ui.screens.ListenTogetherScreen
-import com.music.bitchord.ui.screens.PartyServerEditor
+import com.music.bitchord.ui.screens.MusicTogetherScreen
 import com.music.bitchord.ui.screens.SignatureApiEditor
 import com.music.bitchord.ui.screens.SettingsScreen
 import com.music.bitchord.ui.screens.SourceEditorAlert
@@ -260,6 +258,7 @@ import com.music.bitchord.download.DownloadStore
 import com.music.bitchord.download.MediaTagger
 import com.music.bitchord.download.DownloadTarget
 import com.music.bitchord.download.Downloads
+import com.music.bitchord.download.ExternalDownloader
 import com.music.bitchord.ui.components.BrowseActionsMenu
 import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
@@ -436,7 +435,7 @@ class MainActivity : AppCompatActivity() {
         // Before the composition, so a cold launch from a widget's artwork has
         // the request already standing by the time BitChordApp first reads it.
         PlayerDeepLink.consume(intent)
-        JamInviteLink.consume(intent)
+        TogetherDeepLink.consume(intent)
         // Likewise for a link tapped or shared from another app — see [MusicLink].
         MusicLink.consume(intent)
         // A crash last time left a report (see CrashReporter): say once where
@@ -613,7 +612,7 @@ class MainActivity : AppCompatActivity() {
         // one that just arrived and not the one the task was started with.
         setIntent(intent)
         PlayerDeepLink.consume(intent)
-        JamInviteLink.consume(intent)
+        TogetherDeepLink.consume(intent)
         MusicLink.consume(intent)
     }
 }
@@ -864,7 +863,6 @@ private fun BitChordApp(
     var addonLeftOutOfDownload by remember {
         mutableStateOf<Pair<String, SourceRegistry.DownloadExclusion>?>(null)
     }
-    var editingPartyServer by remember { mutableStateOf(false) }
     var editingSignatureApi by remember { mutableStateOf(false) }
     var librarySortMenuOpen by remember { mutableStateOf(false) }
     var showLyricsSources by remember { mutableStateOf(false) }
@@ -987,7 +985,6 @@ private fun BitChordApp(
     // suggestions, and pressing the button appeared to do nothing, because it
     // turned the party's setting on while the label already said so.
     val autoplayEnabled = autoplayEnabledFor(partyState, autoplay)
-    val partyServerStatus by ListenTogether.serverConnectionState.collectAsStateWithLifecycle()
     val listenBrainzToken by AppSettings.listenBrainzToken.collectAsStateWithLifecycle()
     // Set each time the search tab is tapped, which SearchScreen uses as a
     // signal to focus the input field.
@@ -1121,27 +1118,18 @@ private fun BitChordApp(
         override = AppSettings.streamCeilingOverride.collectAsStateWithLifecycle().value,
     )
     val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
-    val incomingJamInvite by JamInviteLink.pending.collectAsStateWithLifecycle()
-    var activeJamInviteCode by rememberSaveable { mutableStateOf<String?>(null) }
-    var activeJamInviteServer by rememberSaveable { mutableStateOf<String?>(null) }
+    val pendingTogetherJoin by TogetherDeepLink.pending.collectAsStateWithLifecycle()
 
-    // An invite is navigation and an action: reveal the Jam settings page now,
-    // then let that page join once an account is available. Keeping the code
-    // here lets a sign-in round trip return to the invite it started from.
-    LaunchedEffect(incomingJamInvite) {
-        val invite = incomingJamInvite ?: return@LaunchedEffect
-        activeJamInviteCode = invite.code
-        activeJamInviteServer = invite.serverUrl
-        dismissPlayer()
-        replayStory = null
-        showReplayShare = false
-        webSession = null
-        navigator.reset(AppRoute.Settings, AppRoute.ListenTogether)
-        JamInviteLink.handled()
-    }
-    LaunchedEffect(signedIn, activeJamInviteCode) {
-        if (signedIn && activeJamInviteCode != null) {
-            navigator.pushAll(AppRoute.Settings, AppRoute.ListenTogether)
+    // A together link is navigation and an action: reveal the session page now,
+    // and let that page join on its own once it is on screen — the join needs
+    // no account, just the display name it already has.
+    LaunchedEffect(pendingTogetherJoin) {
+        if (pendingTogetherJoin != null) {
+            dismissPlayer()
+            replayStory = null
+            showReplayShare = false
+            webSession = null
+            navigator.reset(AppRoute.Settings, AppRoute.ListenTogether)
         }
     }
     val account by viewModel.account.collectAsStateWithLifecycle()
@@ -1213,7 +1201,18 @@ private fun BitChordApp(
         }
     }
     val toggleLikeOf: (Song) -> Unit = { song ->
-        if (song.localUri != null) OfflinePlaylists.toggleLike(song) else viewModel.toggleLike(song.videoId)
+        if (song.localUri != null) {
+            OfflinePlaylists.toggleLike(song)
+        } else {
+            // The auto download on like setting's one caller here: only a like
+            // that actually landed queues anything — [toggleLike] answers the
+            // status it left behind, null when the tap never reached YouTube.
+            // A like that got rolled back later keeps its download; the moment
+            // was real when it happened, and unlike is not a refund.
+            if (viewModel.toggleLike(song.videoId) == LikeStatus.LIKE) {
+                Downloads.autoDownloadOnLike(context, song, true)
+            }
+        }
     }
     // Which tracks are being held on YouTube's own upload, so the player's menu
     // offers the way back out of a revert rather than the revert again.
@@ -2637,7 +2636,29 @@ private fun BitChordApp(
         } else {
             song
         }
-        startDownload(listOf(withDuration), null)
+        // The external downloader setting's one caller: a YouTube track hands
+        // its watch page to the app the package row names, and only a track
+        // with no watch page to hand — a source-backed one, or the setting
+        // never configured — still downloads through this app. An app that is
+        // named but not installed is said so, and nothing downloads: the
+        // listener picked where that download belongs.
+        val handedOff = AppSettings.externalDownloaderEnabled.value &&
+            when (ExternalDownloader.openFor(context, withDuration)) {
+                ExternalDownloader.LaunchResult.STARTED -> true
+                ExternalDownloader.LaunchResult.NOT_INSTALLED -> {
+                    Toast.makeText(
+                        context,
+                        context.getString(
+                            R.string.external_downloader_missing,
+                            AppSettings.externalDownloaderPackage.value,
+                        ),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    true
+                }
+                ExternalDownloader.LaunchResult.NOT_CONFIGURED -> false
+            }
+        if (!handedOff) startDownload(listOf(withDuration), null)
     }
 
     // Content padding leaves room for the frosted bar above and the tab bar
@@ -3067,7 +3088,6 @@ private fun BitChordApp(
         BackHandler(enabled = editingSource != null) { editingSource = null }
         BackHandler(enabled = choosingSourceQuality != null) { choosingSourceQuality = null }
         BackHandler(enabled = explainingOutdatedAddon != null) { explainingOutdatedAddon = null }
-        BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
         BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
 
         // On a tablet the page and the player stand side by side rather than
@@ -3329,23 +3349,14 @@ private fun BitChordApp(
                                 onSignOutQobuz = { confirmQobuzSignOut = true },
                                 onSignInSoundCloud = { showSoundCloudLogin = true },
                                 onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
+                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                             )
                         } else if (pageRoute == AppRoute.Integration) {
                             IntegrationScreen(
-                                onOpenSources = { navigator.push(AppRoute.Sources) },
                                 onOpenDiscord = { navigator.push(AppRoute.Discord) },
-                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 onOpenListenBrainzLogin = { showListenBrainzLogin = true },
                                 onOpenLastfmLogin = { showLastfmLogin = true },
                                 onChooseLastfmService = { choosingLastfmService = true },
-                                onSignInTidal = { showTidalLogin = true },
-                                onSignOutTidal = { confirmTidalSignOut = true },
-                                onSignInDeezer = { showDeezerLogin = true },
-                                onSignOutDeezer = { confirmDeezerSignOut = true },
-                                onSignInQobuz = { showQobuzLogin = true },
-                                onSignOutQobuz = { confirmQobuzSignOut = true },
-                                onSignInSoundCloud = { showSoundCloudLogin = true },
-                                onSignOutSoundCloud = { confirmSoundCloudSignOut = true },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Internet) {
@@ -3354,6 +3365,7 @@ private fun BitChordApp(
                                     navigator.push(AppRoute.SettingsChoice(SettingsChoiceKind.YT_MUSIC_REGION))
                                 },
                                 onOpenDialog = { internetDialog = it },
+                                onOpenChoice = { navigator.push(AppRoute.SettingsChoice(it)) },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Lyrics) {
@@ -3367,6 +3379,16 @@ private fun BitChordApp(
                                 onTranslationLanguage = { showTranslationLanguage = true },
                                 contentPadding = listPadding,
                             )
+                        } else if (pageRoute == AppRoute.Canvas) {
+                            // The Canvas sub-setting page under Playback: the
+                            // looping artwork's own settings, ported from
+                            // ArchiveTune. Its sp_dc sign-in stays raised here —
+                            // the WebView the auth needs lives at the activity,
+                            // where the Lyrics page's pickers live too.
+                            CanvasSettingsScreen(
+                                onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
+                                contentPadding = listPadding,
+                            )
                         } else if (pageRoute == AppRoute.Downloads) {
                             DownloadManagerPage(
                                 onCleared = { navigator.pop() },
@@ -3375,21 +3397,7 @@ private fun BitChordApp(
                         } else if (pageRoute == AppRoute.WearOs) {
                             WearOsScreen(contentPadding = listPadding)
                         } else if (pageRoute == AppRoute.ListenTogether) {
-                            ListenTogetherScreen(
-                                signedIn = signedIn,
-                                inviteCode = activeJamInviteCode,
-                                inviteServer = activeJamInviteServer,
-                                onInviteHandled = {
-                                    activeJamInviteCode = null
-                                    activeJamInviteServer = null
-                                },
-                                onSignIn = {
-                                    navigator.clear()
-                                    webSession = WebSessionMode.SIGN_IN
-                                },
-                                contentPadding = listPadding,
-                                onEditServer = { editingPartyServer = true },
-                            )
+                            MusicTogetherScreen(contentPadding = listPadding)
                         } else if (pageRoute == AppRoute.Equalizer) {
                             EqualizerScreen(
                                 contentPadding = listPadding,
@@ -3432,6 +3440,7 @@ private fun BitChordApp(
                                 },
                                 onLyricsSettings = { navigator.push(AppRoute.Lyrics) },
                                 onSources = { navigator.push(AppRoute.Sources) },
+                                onOpenCanvas = { navigator.push(AppRoute.Canvas) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
                                 onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
@@ -4120,6 +4129,7 @@ private fun BitChordApp(
                         AppRoute.Internet -> stringResource(R.string.internet)
                         AppRoute.Sources -> stringResource(R.string.sources)
                         AppRoute.Lyrics -> stringResource(R.string.lyrics)
+                        AppRoute.Canvas -> stringResource(R.string.canvas)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)
@@ -4200,65 +4210,6 @@ private fun BitChordApp(
                         }
                     } else null,
                     actions = {
-                        // This is intentionally scoped to Listen together: the
-                        // round-trip time is meaningful while coordinating a
-                        // party, but would be noise in the rest of the app.
-                        if (route == AppRoute.ListenTogether) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp),
-                            ) {
-                                when (val state = partyServerStatus) {
-                                    is ServerConnectionState.CustomFallback -> {
-                                        Icon(
-                                            Icons.Rounded.CloudOff,
-                                            contentDescription = stringResource(R.string.listen_together_top_bar_fallback, stringResource(R.string.listen_together_ping, state.latencyMs)),
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(14.dp),
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(
-                                            text = stringResource(R.string.listen_together_ping, state.latencyMs),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.error,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    is ServerConnectionState.CustomOnline -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_ping, state.latencyMs),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    is ServerConnectionState.DefaultOnline -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_ping, state.latencyMs),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    ServerConnectionState.Checking -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_server_checking),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    ServerConnectionState.Offline -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_server_offline_dash),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.error,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                }
-                            }
-                        }
                         // Only worth surfacing where there's room for it and it won't
                         // be mistaken for a per-page action — Home, at rest.
                         if (route == null && detail == null && selectedTab == TAB_HOME) {
@@ -4636,6 +4587,7 @@ private fun BitChordApp(
                                 controller = controller,
                                 viewModel = viewModel,
                                 scope = scope,
+                                context = context,
                                 onOpenArtist = { id ->
                                     viewModel.openDetail(
                                         id,
@@ -6271,13 +6223,6 @@ private fun BitChordApp(
             // At the root with the source editor, and for the same two reasons: it
             // is a haze card that has to sample the backdrop it is *not* inside,
             // and a full-window scrim that has to be full-window.
-            if (editingPartyServer) {
-                PartyServerEditor(
-                    hazeState = hazeState,
-                    onDismiss = { editingPartyServer = false },
-                )
-            }
-
             if (editingSignatureApi) {
                 SignatureApiEditor(
                     hazeState = hazeState,

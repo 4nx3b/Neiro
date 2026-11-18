@@ -90,6 +90,10 @@ object LyricsTranslation {
         @Synchronized fun put(key: String, value: CachedTranslation) {
             entries[key] = value
         }
+
+        @Synchronized fun clear() {
+            entries.clear()
+        }
     }
 
     /**
@@ -613,6 +617,21 @@ object LyricsTranslation {
         files.forEach { file ->
             kept += file.length()
             if (kept > MAX_CACHE_BYTES) file.delete()
+        }
+    }
+
+    /**
+     * Drops every translated and romanized lyric held on disk and in memory —
+     * the clear-lyrics-cache row's action. The lyrics themselves are fetched
+     * per play and never persisted, so this is the whole cache there is.
+     */
+    suspend fun clearCache() {
+        memory.clear()
+        withContext(Dispatchers.IO) {
+            diskMutex.withLock {
+                val root = cacheDir ?: return@withLock
+                File(root, CACHE_DIRECTORY).deleteRecursively()
+            }
         }
     }
 }

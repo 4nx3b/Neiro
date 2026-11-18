@@ -697,11 +697,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * is a one-tap, low-stakes action taken while a song is playing; waiting
      * on a round trip before the heart fills reads as the tap not having
      * registered, and people tap again.
+     *
+     * Answers whether the rating was set — a tap that never reached YouTube
+     * (not signed in, or the same rating sent twice) leaves it untouched, and
+     * the auto download on like rule only queues for a like that landed.
      */
-    fun setLike(videoId: String, status: LikeStatus) {
-        if (!requireSignIn()) return
+    fun setLike(videoId: String, status: LikeStatus): Boolean {
+        if (!requireSignIn()) return false
         val previous = likeStatusOf(videoId)
-        if (previous == status) return
+        if (previous == status) return false
         LikeState.set(videoId, status)
         viewModelScope.launch {
             YtMusicRepository.rate(videoId, status).fold(
@@ -720,6 +724,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 },
             )
         }
+        return true
     }
 
     /**
@@ -778,11 +783,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** The heart: liked becomes neutral, anything else becomes liked. */
-    fun toggleLike(videoId: String) = setLike(
-        videoId,
-        if (likeStatusOf(videoId) == LikeStatus.LIKE) LikeStatus.INDIFFERENT else LikeStatus.LIKE,
-    )
+    /**
+     * The heart: liked becomes neutral, anything else becomes liked. Answers
+     * the status it left behind, or null when the tap was refused (not signed
+     * in, or nothing to change) — see [setLike], whose answer this passes on.
+     */
+    fun toggleLike(videoId: String): LikeStatus? {
+        val status = if (likeStatusOf(videoId) == LikeStatus.LIKE) LikeStatus.INDIFFERENT else LikeStatus.LIKE
+        return if (setLike(videoId, status)) status else null
+    }
 
     /** As [toggleLike], for the thumb-down. */
     fun toggleDislike(videoId: String): LikeStatus? {

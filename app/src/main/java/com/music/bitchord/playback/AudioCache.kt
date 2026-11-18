@@ -277,6 +277,16 @@ object AudioCache {
     }
 
     /**
+     * Reclaims whatever is past [AppSettings.audioCacheLimitBytes] right now,
+     * without waiting for the next write to notice — the Smart Trimmer's
+     * once-per-launch pass. The running cache already evicts as it writes; this
+     * is for the space a session that wrote nothing left behind.
+     */
+    fun trimNow() {
+        evictor.applyNow(cache)
+    }
+
+    /**
      * Moves a cache left in `cacheDir` by an older build to [dir], keeping
      * every track in it. A rename within app storage, so instant and free; the
      * index survives with it, because [SimpleCache] keys its database tables on

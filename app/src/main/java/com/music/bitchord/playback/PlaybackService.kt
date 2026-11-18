@@ -3611,6 +3611,14 @@ class PlaybackService : MediaLibraryService() {
         // the optimistic state with YouTube in the background.
         LikeState.set(videoId, target)
         refreshCustomLayouts()
+        // The auto download on like rule answers the notification's heart too —
+        // it is about the like, not about which surface drew it. The track the
+        // notification names is the one playing, which [toSong] answers.
+        if (target == LikeStatus.LIKE) {
+            player?.currentMediaItem?.toSong()?.let { song ->
+                Downloads.autoDownloadOnLike(this, song, true)
+            }
+        }
         favoriteActionJob = scope.launch {
             YtMusicRepository.rate(videoId, target)
                 .onFailure {

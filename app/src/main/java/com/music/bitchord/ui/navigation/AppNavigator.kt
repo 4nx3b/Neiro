@@ -33,6 +33,12 @@ sealed interface AppRoute {
      * categorization.
      */
     data object Lyrics : AppRoute
+    /**
+     * The Canvas sub-setting page under Playback — the looping artwork behind
+     * the sleeve and the headers, where it comes from and when it plays,
+     * ported from ArchiveTune's Canvas settings page.
+     */
+    data object Canvas : AppRoute
     data object ListenTogether : AppRoute
     data object WearOs : AppRoute
     data object Equalizer : AppRoute

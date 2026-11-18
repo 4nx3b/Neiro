@@ -78,6 +78,14 @@ interface PlayerHost {
     @Composable
     fun rememberRemoteArtworkUrl(song: Song?): String?
 
+    /**
+     * A still cover for [song] from Tidal's catalogue — the Canvas page's
+     * "Use Tidal artwork" fallback, for a sleeve that resolved no artwork of
+     * its own. Null is the normal answer, and the only one while the switch
+     * is off: the request behind it is never made.
+     */
+    suspend fun tidalSleeveFallback(song: Song): String? = null
+
     /** The system output level the player's volume bar drives, if it drives one. */
     val volume: SystemVolume
 
@@ -240,6 +248,8 @@ interface PlayerSettingsSource {
     val audioQualityCellular: StateFlow<AudioQuality>
     val audioQualityWifi: StateFlow<AudioQuality>
     val canvasOverCellular: StateFlow<Boolean>
+    /** Breathe a slow scale into a still sleeve with no canvas over it — see the Canvas page. */
+    val animateStaticArtwork: StateFlow<Boolean>
     val fullBleedArtwork: StateFlow<Boolean>
     val hideSongStatus: StateFlow<Boolean>
     val showQueueHistory: StateFlow<Boolean>

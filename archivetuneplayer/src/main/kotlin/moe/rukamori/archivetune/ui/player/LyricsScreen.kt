@@ -624,7 +624,7 @@ fun LyricsScreen(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(horizontal = 36.dp, vertical = 8.dp),
+                                    .padding(vertical = 8.dp),
                         )
                     }
                 }
@@ -978,10 +978,7 @@ private fun AppleMusicLyricsPane(
         lyricsMode = lyricsMode,
         sliderPositionProvider = sliderPositionProvider,
         lyricsSyncOffset = lyricsSyncOffset,
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
+        modifier = modifier.fillMaxSize(),
         textColor = foregroundColor,
     )
 }

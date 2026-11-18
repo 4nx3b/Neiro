@@ -231,3 +231,39 @@ its own source system. Porting rules:
   request-tier mapping, the end-to-end transcoding walk over a MockWebServer
   via `apiBaseForTest`/`clientIdForTest`/`appVersionForTest`, and the
   failure cache).
+- **Music Together** (the Listen Together page's replacement, ported from
+  ArchiveTune's `together` package): `app/.../data/together/` — the protocol
+  (`TogetherMessages`, a `type`-discriminated sealed `TogetherMessage` with
+  chat: `ChatSendRequest` → `ChatMessage`), `TogetherServer` (the host IS the
+  server: an embedded Ktor CIO engine on `0.0.0.0:<togetherDefaultPort>` with
+  a `/together` WebSocket, protocol version + session key handshake, approval
+  queue, host transfer, chat rate limit 10/5s), the online relay stack
+  (`TogetherOnlineEndpoint` resolves the relay base from
+  `NeiroKoiverseServer.txt` on the repo's `dev` branch, 6h cache;
+  `TogetherOnlineApi` create/resolve/end with the `TOGETHER_BEARER_TOKEN`
+  BuildConfig field — seeded from local.properties/env, empty is a supported
+  "online unavailable" state; `TogetherOnlineHost` is the host's relay
+  client), `TogetherClient` (the guest socket, ws→wss retry),
+  `TogetherEngine` (the object every surface reads: session/room state flows,
+  500ms host broadcasts, guest control/add request planning, NTP-ish
+  `TogetherClock`, `applyingRemote` echo suppression, the room-events
+  notification channel) — behind the `data/listentogether/ListenTogether.kt`
+  facade that keeps the old `State` shape (`inParty`/`controlsLocked`/
+  `awaitingStart`/`nickname()`) the player surfaces, PlaybackService's
+  AutoPlay election and MiniPlayer already speak, and the rewritten
+  `playback/PartySync.kt` that owns the service-side doors
+  (`onLocalIntent` debounced to guest `ControlRequest`/`AddTrackRequest`,
+  `onPlayWhenReadyChanged` focus-loss dropout, `onLockedTransport`,
+  `shouldDeferPlay`, queue-drag flushing). The UI is
+  `ui/screens/MusicTogetherScreen.kt` (status/playback/host/join/participants/
+  chat/activity-log cards + the welcome dialog); the deep link is
+  `bitchord://together?host=&port=&sid=&key=` (`TogetherLink.decode` +
+  `TogetherDeepLink.consume`, the manifest filter on MainActivity). Because
+  `:tv` compiles the phone app's sources, its build.gradle carries the same
+  ktor-server trio and `TOGETHER_BEARER_TOKEN` field. LAN sessions are
+  cleartext `ws://` — dev builds allow it, prod keeps
+  `usesCleartextTraffic="false"`, so the relay is the only path there. The
+  together_* strings ship `translatable="false"` until the locale pass; the
+  old party-server BuildConfig (`LISTEN_TOGETHER_SERVER`) and its CI seeding
+  are gone. The Go `backend/` and `web/` modules still exist for the old
+  party protocol and are untouched by this port.

@@ -191,6 +191,7 @@ import moe.rukamori.archivetune.constants.DisableBlurKey
 import moe.rukamori.archivetune.constants.EnableHapticFeedbackKey
 import moe.rukamori.archivetune.constants.EnableVideoPlaybackKey
 import moe.rukamori.archivetune.constants.InnerTubeCookieKey
+import moe.rukamori.archivetune.constants.LyricsSyncOffsetKey
 import moe.rukamori.archivetune.constants.MaxCanvasCacheSizeKey
 import moe.rukamori.archivetune.constants.PlayerBackgroundStyle
 import moe.rukamori.archivetune.constants.PlayerBackgroundStyleKey
@@ -533,9 +534,7 @@ fun BottomSheetPlayer(
 
     val durationUpdatedState = rememberUpdatedState(duration)
     val durationProvider = remember { { durationUpdatedState.value } }
-    var lyricsSyncOffset by rememberSaveable(mediaMetadata?.id) {
-        mutableIntStateOf(0)
-    }
+    var lyricsSyncOffset by rememberPreference(LyricsSyncOffsetKey, defaultValue = 0)
     var sliderPosition by remember(mediaMetadata?.id) {
         mutableStateOf<Long?>(null)
     }

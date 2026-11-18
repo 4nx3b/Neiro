@@ -34,23 +34,11 @@ val lastfmSecret: String = (
         ?: ""
     ).trim()
 
-/*
- * Where Listen Together's party server lives. Not a credential — it is a public
- * URL, and every device in a party has to be pointed at the same one — but it is
- * deployment-specific rather than a property of the source, which is what puts
- * it here beside the others instead of in a constant.
- *
- * Empty is a supported state, not a broken build: the field below is only the
- * *default* the address box on the Listen Together screen starts with, and
- * anything typed there wins and persists. So a fresh checkout without this line
- * builds and runs, and simply asks for an address the first time somebody opens
- * the screen. See ListenTogether.DEFAULT_SERVER.
- */
-val listenTogetherServer: String = (
-    localProps.getProperty("LISTEN_TOGETHER_SERVER")
-        ?: System.getenv("LISTEN_TOGETHER_SERVER")
-        ?: "https://bitchord-listen-together.onrender.com"
-    ).trim().trimEnd('/')
+val togetherBearerToken: String = (
+    localProps.getProperty("TOGETHER_BEARER_TOKEN")
+        ?: System.getenv("TOGETHER_BEARER_TOKEN")
+        ?: ""
+    ).trim()
 
 /*
  * Bump this by hand before cutting each sideloaded test build ("beta2",
@@ -92,8 +80,8 @@ android {
         buildConfigField("String", "LASTFM_SECRET", "\"${lastfmSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField(
             "String",
-            "LISTEN_TOGETHER_SERVER",
-            "\"${listenTogetherServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+            "TOGETHER_BEARER_TOKEN",
+            "\"${togetherBearerToken.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
         // TV has no addons; AddonAuth only reaches the compiler through the
         // shared phone sources, so it gets no server.
@@ -450,6 +438,14 @@ dependencies {
 
     // ---- Discord Rich Presence: the gateway is a WebSocket, so Ktor needs the plugin ----
     implementation("io.ktor:ktor-client-websockets:3.5.2")
+
+    // ---- Music Together: the host IS the server, an embedded Ktor CIO engine ----
+    // The shared phone sources carry TogetherServer, so TV compiles the same
+    // relay-shaped stack: `core` for routing and the embedded-server plumbing,
+    // `cio` for the engine, `websockets` for the /together upgrade.
+    implementation("io.ktor:ktor-server-core:3.5.2")
+    implementation("io.ktor:ktor-server-cio:3.5.2")
+    implementation("io.ktor:ktor-server-websockets:3.5.2")
 
     // ---- YouTube stream extraction: live-benchmarked client catalog + cipher tiers ----
     implementation("com.github.MetrolistGroup.innertubex:innertubex-android:v0.7.0")

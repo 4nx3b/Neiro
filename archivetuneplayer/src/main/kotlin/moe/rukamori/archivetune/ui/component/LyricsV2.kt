@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -160,11 +161,16 @@ import kotlin.math.abs
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
-private const val LRC_LEAD_MS = 300L
+private const val LRC_LEAD_MS = 0L
 
 private const val TTML_LEAD_MS = 0L
 
-private const val LYRIC_VISUAL_TUNING_OFFSET_MS = 150L
+private const val LYRIC_VISUAL_TUNING_OFFSET_MS = 0L
+
+// Where the active line is pinned, the same ~16%-from-top anchor BitChord's
+// own panel and LyricsEnhanced keep, so line-synced lyrics land in the same
+// place whichever style hosts them.
+private const val LYRICS_ANCHOR_FRACTION = 0.16f
 
 private const val MIN_SWEEP_MS = 180L
 
@@ -516,7 +522,7 @@ fun LyricsV2(
                     ?: snapshotFlow { listState.layoutInfo.viewportSize.height }.first { it > 0 }
             listState.scrollToItem(
                 index = currentLineIndex,
-                scrollOffset = -(viewportHeight * 0.35f).toInt(),
+                scrollOffset = -(viewportHeight * LYRICS_ANCHOR_FRACTION).toInt(),
             )
             awaitingFirstFocus = false
             return@LaunchedEffect
@@ -524,7 +530,7 @@ fun LyricsV2(
 
         val visibleInfo = listState.layoutInfo
         val viewportHeight = visibleInfo.viewportSize.height
-        val targetOffset = (viewportHeight * 0.35f).toInt()
+        val targetOffset = (viewportHeight * LYRICS_ANCHOR_FRACTION).toInt()
 
         val distance = abs(currentLineIndex - (listState.firstVisibleItemIndex))
         if (distance > 15) {
@@ -622,6 +628,7 @@ fun LyricsV2(
                         compositingStrategy = CompositingStrategy.Offscreen
                     },
             horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp),
         ) {
             itemsIndexed(
                 items = entriesWithWords,
@@ -1000,7 +1007,7 @@ fun LyricsV2(
                         val viewportHeight = listState.layoutInfo.viewportSize.height
                         listState.animateScrollToItem(
                             index = currentLineIndex,
-                            scrollOffset = -(viewportHeight * 0.35f).toInt(),
+                            scrollOffset = -(viewportHeight * LYRICS_ANCHOR_FRACTION).toInt(),
                         )
                     }
                 },

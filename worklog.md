@@ -833,3 +833,863 @@ Stage Summary:
 - **Accompanist is out**: `LyricsEnhanced` keeps its scaffolding (fetch, TTML/LRC parse, translation/romanisation, click-to-seek, scrub preview) and renders natively — the BitChordLyrics word-sweep technique (drawWithContent + clipRect gradient wipe) on a LazyColumn with anchor auto-scroll; `LyricsSpicyMobile.kt` and the `EnhancedLyricsStyle` picker are deleted; both mocharealm artifacts leave the module.
 - **am-lyrics on the web** goes 1.8.2 → 1.9.1 (package.json + pnpm-lock).
 - **Every locale** got the Integration/Internet/Lyrics strings the LocaleStringsTest demands, preferring ArchiveTune's own translations where they exist.
+
+## Task 1-a: the settings reorganization the owner ordered
+
+Task ID: 1-a
+Agent: Super Z (sub agent, session task-1a)
+
+Task: Reorganize Settings exactly as the owner ordered: the audio-quality
+ceilings and the Dolby Atmos switch off the main page, six categories
+(Downloads, Content Preferences, Local Music, Language, Performance,
+Behavior) dissolved into the pages whose subject they are, Spotify moved from
+Integration to Sources, and the Replay row and the work-out-genres switch
+moved to where the owner wants them read.
+
+Work Log:
+- SettingsSheet.kt:
+  - The main page's Audio quality group is gone; a Replay row (same icon,
+    subtitle, keywords and `onOpenReplay` as Your data's) sits in the top
+    group directly after Listen Together; the Wear OS row no longer sits
+    under the category list — it is a Miscellaneous row now.
+  - `SettingsCategory` keeps five entries — PLAYBACK, APPEARANCE, STORAGE,
+    YOUR_DATA, MISCELLANEOUS — and the icon map lost the six dead branches.
+    Nothing outside SettingsSheet/AppNavigator names a category, and the
+    top-bar title mapping reads `route.category.title`, so no other call
+    site changed.
+  - Playback gains the Dolby Atmos switch (between Spatial audio and
+    Equalizer, still `BypassedByBitPerfect`-wrapped and greyed where the
+    device can't decode E-AC-3), plus Content Preferences and Local Music
+    groups carrying every row of the two dissolved categories (the folder
+    picker and the conditional Use-all-folders row included).
+  - Storage leads with the Downloads group (Download quality, Wi-Fi only,
+    Export-compatible downloads, Sync downloaded playlists).
+  - Miscellaneous gains Language (App language + the activity-hosted
+    `AppLanguageDialog`), Performance (High performance mode + the
+    conditional Refresh rate row) and Behavior (the Performance row into
+    `BehaviorPerformancePage`), and the Wear OS row, all still searchable
+    through `SearchableSettingsGroup`'s keyword rows.
+  - Your data keeps only Export/Import data — the later task replaces them.
+  - `AudioQuality.localizedLabel()` went private→internal so the Internet
+    page labels the ceilings with the same strings.
+- InternetScreen.kt: an Audio quality group after the YouTube Music region
+  group, with the same On Wi-Fi / On mobile data rows (same icons, In-use
+  badges off the live `meteredConnection`, same choice-page navigation
+  through a new `onOpenChoice` parameter).
+- IntegrationScreen.kt: the Music sources group (Sources row, Direct source
+  stream subrow, Tidal/Deezer/Qobuz/SoundCloud account rows) is gone — all
+  duplicated on Sources already — and the External sources group left with
+  Spotify. The Scrobbling group gains the work-out-genres switch directly
+  under the Last.fm sign-in row. Ten now-unused parameters and their
+  MainActivity wiring came out with the rows.
+- SourcesScreen.kt: a Spotify group after the SoundCloud account group — the
+  Spotify logo row, the Connected subtitle, the Disconnect destructive row,
+  the connect footer — reached through a new `onOpenSpotify` parameter.
+- MainActivity.kt: the three call sites updated (Integration slimmed,
+  Internet gains `onOpenChoice`, Sources gains `onOpenSpotify`); no other
+  region touched.
+- No string keys were added, removed, or renamed — every moved row reuses
+  its existing key; `LocaleStringsTest` is unaffected by construction.
+
+Stage Summary:
+- Settings' page structure matches the owner's order with zero row-level
+  behaviour changes: every moved row kept its callbacks, preference keys,
+  conditional visibility and search keywords. Compile verification is CI's
+  (never local); the orchestrator commits.
+
+## Task 1-b: synced lyrics fixed across the ported player styles
+
+Task ID: 1-b
+Agent: Super Z (sub agent, session task-1b)
+
+Task: Fix synced-lyrics rendering in every style ported from ArchiveTune
+(Flamingo/APPLE_MUSIC, TikTok, the vendored BitChord page and strip, the
+full-screen lyrics screen): word-synced lyrics arrived fused into
+"Ibeentrynacall" with no per-word sweep, line-synced lyrics sat misplaced,
+the app's lyrics offset never reached the ported players, and the vendored
+BitChord strip could never show lyrics at all.
+
+Work Log:
+- Root cause, verified in the sources: `toArchiveTuneLrc()` joined
+  `<stamp>word` with no inter-word spaces, but the app's `LyricWord.text`
+  is trimmed while the ported parser keeps inter-tag substrings verbatim —
+  so the reconstructed words had no spaces and the line text fused. The
+  app's `lyricsOffsetMs` was bridged nowhere (the vendored
+  `lyricsSyncOffset` was a per-track `rememberSaveable(0)`), and the ported
+  views added their own leads (LRC_LEAD_MS 120/300, LYRIC_VISUAL_TUNING
+  150) that the native style has no counterpart for. The vendored strip
+  read `database.lyrics(id)` off an in-memory MusicDatabase nothing seeds.
+- `ArchiveTuneBridgeImpl.kt`:
+  - `toArchiveTuneLrc()` now writes the A2 convention: each word run
+    carries its own trailing space (`<00:27.39>I <00:27.54>been `), the
+    tag-stripped line text equals the original (spaces intact), and the
+    last run is closed by a bare terminator stamp at `LyricLine.endMs` —
+    the parser reads a bare tag as the final word's end and nothing else,
+    so the sweep stops where the line stops (verified against
+    `parseEnhancedLrcLine`'s empty-text skip and
+    `clampEnhancedLrcLastWordEnds`).
+  - The collector now watches `lyricsChecked` too and emits the module's
+    `LYRICS_NOT_FOUND` marker when a lookup finished with nothing, so the
+    ported pages and the strip report "not available" instead of
+    shimmering forever (the AOD ticker already guards that marker).
+- `constants/PreferenceKeys.kt`: new `LyricsSyncOffsetKey`
+  ("lyricsSyncOffset", int).
+- `ArchiveTunePreferenceBridge.kt`: `lyricsSyncOffset` bridged two-way to
+  `AppSettings.lyricsOffsetMs`, negated — Neiro's playhead is
+  `position − offset`, the ported stack's `position + offset`, so the sign
+  flip is what makes a track synced in one style stay synced in the other.
+  `docs/archivetune-settings-map.md` gains the row (39 bridged now).
+- Readers routed to the bridged preference: vendored `Player.kt` (which
+  feeds Flamingo, TikTok and the full-screen LyricsScreen) and
+  `BitChordPlayer.kt` replaced their per-track `rememberSaveable` locals
+  with `rememberPreference(LyricsSyncOffsetKey, 0)`; the vendored
+  LyricsMenu's offset dialog therefore writes the app's setting.
+- `BitChordPlayer.kt`: the strip's source switched from
+  `database.lyrics(id)` to the live `playerConnection.currentLyrics` flow
+  (id-matched like the lyric pages), parsed by the same
+  `parseBitChordLyrics` — the strip now shows the current line and sweeps
+  it word by word, and `lyricsUnavailable` becomes reachable.
+- Layout unification, per the user's ask:
+  - `LyricsEnhanced.kt` (Flamingo portrait/landscape, TikTok inline pane,
+    vendored BitChord ENHANCED page, LyricsScreen ENHANCED): the lyric
+    column gets a fixed symmetric `NativeLyricsGutter = 30.dp`
+    contentPadding (BitChord's PLAYER_GUTTER equivalent; rows carry no
+    horizontal padding of their own) and `LRC_LEAD_MS` is zeroed — the
+    anchor was already the ~16%-from-top pin. The word sweep itself
+    (SweptLyricText/sweepTo over revealedChars) was already the BitChord
+    technique; it now has real words to walk.
+  - `LyricsV2.kt` (LyricsScreen V2/SPOTIFY, vendored BitChord V2/SPOTIFY):
+    the LazyColumn gets `contentPadding` of 18dp each side (rows keep
+    their own 12dp → 30dp total), the active-line anchor moves from
+    35% to `LYRICS_ANCHOR_FRACTION = 0.16f` (matching LyricsEnhanced and
+    the native panel), and the 300ms LRC lead + 150ms visual tuning are
+    zeroed. Word separation came from the bridge fix: each word run's
+    trailing space is what the FlowRow now lays out; the space-run branch
+    stays for TTML sources.
+  - `LyricsScreen.kt`: the pane's 24dp horizontal padding (and the
+    landscape full-screen 36dp) dropped — the components carry the fixed
+    gutter themselves now.
+  - `TikTokSongPage.kt`: the inline pane's 6dp horizontal padding dropped
+    for the same reason. `TikTokMainLyrics` keeps its caller-chosen
+    overlay insets; its sweep is fixed by the bridge. AOD untouched.
+- No string resources added. No files outside the task's scope touched.
+
+Stage Summary:
+- Every ported style renders the app's lyrics the way the native BitChord
+  panel does: words separated and swept word by word on their own timings,
+  lines anchored ~16% from the top inside a fixed 30dp gutter, timing
+  driven by the app's lyrics offset through the negated bridge with the
+  per-view leads gone, and the vendored BitChord strip live at last.
+  Compile verification is CI's (never local); the orchestrator commits.
+
+## Task 3-a: Backup and restore ported into the Your data page
+
+Task ID: 3-a
+Agent: Super Z (sub agent, session task-3a)
+
+Task: Port ArchiveTune's Backup and restore page (scheduled auto backup,
+cloud storage sync, internal service with m3u/csv playlist import and CSV
+export) into Neiro's Your data settings page, replacing the old
+Export/Import data rows, with the archive adapted to Neiro's data rather
+than ArchiveTune's SQLite zip.
+
+Work Log:
+- New engine under `app/src/main/java/com/music/bitchord/data/backup/`:
+  - `BackupArchive.kt`: the `.backup` file — a zip of `manifest.json`
+    (app tag `bitchord`, format version, created date, app version),
+    `settings.json` (AppSettings.exportPrefs() through Backup.PrefValue's
+    typed codec, secrets and device-local keys already excluded), and
+    `history.json` (ListeningStats.exportAll()'s buckets). Restore
+    validates the manifest first, then applies settings through
+    AppSettings.importPrefs() and history through ListeningStats.importAll()
+    — the existing import paths, not new ones. A picked file whose first two
+    bytes are not "PK" is one of the old single-file JSON exports and
+    restores through Backup.importFrom() as-is (Validity.legacy, the confirm
+    dialog says so); zip validation answers invalid / corrupted / missing /
+    newer-format with its own string.
+  - `ScheduledBackup.kt`: ScheduledBackupFrequency (DAILY/WEEKLY/MONTHLY/
+    CUSTOM) plus the scheduler, both channels — `scheduled_auto_backup` for
+    the device folder and `scheduled_auto_backup_cloud` for the cloud
+    folder — periodic work at 1/7/30 days with the initial delay landing on
+    the next 02:00 after one period (the reference's nextRunAt), custom as a
+    one-time request on the picked date at 02:00; constraints
+    battery-not-low + storage-not-low; setDirectory/setCloudFolder take the
+    persistable READ|WRITE tree grant and resolve the display name the way
+    ArchiveTune's repository did; syncNow() writes one dated-or-overwrite
+    backup into the Drive folder and stamps cloudSyncLastRunAt;
+    rescheduleAfterRun() advances a custom date by whole months to the next
+    future occurrence and re-arms that one channel only (re-arming periodic
+    work would reset its delay every run).
+  - `ScheduledBackupWorker.kt`: the CoroutineWorker — reads its channel's
+    settings fresh at run time, writes the zip through
+    ScheduledBackup.createDestination (DocumentsContract.createDocument,
+    dated `<app>_yyyyMMdd.backup`, overwrite mode finds the fixed
+    `<app>.backup` child doc and truncates it), stamps the cloud last-run,
+    re-arms; a lost grant fails the run, anything else retries.
+  - `PlaylistTransfer.kt`: readCsvRecords ported verbatim (the
+    PushbackReader state machine, quote handling, CRLF); the CSV header
+    detection (title/artist aliases, artist split on `;` and `|`); the m3u
+    #EXTM3U/#EXTINF parse; imported rows become a LocalPlaylistStore
+    playlist named after the file; exportCsv writes the ArchiveTune column
+    set (Title, Artist, Album, Duration — Duration instead of Media ID,
+    which is a YouTube id Neiro rows don't always have) with the BOM,
+    always-quoted fields and the spreadsheet-formula escape.
+- `AppSettings.kt`: eleven new flows and keys in the house pattern —
+  scheduledBackupEnabled/Frequency/CustomDateEpochDay/DirectoryUri/
+  DirectoryName/OverwriteExisting and cloudSyncEnabled/FolderUri/FolderName/
+  OverwriteExisting/LastRunAt — read in readAll(), written by setters, the
+  frequency enum parsed like the other enum settings. The two folder URIs,
+  their names and the cloud last-run are added to DEVICE_LOCAL (a SAF tree
+  grant means this phone), so a restore keeps this device's folders and
+  never exports them.
+- `SettingsSheet.kt`, Your data page: the old Export/Import data rows, their
+  two launchers, their status vars and the pre-picker confirm dialog are
+  replaced by the ported structure —
+  - "Scheduled auto backup": enable switch (running/paused subtitle),
+    Backup schedule row (frequency value chip, opens the Daily/Weekly/
+    Monthly/Custom dialog; Custom opens a Material3 DatePicker with past
+    dates disabled), Backup directory row (OpenDocumentTree, shows the
+    folder name), Overwrite switch gated on a directory being set.
+  - "Cloud storage sync": the info banner row (the owner's wording about
+    cloud apps and the system picker), Drive folder row, Enable cloud sync
+    switch (paused/running subtitle), the shared Backup schedule row gated
+    on a folder, Overwrite existing Drive backup switch, Sync now row
+    showing "Never synced"/"Last synced …" and running the backup inline.
+  - "Internal service": Backup row (CreateDocument octet-stream,
+    `<app>_yyyyMMddHHmmss.backup`), Restore row (OpenDocument, validate,
+    confirm dialog showing what the file holds, restore, then the schedule
+    re-armed from the restored settings), Import a "m3u" playlists, Import a
+    "csv" playlists, Export playlist as CSV (playlist picker dialog →
+    CreateDocument text/csv).
+  All rows ride SettingsRow/SearchableSettingsGroup with the page's own
+  spacing and search keywords; the frequency dialog, restore dialogs and
+  playlist picker are GlassAlertDialogs; a `scheduledFrequencyLabel`
+  composable maps the enum to the row's value.
+- `strings.xml`: 60 `backup_*` strings plus one plural added
+  `translatable="false"` — the repo's standing way to ship English-first
+  keys (32 existing ones already do) so LocaleStringsTest keeps passing
+  until the localization task translates them; no existing key removed.
+- No dependency added: `androidx.work:work-runtime-ktx:2.10.1` is already
+  declared (PlaylistSync's line), which is the 2.10.x the task asked for.
+  MainActivity untouched — the launchers live in SettingsScreen, where the
+  export/import pickers already lived.
+
+Stage Summary:
+- Your data is now the Backup and restore page: one schedule engine behind
+  two folders, an own-format zip archive with legacy JSON restore, and the
+  playlist import/export pair — every row backed by the engine, every
+  setting persisted in AppSettings, every schedule in WorkManager.
+  Compile verification is CI's (never local); the orchestrator commits.
+
+---
+
+## Task 3-b: Music Together — the full Listen Together port, verified and completed
+
+Task ID: 3-b
+Agent: Super Z (sub agent, session task-3b-continue)
+
+Task: Verify and complete the interrupted port of ArchiveTune's Music
+Together feature (embedded LAN server, online relay host, guest socket,
+room-state protocol with chat) into Neiro, keeping the old Listen Together
+facade alive for every existing caller, and fix all breakage left in the
+working tree.
+
+Work Log:
+- The port itself (in-flight from the previous agent, verified file by
+  file): `app/.../data/together/` — `TogetherMessages.kt` (the
+  `type`-discriminated sealed protocol: hello/welcome, room state, control
+  and add-track requests, join decisions, heartbeats, host transfer, kick/
+  ban, and the chat pair `ChatSendRequest`/`ChatMessage`),
+  `TogetherModels.kt` (track/participant/room-settings/room-state + the
+  session-state sealed class), `TogetherServer.kt` (the host IS the server —
+  embedded Ktor CIO on 0.0.0.0, `/together` WebSocket, session-key +
+  protocol-version handshake, approval gating, authority/handoff, chat
+  rate-limit 10 per 5s), `TogetherOnlineEndpoint.kt` (relay base resolved
+  from `NeiroKoiverseServer.txt` on the fork's dev branch, 6h cache, falls
+  back to the cached copy), `TogetherOnlineApi.kt` (`/v1/together/sessions`
+  create/resolve/end over the Bearer token, retry on transient IO),
+  `TogetherOnlineHost.kt` (the host's relay WebSocket client, relays guest
+  chat back), `TogetherClient.kt` (the guest socket: ws→wss retry,
+  hello/welcome, events as a shared flow), `TogetherClock.kt` (NTP-style
+  offset over heartbeat pongs), `TogetherPlaybackSync.kt` (the sync rules:
+  500ms broadcast, stale-frame drop, queue rebuild on hash mismatch, seek
+  thresholds paused 150ms / LAN playing 700ms / online playing 1200ms),
+  `TogetherGuestPlaybackPlanner.kt`, `TogetherJson.kt`, `TogetherLink.kt`
+  (deep-link encode/decode + `TogetherDeepLink` pending-join store), and
+  `TogetherEngine.kt` (the single object every surface reads — session and
+  room state flows, host broadcast loop, guest control/add planning with
+  dedupe and fallback-start, focus-loss dropout, host transfer, inactivity
+  room close, the room-events notification channel, chat buffer of 200).
+- The compatibility layer: `data/listentogether/ListenTogether.kt` rewritten
+  as a facade over the engine — the old `State` shape (`code`/`you`/
+  `members`/`playback`/`queue`/`inParty`/`controlsLocked`/`hostOnlyControl`)
+  mapped from the session+room state, `awaitingStart` from Joining*, the
+  nickname backed by `togetherDisplayName` with one-time migration from the
+  legacy party prefs, and `queueAdd` split into the host's local append and
+  a guest's `AddTrackRequest`s. Every external caller verified against it:
+  MainActivity (transport, refusedByHost, party queue context, version
+  swap, onboarding name), PlaybackService (AutoPlay election, queue echo
+  wait, all `inParty` gates), Autoplay/DirectSourceGate/MusicOnlyPlayback/
+  CrossfadeController/TrackAnalyzer/AndroidPlayerHost/SettingsSheet/
+  SourcesScreen, and sharedUi through `PartyUi` — all unchanged, all still
+  compiling against the facade.
+- `playback/PartySync.kt` rewritten as the service-side door set
+  (`start`/`stop`, debounced `onLocalIntent` → guest control/add requests,
+  `onPlayWhenReadyChanged` audio-focus dropout, `onLockedTransport`,
+  `shouldDeferPlay` with the engine's fallback-start, queue-drag flushing,
+  the personal-queue stash on enter/leave) — PlaybackService is untouched
+  and every existing door call matches the new signatures.
+- The UI: `ui/screens/MusicTogetherScreen.kt` replaces ListenTogetherScreen/
+  Sheets/PartyServerEditor — status, current playback, host controls
+  (LAN/online segmented, display name, port, the three permission toggles),
+  join by link or code, participants with approve/reject/transfer/kick/ban,
+  the chat card, the activity log, the welcome dialog, all in the settings
+  page idiom (SettingsGroup/SettingsRow/SegmentedControl/GlassAlertDialog/
+  IosSwitch). MainActivity dispatches it at the Listen Together route, the
+  settings row and MiniPlayer badge ride the facade, and the party-server
+  top-bar status UI is gone with the server it described.
+- Completion fixes made while finishing the port:
+  - `app/build.gradle.kts` + `tv/build.gradle.kts`: added
+    `io.ktor:ktor-server-{core,cio,websockets}:3.5.2` beside the client set
+    (TogetherServer's imports), added the `TOGETHER_BEARER_TOKEN`
+    BuildConfig field in the localProps/env pattern (default "" — an empty
+    token is the "online sessions aren't available in this build" state),
+    and removed the now-dead `LISTEN_TOGETHER_SERVER` val + field (nothing
+    in app/tv Kotlin reads it any more; grep-verified). tv needs both
+    because it compiles the phone app's sources — without them `assembleDev
+    Debug` fails at :tv.
+  - CI (`check.yml`, `android.yml`, `tv.yml`, `diag-pr.yml`): the
+    local.properties seeding swaps `LISTEN_TO_GETHER_SERVER` for
+    `TOGETHER_BEARER_TOKEN`, so the owner sets one repo secret and every
+    pipeline builds online sessions with it.
+  - Manifest (app + tv): the dead `bitchord.kushagrasingh.in/invite/……`
+    autoVerify filter and the `bitchord://party` custom-scheme filter are
+    replaced by the together filter — `bitchord://together` with
+    ACTION_VIEW + DEFAULT + BROWSABLE; `TogetherDeepLink.consume` (already
+    wired in MainActivity's onCreate/onNewIntent) parks the join info and
+    the screen auto-joins with the saved display name.
+  - `NeiroKoiverseServer.txt` at the repo root: one line,
+    `https://archivetune-api.koiiverse.cloud`, matching the raw.githubusercontent
+    URL TogetherOnlineEndpoint fetches (ArchiveTune's own
+    ArchiveTuneKoiverseServer.txt content, verbatim).
+  - `strings.xml`: 105 keys added `translatable="false"` (the repo's
+    standing English-first pattern until the locale task) — the full
+    together_* set ported from ArchiveTune's wording (welcome, status,
+    host/join sections, permissions, participants, moderation confirms,
+    playback pills, chat, activity log, notifications/errors) plus the
+    generic actions the screen shares (start/join_session, session
+    link/code, join/joined/leave/loading/connecting/copied/copy_link/
+    dismiss/invalid link/code/not allowed/network unavailable). No
+    duplicate keys; LocaleStringsTest exempts them.
+  - The facade's state combine rewrote as nested combines (5+2) — the
+    single 7-flow combine relied on an arity kotlinx.coroutines does not
+    offer, which would not have compiled.
+  - TogetherEngine's scope gained a logging CoroutineExceptionHandler:
+    a failed host bind (port already taken) was an uncaught coroutine
+    crash; the reference swallows it silently, this logs it instead.
+  - `TvActivity.kt` consumes `TogetherDeepLink` instead of the deleted
+    `JamInviteLink`; `SignatureApiEditor.kt`'s doc reference to the deleted
+    `PartyServerEditor` rewritten in place.
+  - Deleted the two dead test files that no longer compiled:
+    `JamInviteLinkTest.kt` (tested the deleted invite parser and the old
+    server-URL machinery) and `ListenTogetherIdleHealthTest.kt` (tested
+    the deleted idle health-probe gate). `PartyHostOnlyControlTest`,
+    `PartyAutoplayTest` and `PartyQueueMoveTest` still compile and pass
+    against the facade and the shared party models.
+  - AGENTS.md gained the Music Together invariant (engine shape, facade,
+  doors, token, tv's duplicate deps, cleartext posture, the untouched Go
+  backend).
+- Engine wiring traced end to end (read-the-code verification, no local
+  compile): host LAN Start → server bound on 0.0.0.0:port → 500ms
+  buildRoomState-from-player broadcasts to every guest socket; host online
+  → endpoint fetch → create session (Bearer) → relay ws → same broadcasts;
+  guest → hello/welcome → room states → hash-rebuild/seek under the
+  thresholds, local intents out as ControlRequest/AddTrackRequest when
+  the room's permissions allow; chat → ChatSendRequest relayed by both the
+  LAN server and the online host → ChatMessage broadcast → the chat card.
+
+Stage Summary:
+- Listen Together is now Music Together: one protocol package with chat,
+  an embedded Ktor server, an online relay stack, the compatibility
+  facade, the PartySync door rewrite, the settings-page screen, the
+  `bitchord://together` deep link, the together settings keys, and every
+  string the surface references. All deleted-symbol references across
+  app/tv are resolved, the two module builds carry the server stack and
+  the token, and the relay endpoint file the engine fetches exists at the
+  exact URL it reads. Compile verification is CI's (never local); the
+  orchestrator commits.
+
+## Task 4: the Canvas settings page and the Downloads/Storage settings port
+
+Task ID: 4
+Agent: Super Z (sub agent, session task-4-continue)
+
+Task: Finish the interrupted Canvas/Downloads/Storage settings port from
+ArchiveTune — the data layer was already in the working tree from the
+previous agent; what was left was every string, the Canvas page's dispatch,
+the rows on the Settings pages, and the two settings' actual wiring
+(auto download on like, external downloader).
+
+Work Log:
+- The data layer (in-flight from the previous agent, read file by file and
+  kept as-is): `data/canvas/CanvasHealth.kt` (per-provider probes with
+  timeouts — Spotify gated on the sp_dc token, the others probed over IO,
+  20s/45s budgets), `download/DownloadsExport.kt` (SAF tree export of the
+  finished downloads in their original audio format, per-song progress
+  callback, sanitised "title - artist.ext" names), `download/ExternalDownloader.kt`
+  (watch-URL hand-off to a package-named app, three-intent ladder:
+  ACTION_VIEW / ACTION_SEND / launch intent), `Downloads.autoDownloadOnLike`
+  + `clearAll` + `bytesInUse`, `CanvasCache`'s MutableLruCacheEvictor with a
+  live ceiling + `sizeBytes` + `clear`, the canvas providers' probeHealthy
+  probes, `AppSettings`' nine new keys with their setters
+  (normalizeCanvasCacheSizeMb: -1 unlimited, 0 off, else 0..2048), the Smart
+  Trimmer pass in BitChordApplication (image disk cache + AudioCache.trimNow),
+  LyricsTranslation.clearCache, and `AppRoute.Canvas`.
+- `CanvasSettingsScreen.kt` (previous agent's file, fixed to compile): the
+  missing `foundation.layout.Row` import for its healthLine/priorityOption
+  rows, the nonexistent `SfIcons.Spotify` replaced with `SfIcons.PlayCircle`
+  (no brand glyph exists in SfIcons), and the health dialog's
+  `android.R.string.ok` switched to the repo's own `R.string.ok`.
+- `strings.xml`: 69 keys added `translatable="false"` (English-first until
+  the locale pass, LocaleStringsTest-exempt) — the 32 keys the Canvas page
+  references (canvas, neiro_canvas, spotify_canvas, the cellular/headers/
+  check rows, the four provider names and their health words, the artwork
+  priority dialog's labels and details, animate_static_album_art, ok), the
+  canvas row's own subtitle, and the Storage port's full set (downloaded
+  songs, clear/confirm/size, export + its four status lines, auto download
+  on like, download source priority, external downloader + package + missing
+  toast, canvas cache section/max size/usage/off/unlimited/clear/confirm/
+  cleared, lyrics cache section/clear/confirm/cleared, smart trimmer).
+  No duplicate names; `animated_cover_cellular`, `integrate_spotify_canvas`,
+  `spotify`, `cancel` were already present and are not duplicated.
+- `MainActivity.kt`: the `AppRoute.Canvas` dispatch branch (CanvasSettingsScreen
+  with onSpotifyCanvasAuth raised at the activity, like Lyrics' pickers), the
+  FrostedTopBar title branch (`AppRoute.Canvas -> R.string.canvas` — the
+  when is exhaustive over the sealed interface), and
+  `onOpenCanvas = { navigator.push(AppRoute.Canvas) }` on the SettingsScreen
+  call site.
+- `SettingsSheet.kt`:
+  - Playback's Content group gains the Canvas row (Sources → Lyrics →
+    Canvas), opening the new page.
+  - Appearance loses the "Animated cover art" switch and its "On cellular"
+    and "Spotify Canvas" subrows — the Canvas page carries all three
+    settings now; everything else on the page is untouched.
+  - Storage, after the existing Downloads group: "Auto download on like"
+    and "Download source priority" (subtitle = the live
+    SourceRegistry.activeForDownload order joined with arrows, tap opens
+    Sources) inside the Downloads group; then the "Downloaded songs" card
+    ("Clear all downloads" with the bytes-in-use subtitle and a confirm,
+    "Export" through OpenDocumentTree → DownloadsExport with progress and
+    outcome reported on the row); the "External downloader" card (the
+    switch, plus the package row enabled only under it, edited through the
+    frosted text dialog); the "Canvas cache" card (max size choice dialog
+    over 0/64/128/256/512/1024/2048 MB + Unlimited — 0 off, -1 unlimited,
+    matching normalizeCanvasCacheSizeMb — with the current pick as the row's
+    value, a usage row reading CanvasCache.sizeBytes with the "x of y · N%
+    used" text and a LinearProgressIndicator, and clear with confirm); the
+    "Lyrics" card (clear → LyricsTranslation.clearCache, with confirm); and
+    the Smart trimmer switch in the storage card beside the song-cache rows
+    (the "first card near the song-cache rows" the task named — the
+    song-cache rows live in the Storage card, not the Downloads card that
+    leads the page).
+  - No video cache card: archivetuneplayer's CanvasArtworkPlaybackCache is
+    a distinct persistent cache, but nothing in app/tv/wearos references it —
+    Neiro's canvas system is its own CanvasRepository + CanvasCache — so there
+    is no second video cache to mirror the rows against. Not fabricated.
+- Wiring, verified in the code and completed where it was missing:
+  - autoDownloadOnLike was stored-only. `MainViewModel.setLike` now answers
+    whether the rating landed (the refused-tap paths: not signed in, or the
+    same rating twice) and `toggleLike` passes on the status it left behind —
+    the shape `toggleDislike` already had. The three UI like funnels now
+    consult `Downloads.autoDownloadOnLike` with the song in hand:
+    MainActivity's `toggleLikeOf` (the native player's heart, the song menu,
+    the list rows), `ArchiveTuneBridgeImpl`'s toggleLike/likeSong (the
+    ported player styles' hearts — it needed a context, added to its
+    constructor and passed by MainActivity's single construction site), and
+    PlaybackService's `toggleFavoriteFromNotification` (the media
+    notification's heart, off the current item's toSong).
+  - ExternalDownloader was stored-only. `MainActivity.downloadSong` — the
+    one-song download action the song menu drives — now hands a YouTube
+    track to the configured app when the switch is on; NOT_CONFIGURED (no
+    package, or a source-backed track with no watch page) falls through to
+    the app's own download exactly as the setting's doc promises, and
+    NOT_INSTALLED is a toast with the package name and no download.
+  - spotifyCanvasEnabled is genuinely gated (CanvasRepository.spotifyAsked,
+    part of the cache key so a toggle never serves the other order's answer).
+    canvasInHeaders, animateStaticArtwork and tidalArtworkFallback are
+    stored-only: no UI or provider reads them yet — the header pages, the
+    static-artwork animation and the player's Tidal sleeve fallback are the
+    follow-up ports they wait for. TidalCanvas.fallbackCoverUrl (the lookup
+    tidalArtworkFallback describes) exists in the data layer but has no
+    caller.
+- Verification, all read-the-code (compile verification is CI's — never
+  local): every R.string key referenced by CanvasSettingsScreen, the new
+  rows, and the new data-layer files cross-checked against values/
+  strings.xml by script (no misses, no android.R confusion — R.string.ok is
+  the repo's own); every SfIcons glyph used exists in SfIcons.kt; the
+  SettingsRow/SettingsSubRow/GlassAlertDialog/IosSwitch/LaunchedEffect/
+  rememberLauncherForActivityResult signatures matched against their
+  declarations; strings.xml parsed with Python ElementTree (no duplicate
+  names, format args well-formed); brace/paren balance checked on
+  SettingsSheet.kt, MainActivity.kt, MainViewModel.kt,
+  ArchiveTuneBridgeImpl.kt, PlaybackService.kt and CanvasSettingsScreen.kt;
+  every setLike/toggleLike call site re-grepped after the signature change
+  (all four compile-compatible); the exhaustive AppRoute when got its
+  Canvas branch.
+
+Stage Summary:
+- The Canvas page is reachable (Playback → Content → Canvas → the page and
+  its health check, priority dialog and sp_dc auth), Appearance no longer
+  duplicates its rows, the Storage page carries the full downloads/caches
+  port (clear-all + SAF export, auto download on like, source priority,
+  external downloader, canvas cache ceiling + usage + clear, lyrics clear,
+  smart trimmer), and both ported settings act: a like queues a download on
+  all three like surfaces, and the external downloader takes over single
+  YouTube downloads when configured. 69 strings, translatable="false" until
+  the locale pass. The three stored-only canvas keys (canvasInHeaders,
+  animateStaticArtwork, tidalArtworkFallback) are the port's known remainder,
+  reported rather than hidden.
+
+## Task 4b: the three stored-only canvas keys wired to real behavior
+
+Task ID: 4b
+Agent: Super Z (sub agent, session task-4b)
+
+Task: Give canvasInHeaders, animateStaticArtwork and tidalArtworkFallback —
+the three keys Task 4 left stored-only — their behaviour, smallest change per
+key, zero regressions out of the box (defaults: on / off / off).
+
+Work Log:
+- tidalArtworkFallback. The seam is the player's own sleeve resolution,
+  NowPlayingScreen's `rememberRemoteArtworkUrl(song)` result: when it answers
+  null (no thumbnail, no embedded store art), the new `tidalSleeve` state asks
+  the host for Tidal's cover and every `remoteArt` consumer below picks it up —
+  sleeve, banner, mesh/glow/blur backdrops, top-band scrim, lyric share card.
+  PlayerHost gained `tidalSleeveFallback(song): String?` (default null),
+  AndroidPlayerHost answers it through `CanvasRepository.tidalSleeveFallback`,
+  which reuses the repository's own resolve() — noise-cleaned title/artist,
+  miss-cached entries, album-late re-ask, IO off-main — and only reaches
+  TidalCanvas.fallbackCoverUrl (its first caller) after the
+  AppSettings.tidalArtworkFallback gate; off answers null with no request.
+  WebDAV/SMB tracks wait REMOTE_ART_SETTLE_MS (700ms) for the embedded
+  extraction to land before a search is spent on a sleeve the store may be
+  about to answer. Deliberately NOT wired under the rows (SongRow/MiniPlayer
+  resolve the same nothing; a fallback there is a third-party search per row).
+- animateStaticArtwork. `Modifier.staticArtworkBreathing(breathe)` in
+  NowPlayingScreen.kt: an infinite scale 1.0→1.03→1.0 (4.5s per leg, ~9s the
+  whole breath, FastOutSlowIn reversed), read in the graphicsLayer so a frame
+  is a redraw, never a relayout. Applied at the portrait sleeve's AsyncImage
+  and passed into LandscapeArtwork (new `breathe` param) for the landscape
+  sleeve. The gate is `animateStaticArtwork && canvas == null && !videoMode`
+  — a track with no clip and no music-video picture — collected from the new
+  PlayerSettingsSource.animateStaticArtwork (AndroidPlayerHost fronts
+  AppSettings), and skipped entirely under Reduce animation or while the
+  switch is off (the modifier is then the caller's own).
+- canvasInHeaders. DetailScreen's two header canvas effects (the album
+  sleeve's `canvasForAlbum` lookup and the artist page's appleArt videoUrl)
+  now also key on and gate on AppSettings.canvasInHeaders: off, `canvas` stays
+  null and both headers render exactly the no-canvas look they always had
+  (ReleaseHeader sleeve still, PageBackground photo with its softened foot);
+  on (the default), unchanged. The player's own clip is untouched, and toggling
+  the key live re-runs the effects.
+- No new strings (all three rows' strings shipped with Task 4), no new
+  dependencies, no comment blocks beyond KDoc matching each file's own voice.
+
+Verification, all read-the-code (compile verification is CI's — never local):
+PlayerSettingsSource/PlayerHost have exactly one implementation
+(AndroidPlayerHost; no fakes in any test source set) so the two new members
+break nothing; `animateFloat` is an extension needing the import now added
+(PlayerControls.kt's own import confirmed the name); `Modifier.graphicsLayer`,
+`rememberInfiniteTransition`, `infiniteRepeatable`, `RepeatMode.Reverse` all
+match existing usages in sharedUi; TidalCanvas.fallbackCoverUrl's signature
+re-checked (title/artist/album, its own isMatch validation) and
+CanvasRepository's private resolve()/cleaned() reached from the same object;
+CanvasArtwork(url = …) follows the two existing single-arg call sites;
+`remoteArt`'s eight downstream reads sit after the new merged declaration and
+kept their names; brace/paren balance scripted over all six touched files;
+tv/wearos grep-clean (tv compiles the app's sources unchanged; wearos does not
+depend on sharedUi); `kotlin.math.abs` duplicate import in NowPlayingScreen.kt
+is pre-existing and left alone.
+
+Stage Summary:
+- All three Canvas page switches now do something: "Use Tidal artwork" fills
+  an artless player sleeve from Tidal (opt-in, cached, miss-cached),
+  "Animate static album art" breathes a canvasless sleeve (opt-in,
+  reduce-animation aware, redraw-only), and "Canvas in headers" takes the
+  looping artwork out of the album and artist page headers when off (default
+  on keeps today's look exactly). Task 4's "known remainder" is closed.
+
+## Task 5-a: locale pass, batch 1 — the 234 new strings translated into the nine Asian catalogues
+
+Task ID: 5-a
+Agent: Super Z (sub agent, session task-5a)
+
+Task: Localize the 234 newly added English strings (Backup and restore port,
+Music Together port, Canvas/Downloads/Storage ports) into the nine Asian
+locale catalogues — values-zh, values-zh-rTW, values-zh-rHK,
+values-b+zh+Hant, values-ja, values-ko, values-vi, values-th, values-id —
+plus the one new plural, backup_playlist_song_count, keeping the
+LocaleStringsTest contract (every locale carries every base key) and the
+translation-source priority: ArchiveTune's own translations first, then
+fresh translation in each file's register. Code/translations only; no
+commit.
+
+Work Log:
+- Sources mined. ArchiveTune's values-zh-rCN / -zh-rTW / -ja / -ko / -vi /
+  -th / -in-rID (strings.xml + archivetune_strings.xml) were indexed by
+  English text and by key family; 138 of the 234 matched ArchiveTune wording
+  exactly, and the rest mapped by wording family (together_* ↔ together_*,
+  backup_* ↔ scheduled_backup_*/import_*/export_*/restore_*/backup_*,
+  canvas/storage ↔ canvas_*/max_cache_size/clear_*_cache/smart_trimmer/
+  external_downloader*/auto_download_on_like). The gms Drive-backup strings
+  turned out to be a different feature (Google account sign-in, no locale
+  folders at all), so the whole backup_cloud_* family is fresh per locale.
+- Reuse/rewrite split per locale (234 strings + 1 plural each): zh 129 from
+  ArchiveTune / 105 fresh-or-adapted; zh-rTW 129/105; zh-rHK and b+zh+Hant
+  mirror zh-rTW (HK only swaps 帳號→帳戶 per that file's own convention);
+  ja 113/121; ko 53/181; vi 122/112; th 21/213 (ArchiveTune's Thai catalogue
+  is 452 entries — only 21 of the mapped keys exist there); id 147/87.
+  ArchiveTune brand was swapped to Neiro everywhere it appeared (welcome
+  titles, welcome host bodies, backup_schedule_subtitle's "how often
+  ArchiveTune creates a backup" → brandless), and "Internal service" flipped
+  ArchiveTune's External Service translations rather than re-translating.
+  Machine-translation damage in ArchiveTune's ja/ko files was fixed instead
+  of copied (ja dismiss "解雇する"→閉じる, leave "休暇を取る"→退出, playing
+  "遊ぶ"→再生中, the mangled room-events channel name; ko's embellished
+  session strings trimmed to match Neiro's shorter English). Register was
+  kept per file: zh 画布/全角标点, TW/HK/Hant 畫布/快取/連線/資料夾, ja 「」
+  quoting and 高評価 (Neiro ja's own like-term, over ArchiveTune's
+  「いいね！」), ko 캔버스/세션/대기열, vi bộ đệm/danh sách phát, th แคนวาส/
+  เซสชัน, id kanvas/antrean — reusing each file's own twin keys where the
+  same English already existed (downloaded_songs, lyrics, song_cache_
+  unlimited, export_failed patterns).
+- Placement and format. Entries appended at each file's end before
+  </resources> in newkeys.txt order, 4-space indent, apostrophes escaped
+  per file convention (ko's '좋아요' keeps ArchiveTune's \'…\' form; no other
+  locale needed one), no straight double quotes introduced (curly/「」
+  quotes instead — the only raw-quote string in the tree, ko's pre-existing
+  listen_together_code_footer, was left untouched), brand names (Neiro,
+  BitChord, Spotify, Tidal, Apple Music, Google Drive, Dropbox, Nextcloud,
+  OneDrive, m3u, csv, LAN, Wi-Fi) untranslated. The plural follows each
+  file's own plurals style: other-only for zh/zh-rTW/zh-rHK/b+zh+Hant/ja/
+  vi/th/id, one+other for ko.
+- Verification (scripted, re-run independently after the last write):
+  ElementTree parses all nine files; the 234 newkeys present in every one
+  (parity 0 missing — was 234); no duplicate keys; format-arg sets match
+  the base for every entry and plural item (%1$s/%2$s/%1$d, incl. the
+  positional order-swaps ja/ko/vi/zh use for "Restored %1$s from v%2$s");
+  git numstat confirms the nine files are purely additive (237/238 added,
+  0 removed). A full LocaleStringsTest simulation over SUPPORTED_LANGUAGES
+  now reads 0 missing for zh, zh-rTW, ja, ko, vi, th, id (the seven this
+  test covers); zh-rHK and b+zh+Hant (untested, maintained in parallel)
+  also carry all 234 new keys — their pre-existing gaps (221/207 keys,
+  present before this task) are untouched and out of scope. The 11
+  non-Asian languages still miss the 234 keys — that is the next batches'
+  work. Note: backup_playlist_song_count is still translatable="false" in
+  the base, so the test does not yet demand the plural, but all nine
+  catalogues carry it anyway; dropping that flag later is a one-line base
+  change with nothing else to do.
+
+Stage Summary:
+- The nine Asian catalogues now carry all 234 new strings plus the
+  backup_playlist_song_count plural, seven of them fully satisfying
+  LocaleStringsTest's whole-catalogue parity (base keys 1674, missing 0),
+  with ArchiveTune's own translations as the base layer everywhere they
+  exist (from 147/234 in id down to 21/234 in th) and fresh translations
+  in each file's register for the Neiro-specific wording. No commit was
+  made; the work sits in the working tree for the owner's review.
+
+## Task 5-b: locale pass, batch 2 — the 234 new strings translated into the ten European/Middle-Eastern catalogues
+
+Task ID: 5-b
+Agent: Super Z (sub agent, session task-5b)
+
+Task: Localize the 234 newly added English strings (Backup and restore
+port, Music Together port, Canvas/Downloads/Storage ports) into the ten
+European/Middle-Eastern locale catalogues — values-de, values-es,
+values-fr, values-it, values-pt, values-ru, values-pl, values-he,
+values-hi, values-tr — plus the one new plural,
+backup_playlist_song_count, keeping the LocaleStringsTest contract
+(every locale carries every base key) and the translation-source
+priority: ArchiveTune's own translations first, then fresh translation
+in each file's register. Code/translations only; no commit.
+
+Work Log:
+- Sources mined. ArchiveTune's values-de-rDE / -es / -fr / -it / -pt +
+  -pt-rBR / -ru / -iw / -tr (strings.xml + archivetune_strings.xml)
+  were indexed by English text and key family (values-pl / values-hi
+  checked: neither translates these features — ~100 unrelated app
+  strings only). 133 of the 234 matched ArchiveTune wording exactly,
+  the rest mapped by family, same as batch 1 (together_* ↔ together_*,
+  backup_* ↔ scheduled_backup_*/import_*/export_*/restore_*/backup_*,
+  canvas/storage ↔ canvas_*/max_cache_size/clear_*_cache/
+  smart_trimmer/external_downloader*/auto_download_on_like; the
+  backup_cloud_* family is fresh everywhere — ArchiveTune has no Drive
+  backup feature, and its export_playlist_* keys are untranslated in
+  de/es/fr/pt/ru/he). values-es/strings.xml in ArchiveTune is
+  encoding-corrupted in place (mixed latin-1 bytes near
+  together_requesting_song_change), so it was mined by regex with
+  utf-8/replace instead of ElementTree. Neiro's values-pt turned out to
+  be Brazilian register ("Tocando agora", "Baixando", "sua pasta"), so
+  ArchiveTune's values-pt-rBR is the Portuguese source layer, not its
+  pt-PT values-pt.
+- Reuse/rewrite split per locale (234 strings + 1 plural each): de 135
+  from ArchiveTune / 99 fresh-or-adapted; es 138/96; fr 136/98; pt
+  138/96; he 114/120; ru 87/147 (ArchiveTune's ru catalogue carries
+  only 48 together_* plus the archivetune_strings.xml backup subset);
+  tr 41/193 (AT tr has 21 together_*); it 29/205 (AT it has 13
+  together_*); pl 0/234 and hi 0/234 — entirely fresh, no ArchiveTune
+  source exists. ArchiveTune brand was swapped to Neiro everywhere it
+  appeared (welcome titles, welcome host bodies, neiro_canvas), and AT's
+  machine-translation damage was fixed rather than copied: de
+  "Stauts"→Status, "fragt den Betritt an", "Host hat Sitzungen
+  verlassen"; es "Tú nombre", "abandono la sala", the "cvs" typo and
+  "En linea"; fr "Session d'adhésion"→Connexion à la session,
+  "Sessions laissées par l'hôte", "Se connecter depuis…" (log-in sense)
+  →Rejoindre; it "Attendendo l'approvazione"; ru "Сессии покинутые
+  хостом", "Онлайн сессии"→Онлайн-сессии; tr "Yönetici Tarafından
+  Sonlandırılan Oturumlar", leftover English "playback", "Paylaşımcı"/
+  "Katılımcı" as host/guest → Yönetici/Misafir; he "Host Leaved
+  Sessions"-class sources re-translated, „…” quotes kept per file
+  convention. Register kept per file: de du-form + „“ + Sicherung/
+  Backupdatei compounds; es tú + ¿? + «» + caché; fr vous + « » with a
+  space before : ? !; it tu + « » + cache dei canvas + brani; pt (BR)
+  você + “” + cache de músicas; ru Вы + «» + кэш with е (the file's own
+  spelling, over ArchiveTune's "кеш"); pl imperative + pamięć podręczna
+  + utwór; he masculine singular + קנבס + geresh (no ASCII apostrophes —
+  צ׳אט); hi आप-register + danda + “”; tr siz + dotted İ + \'
+  (Katıl\'a) + çalma listesi (the file's own term over ArchiveTune's
+  "oynatma listesi"). LAN kept untranslated per the brand rule (AT's fr
+  "Réseau local" and ru "Локальная сеть" not carried; he keeps רשת LAN,
+  which retains the term). Brand names Neiro, BitChord, Spotify, Tidal,
+  Apple Music, Google Drive, Dropbox, Nextcloud, OneDrive, m3u, csv,
+  Wi-Fi, M3U, CSV untouched.
+- Placement and format. Entries appended at each file's end before
+  </resources> in newkeys.txt order, 4-space indent, one section comment
+  per file matching the existing comment style (the files already carry
+  "Listen together"-style section comments), apostrophes and straight
+  double quotes escaped (\' and \") per Android rules — the escaped
+  \"csv\"/\"m3u\" forms follow the base entry, de uses „CSV“, fr
+  « csv », es/it/pt/he/hi/tr use \". The plural follows each file's own
+  song-count plural style: one/other (de Song/Songs, es canción/
+  canciones, fr chanson/chansons, it brano/brani, pt música/músicas, hi
+  गाना/गाने, tr şarkı/şarkı), one/few/many/other (ru песня/песни/песен/
+  песен, pl utwór/utwory/utworów/utworów), one/two/other (he שיר/
+  שירים/שירים) — mirroring song_count_plural/track_count_plural/
+  uploading_song_count in each catalogue.
+- Verification (scripted, re-run independently after the last write):
+  ElementTree parses all ten files; the 234 newkeys present in every
+  one (parity 0 missing — was 234); no duplicate keys; format-arg sets
+  match the base for every entry and every plural item (%1$s/%2$s/
+  %1$d and the literal %%, positional order-swaps preserved — hi
+  "%2$s में से %1$s", the queue-position "of"-forms); git numstat
+  confirms the ten files are purely additive (240 added / 0 removed,
+  241/242 where extra plural quantities add lines). A full
+  LocaleStringsTest simulation over all 17 SUPPORTED_LANGUAGES tags
+  (minus en) now reads 0 missing — with this batch, whole-catalogue
+  parity (1674 base keys) holds for every offered language; the
+  untested parallel-maintained values-zh-rHK/values-b+zh+Hant were
+  already covered by batch 5-a. backup_playlist_song_count remains
+  translatable="false" in the base (test-exempt), yet all ten
+  catalogues carry the translated plural anyway — same call as
+  batch 5-a's nine.
+
+Stage Summary:
+- The ten European/Middle-Eastern catalogues now carry all 234 new
+  strings plus the backup_playlist_song_count plural, ArchiveTune's own
+  translations as the base layer everywhere they exist (135/234 in de
+  and es-pt-fr-he down to 29/234 in it, 0 in pl/hi) and fresh
+  translations in each file's register for the Neiro-specific wording.
+  Combined with batch 5-a, LocaleStringsTest's parity contract is now
+  satisfied across all seventeen offered languages (0 missing keys per
+  locale, 1674 base keys). No commit was made; the work sits in the
+  working tree for the owner's review.
+
+## Task 6: the first CI round — the port's compile fixes
+
+Task ID: 6
+Agent: Super Z (orchestrator, session task-6)
+
+Task: The first Check run after the port (7d3a38c) failed
+:app:compileDevDebugKotlin with 35 resolution/type errors; fix every one
+without local compilation, per Rule 1.
+
+Work Log:
+- TogetherClient's event wrappers shadowed their own wire types — the
+  three nested classes named exactly like the protocol messages
+  (JoinDecision, HostTransferred, HeartbeatPong) declared their payloads
+  as their own type. Their parameter types are now fully qualified to
+  the wire classes, which fixes both the client's emissions and every
+  engine read off them (participantId, sessionId, approved, the pong
+  clock fields).
+- TogetherEngine's Welcome branch called startHeartbeat(sessionId)
+  against a two-parameter signature; the guest client is now resolved
+  from the engine's own reference first.
+- The isConnectedToSession extension needed imports in the facade
+  (ListenTogether) and PartySync — both same-package-different-module
+  callers got them; the cascade of inference errors below those two
+  lines went with the missing imports.
+- CanvasCache.sizeBytes() asked SimpleCache for a cacheSize Kotlin
+  property media3 1.11 does not expose; it now sums cached spans per
+  key exactly the way AudioCache's own accounting does.
+- ExternalDownloader built a List<Intent> with a nullable
+  getLaunchIntentForPackage element; listOfNotNull now carries it.
+- PlaybackService's notification favorite referenced an exoPlayer that
+  exists only inside a listener method two thousand lines up; the
+  service's own player property answers it, the same call
+  onIsPlayingChanged already makes.
+- IntegrationScreen's Discord row called vectorResource as a member
+  of ImageVector; it is a top-level androidx.compose.ui.res function.
+- MusicTogetherScreen: the Icons accessor object was unimported while
+  its icon extensions were, and six when-branches relied on smart
+  casts of the delegated sessionState property — explicit casts now,
+  matching the casts the same file already used elsewhere.
+- SourcesScreen carried a private AudioQuality.localizedLabel()
+  that the reorganization's internal twin in SettingsSheet made a
+  conflicting overload; the private duplicate is gone and both
+  callers resolve to the internal one.
+
+Stage Summary:
+- Every error the run listed is addressed by name; brace balance on
+  all touched files is byte-identical to the pushed tree. The next
+  push runs the loop again.
+
+## Task 7: the second CI round — one call form
+
+Task ID: 7
+Agent: Super Z (orchestrator, session task-7)
+
+Task: The second Check and TV runs (43201d3) failed on the single
+remaining error — IntegrationScreen's Discord row still called
+vectorResource wrong.
+
+Work Log:
+- vectorResource is an extension on ImageVector's companion, not a
+  top-level res function: the fully-qualified call form cannot resolve.
+  The row now uses DiscordScreen's own idiom — the receiver spelled
+  through ImageVector with the androidx.compose.ui.res.vectorResource
+  import in scope.
+
+Stage Summary:
+- The only error both workflows listed is gone; the next push re-runs
+  the loop.
+
+## Task 8: the third CI round — R8 meets the embedded server
+
+Task ID: 8
+Agent: Super Z (orchestrator, session task-8)
+
+Task: Check and TV passed on 17c34fd; the Release APK workflow failed
+in :app:minifyProdReleaseWithR8 on one missing class.
+
+Work Log:
+- ktor-server's ReloadingZipFileSystem references the JDK-internal
+  com.sun.nio.file.SensitivityWatchEventModifier — the watcher the
+  desktop zip-reload feature uses to poll jar files for edits. The
+  phone never runs that path, so the proguard file's JVM-only section
+  gains -dontwarn com.sun.nio.file.** beside Rhino's and SMBJ's
+  desktop-only entries, documented the same way.
+
+Stage Summary:
+- Debug builds and Check never run R8; only the prod release needed
+  the rule. The next push re-runs all three.
