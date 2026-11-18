@@ -1010,14 +1010,13 @@ fun SliderPreference(
                     val sliderState =
                         rememberSliderState(
                             value = sliderValue,
-                            valueRange = HISTORY_DURATION_RANGE,
-                            onValueChangeFinished = {},
+                            trackRange = HISTORY_DURATION_RANGE,
                         )
-                    sliderState.onValueChange = { sliderValue = it }
                     sliderState.value = sliderValue
 
                     Slider(
                         state = sliderState,
+                        onValueChange = { sliderValue = it },
                         modifier = Modifier.fillMaxWidth(),
                         track = {
                             SliderDefaults.Track(
@@ -1123,14 +1122,13 @@ fun CrossfadeSliderPreference(
                         rememberSliderState(
                             value = sliderValue,
                             steps = 19,
-                            valueRange = 0f..10f,
-                            onValueChangeFinished = {},
+                            trackRange = 0f..10f,
                         )
-                    crossfadeSliderState.onValueChange = { sliderValue = it.coerceIn(0f, 10f) }
                     crossfadeSliderState.value = sliderValue
 
                     Slider(
                         state = crossfadeSliderState,
+                        onValueChange = { sliderValue = it.coerceIn(0f, 10f) },
                         modifier = Modifier.fillMaxWidth(),
                         track = {
                             SliderDefaults.Track(
@@ -1227,15 +1225,14 @@ fun NumberPickerPreference(
                         rememberSliderState(
                             value = sliderValue,
                             steps = maxValue - minValue - 1,
-                            valueRange = minValue.toFloat()..maxValue.toFloat(),
-                            onValueChangeFinished = {},
+                            trackRange = minValue.toFloat()..maxValue.toFloat(),
                         )
-                    pickerSliderState.onValueChange = {
-                        sliderValue = it.coerceIn(minValue.toFloat(), maxValue.toFloat())
-                    }
 
                     Slider(
                         state = pickerSliderState,
+                        onValueChange = {
+                            sliderValue = it.coerceIn(minValue.toFloat(), maxValue.toFloat())
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         track = {
                             SliderDefaults.Track(

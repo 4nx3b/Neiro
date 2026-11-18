@@ -1925,3 +1925,45 @@ Work Log:
 Stage Summary:
 - Vendored glasmio restored byte-for-byte, app-wide Compose on one 1.12
   line, launch-crash root cause (split runtime) removed at the source.
+
+---
+
+Task ID: 2 (this window)
+Agent: Super Z (main agent, session web-4388e63e)
+
+Task: CI round 2 — :archivetuneplayer compiles against the material3 1.5.0-rc01
+API surface the line move picked up (alpha18's experimental surfaces finalized
+differently by rc01).
+
+Work Log:
+- Read every failing call site and the rc01 signatures straight out of the
+  material3-android 1.5.0-rc01 AAR already in the Gradle cache (javap) plus
+  the androidx-main sources for the same files; no local build run.
+- Slider migration, the big one: rc01's rememberSliderState dropped the
+  onValueChange/onValueChangeFinished factory params and renamed valueRange to
+  trackRange, SliderState lost the settable onValueChange, and the state-based
+  Slider now takes onValueChange (required) + onValueChangeFinished itself.
+  Converted all ten sites the CI round flagged — Preference's three dialog
+  sliders and PlayerSettings' preload slider (static ranges), LyricsScreen
+  and PlayerComponents' Thick style (ranges that change per song — keyed
+  remember on the range ends constructing SliderState directly, value synced
+  per recomposition), and Flamingo's seek (keyed on the track duration) and
+  volume sliders. PlayerSliderTrack reads .trackRange now.
+- ToggleButtonDefaults.toggleButtonColors -> ToggleButtonDefaults.colors
+  (renamed; same six color params) in QueueComponents.
+- ShortNavigationBarItemDefaults.colors' selectedTextColor split into
+  selectedTextColorTopIconPosition / selectedTextColorStartIconPosition;
+  both set to the same colour at all three FloatingNavigationToolbar sites.
+- ExposedDropdownMenu's scope-member became HIDDEN in rc01; the replacement
+  is the top-level extension of the same name — imported it in
+  EqualizerDialog, and menuAnchor() now takes its type:
+  PrimaryNotEditable, the anchor of a read-only field.
+- LoadingIndicator's opt-in marker is ExperimentalMaterial3ExpressiveApi on
+  the rc01 line; added it to the module's compiler opt-ins beside the
+  ExperimentalMaterial3Api that was already there.
+- Verified (javap only) that the app's own fragile APIs all exist on the
+  1.12 line: LocalOverscrollFactory (foundation OverscrollKt),
+  rememberPullToRefreshState / PullToRefreshBox (m3 pulltorefresh),
+  rememberModalBottomSheetState, ModalBottomSheetProperties,
+  LocalClipboardManager. TV's failure was the same archivetuneplayer set,
+  so this covers all three workflows.

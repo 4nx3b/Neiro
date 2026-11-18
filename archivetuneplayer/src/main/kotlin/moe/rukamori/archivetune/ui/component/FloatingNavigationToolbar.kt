@@ -285,7 +285,8 @@ fun FloatingNavigationToolbar(
                 ShortNavigationBarItemDefaults.colors(
                     selectedIndicatorColor = Color.Transparent,
                     selectedIconColor = glassSelectedColor,
-                    selectedTextColor = glassSelectedColor,
+                    selectedTextColorTopIconPosition = glassSelectedColor,
+                    selectedTextColorStartIconPosition = glassSelectedColor,
                     unselectedIconColor = glassUnselectedColor,
                     unselectedTextColor = glassUnselectedColor,
                 )
@@ -295,7 +296,8 @@ fun FloatingNavigationToolbar(
                 ShortNavigationBarItemDefaults.colors(
                     selectedIndicatorColor = Color.Transparent,
                     selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColorTopIconPosition = MaterialTheme.colorScheme.primary,
+                    selectedTextColorStartIconPosition = MaterialTheme.colorScheme.primary,
                     unselectedIconColor =
                         if (pureBlack) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor =
@@ -309,7 +311,8 @@ fun FloatingNavigationToolbar(
         ShortNavigationBarItemDefaults.colors(
             selectedIndicatorColor = Color.Transparent,
             selectedIconColor = Color.Transparent,
-            selectedTextColor = Color.Transparent,
+            selectedTextColorTopIconPosition = Color.Transparent,
+            selectedTextColorStartIconPosition = Color.Transparent,
             unselectedIconColor = Color.Transparent,
             unselectedTextColor = Color.Transparent,
         )

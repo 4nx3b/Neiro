@@ -57,6 +57,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -1210,21 +1211,29 @@ private fun AppleMusicSlider(
             inactiveTrackColor = inactiveColor,
         )
 
+    val sliderState =
+        remember(safeStart, safeEnd) {
+            SliderState(
+                value = value.coerceIn(safeRange),
+                steps = 0,
+                trackRange = safeRange,
+            )
+        }
+    sliderState.value = value.coerceIn(safeRange)
+
     Slider(
-        value = value.coerceIn(safeRange),
-        valueRange = safeRange,
+        state = sliderState,
         onValueChange = onValueChange,
         onValueChangeFinished = onValueChangeFinished,
         colors = sliderColors,
         thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-        track = { sliderState ->
+        track = { state ->
             PlayerSliderTrack(
-                sliderState = sliderState,
+                sliderState = state,
                 colors = sliderColors,
                 trackHeight = trackHeight,
             )
         },
-
         modifier = modifier,
     )
 }
