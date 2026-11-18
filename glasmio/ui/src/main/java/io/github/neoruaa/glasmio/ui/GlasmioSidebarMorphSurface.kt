@@ -11,13 +11,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.LayerOutsets
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
-import androidx.compose.ui.unit.dp
 import com.kyant.shapes.RoundedRectangle
 import io.github.neoruaa.glasmio.core.LocalGlassAppearance
 import io.github.neoruaa.glasmio.core.LocalGlassColors
@@ -50,7 +48,11 @@ fun GlasmioSidebarMorphSurface(
     tabsAppearance: GlassAppearance = LocalGlassAppearance.current,
 ) {
     val density = LocalDensity.current
-    val shadowOutsets = remember { LayerOutsets(64.dp, 64.dp, 64.dp, 64.dp) }
+    // This surface lets its exterior shadow draw past its own bounds through the
+    // layer outsets (LayerOutsets, `GraphicsLayerScope.outsets`), which arrived with
+    // Compose ui 1.12. This project compiles against 1.11.0-beta02, so the offscreen
+    // layers below clip at their bounds instead: the navigation glass's outer shadow
+    // is cut at the surface edge until that upgrade lands.
     val shape: () -> Shape = remember(density, cornerRadius) {
         {
             // RoundedRectangle and Capsule share the same continuous-corner implementation.
@@ -65,16 +67,13 @@ fun GlasmioSidebarMorphSurface(
             // Two SrcOver half-alpha surfaces would leak 25% of the untreated backing.
             Box(Modifier.graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
-                outsets = shadowOutsets
             }) {
             CompositionLocalProvider(LocalGlassColors provides tabsColors, LocalGlassAppearance provides tabsAppearance) {
             val materialContext = rememberGlassMaterialContext()
             val innerShadows = rememberNavigationInnerShadows(tabsAppearance.usesBackdrop, renderScale = .5f)
             Box(Modifier.matchParentSize().graphicsLayer {
                 alpha = 1f - sidebarMaterialProgress().coerceIn(0f, 1f)
-                // Intermediate group opacity creates its own offscreen target. Preserve the
-                // exterior shadow here before the enclosing material-mix layer composites it.
-                outsets = shadowOutsets
+                // Intermediate group opacity creates its own offscreen target.
             }.navigationGlassBackground(
                 backdrop = backdrop,
                 shape = shape,
