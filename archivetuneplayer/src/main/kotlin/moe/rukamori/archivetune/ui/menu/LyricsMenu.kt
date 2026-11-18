@@ -109,10 +109,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.colorControls
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import moe.rukamori.archivetune.bridge.colorControls
+import moe.rukamori.archivetune.bridge.lens
+import moe.rukamori.archivetune.bridge.drawBackdrop
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -1467,7 +1467,7 @@ fun AnchoredLyricsOverflowMenu(
     onLyricsSyncOffsetChange: (Int) -> Unit,
     onDismiss: () -> Unit,
     viewModel: LyricsMenuViewModel = hiltViewModel(),
-    backdrop: com.kyant.backdrop.Backdrop? = null,
+    backdrop: io.github.neoruaa.glasmio.glass.render.Backdrop? = null,
 
     scrimColor: Color = Color.Black.copy(alpha = 0.45f),
     showTranslationActions: Boolean = true,

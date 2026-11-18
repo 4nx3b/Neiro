@@ -40,6 +40,14 @@ sealed interface AppRoute {
      */
     data object Canvas : AppRoute
     data object ListenTogether : AppRoute
+    /**
+     * The Listen Together chat page — its own full-screen page with its own
+     * back, rather than a card on the room screen, so the keyboard and the
+     * message list get the whole window.
+     */
+    data object ListenTogetherChat : AppRoute
+    /** The Listen Together settings page under the room screen. */
+    data object ListenTogetherSettings : AppRoute
     data object WearOs : AppRoute
     data object Equalizer : AppRoute
     data object Replay : AppRoute

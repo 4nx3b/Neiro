@@ -2,7 +2,6 @@ package com.music.bitchord
 
 import com.music.bitchord.data.settings.AppFont
 import com.music.bitchord.data.settings.AutomixPerformanceMode
-import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
 import com.music.bitchord.data.settings.LiquidGlassIntensity
 import com.music.bitchord.data.settings.PlayerDesignStyle
@@ -16,7 +15,6 @@ import org.junit.Before
 import org.junit.Test
 import moe.rukamori.archivetune.constants.AppFontPreference as AtFont
 import moe.rukamori.archivetune.constants.AutomixPerformanceMode as AtAutomix
-import moe.rukamori.archivetune.constants.BackAnimationStyle as AtBackAnimation
 import moe.rukamori.archivetune.constants.LiquidGlassIntensity as AtGlassIntensity
 import moe.rukamori.archivetune.constants.PlayerDesignStyle as AtStyle
 
@@ -62,9 +60,7 @@ class ArchiveTunePreferenceBridgeTest {
     }
 
     @Test
-    fun backAnimationAndTabRoundTrip() {
-        BackAnimationStyle.entries.forEach { assertEquals(it, Bridge.fromAt(Bridge.toAt(it))) }
-        AtBackAnimation.entries.forEach { assertEquals(it, Bridge.toAt(Bridge.fromAt(it))) }
+    fun tabRoundTrip() {
         DefaultOpenTab.entries.forEach { assertEquals(it, Bridge.fromAt(Bridge.toAt(it))) }
         NavigationTab.entries.forEach { assertEquals(it, Bridge.toAt(Bridge.fromAt(it))) }
     }

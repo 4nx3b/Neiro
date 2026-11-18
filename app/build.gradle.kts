@@ -307,6 +307,9 @@ dependencies {
     implementation(project(":sharedUi"))
     // The ported ArchiveTune player stack (only the phone app mounts it).
     implementation(project(":archivetuneplayer"))
+    // Glasmio's liquid-glass controls and motion, vendored at glasmio/ (minSdk 33,
+    // reached only behind glasmioAvailable).
+    implementation(project(":glasmio:ui"))
 
     // ---- Compose (Material 3) ----
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

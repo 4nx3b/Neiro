@@ -21,7 +21,7 @@ object PageMotion {
 
     const val CARD_CORNER_DP = 12f
 
-    fun slideEase(t: Float): Float = cubicBezier(0.8f, 1f, 0.1f, 0.5f, t.coerceIn(0f, 1f))
+    fun slideEase(t: Float): Float = cubicBezier(0.25f, 1f, 0.5f, 1f, t.coerceIn(0f, 1f))
 
     fun zoomEase(t: Float): Float = expEase(t, ZOOM_EASE_K)
 

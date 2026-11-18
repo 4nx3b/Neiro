@@ -9,6 +9,17 @@
 
 package com.music.bitchord.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.semantics.Role
+import io.github.neoruaa.glasmio.icons.GlasmioIconResolver
+import io.github.neoruaa.glasmio.icons.LocalGlasmioIconResolver
+import io.github.neoruaa.glasmio.icons.SfSymbol
+import io.github.neoruaa.glasmio.ui.CompactBottomControlSize
+import io.github.neoruaa.glasmio.ui.GlasmioNavigationBar
+import io.github.neoruaa.glasmio.ui.GlasmioTabItem
+import io.github.neoruaa.glasmio.ui.NavigationBarSurfaceHeight
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -135,6 +146,46 @@ fun GlassNavBar(
     // the three surfaces gets its own glass modifier and so its own shape cache.
     // The theme's own glass tint, as the liquid top bar has it — no white wash.
     val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape) }
+
+    if (glasmioAvailable) {
+        val accessory: (@Composable (Boolean, Modifier) -> Unit)? = song?.let { current ->
+            { inline, accessoryModifier ->
+                GlassNowPlaying(
+                    song = current,
+                    isInline = inline,
+                    isPlaying = isPlaying,
+                    isLoading = isLoading,
+                    contentColor = contentColor,
+                    onPlayPause = onPlayPause,
+                    onNext = onNext,
+                    onPrevious = onPrevious,
+                    onExpand = onExpand,
+                    controlsLocked = controlsLocked,
+                    onBlockedControl = onBlockedControl,
+                    dock = dock,
+                    pull = pull,
+                    modifier = accessoryModifier.then(glassSurface()),
+                )
+            }
+        }
+        GlasmioTabBar(
+            tabs = tabs,
+            selectedIndex = selectedIndex,
+            onTabSelected = { index ->
+                if (index != selectedIndex) haptics.play(Haptic.Select)
+                currentOnTabSelected(index)
+            },
+            scrollConnection = scrollConnection,
+            contentColor = contentColor,
+            accessory = accessory,
+            modifier = modifier
+                .windowInsetsPadding(floatingBarInsets)
+                .padding(horizontal = NAV_BAR_GUTTER)
+                .padding(bottom = NAV_BAR_LIFT)
+                .fillMaxWidth(),
+        )
+        return
+    }
 
     FloatingTabBar(
         selectedTabKey = selectedIndex,
@@ -518,3 +569,84 @@ private val ACCESSORY_ART_CORNER = 5.7.dp
 
 /** The expanded play glyph: its triangle about Apple's 15pt tall. */
 private val EXPANDED_GLYPH_SIZE = 29.dp
+
+@Composable
+private fun GlasmioTabBar(
+    tabs: List<BottomTab>,
+    selectedIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    scrollConnection: FloatingTabBarScrollConnection,
+    contentColor: Color,
+    accessory: (@Composable (Boolean, Modifier) -> Unit)?,
+    modifier: Modifier,
+) {
+    val inline = scrollConnection.isInline
+    val compact = animateFloatAsState(
+        targetValue = if (inline) 1f else 0f,
+        animationSpec = spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow),
+        label = "glasmioTabBarCompact",
+    )
+    val standaloneIndex = tabs.lastIndex
+    val items = remember(tabs) {
+        tabs.take(standaloneIndex).mapIndexed { index, tab ->
+            GlasmioTabItem(key = index, label = tab.label, symbol = TabSymbols.getOrElse(index) { SfSymbol.MusicNote })
+        }
+    }
+    val resolver = remember(items, tabs) {
+        val vectors = items.associate { it.symbol.systemName to tabs[it.key].icon }
+        GlasmioIconResolver { name -> vectors[name] }
+    }
+    val standalone = tabs.getOrNull(standaloneIndex)
+    val circleSize by animateDpAsState(
+        targetValue = if (inline) CompactBottomControlSize else NavigationBarSurfaceHeight,
+        label = "glasmioSearchSize",
+    )
+    CompositionLocalProvider(LocalGlasmioIconResolver provides resolver) {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(INLINE_SPACING)) {
+            if (!inline) accessory?.invoke(false, Modifier.fillMaxWidth())
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(INLINE_SPACING),
+            ) {
+                if (items.isNotEmpty()) {
+                    GlasmioNavigationBar(
+                        items = items,
+                        selectedKey = selectedIndex,
+                        onSelected = onTabSelected,
+                        onExpand = scrollConnection::expand,
+                        compactProgress = compact,
+                        compactSize = CompactBottomControlSize,
+                        modifier = if (inline) Modifier.width(CompactBottomControlSize) else Modifier.weight(1f),
+                    )
+                }
+                if (inline) accessory?.invoke(true, Modifier.weight(1f))
+                if (standalone != null) {
+                    val selected = selectedIndex == standaloneIndex
+                    Box(
+                        Modifier
+                            .size(circleSize)
+                            .liquidGlass(shape = CircleShape)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                role = Role.Tab,
+                                onClickLabel = standalone.label,
+                            ) { onTabSelected(standaloneIndex) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = standalone.icon,
+                            contentDescription = standalone.label,
+                            tint = if (selected) MaterialTheme.colorScheme.primary else contentColor,
+                            modifier = Modifier.size(TAB_ICON_SIZE),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val TabSymbols = listOf(SfSymbol.House, SfSymbol.Safari, SfSymbol.MusicNoteSquareStackFilled)

@@ -53,10 +53,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.colorControls
-import com.kyant.backdrop.effects.lens
+import moe.rukamori.archivetune.bridge.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import moe.rukamori.archivetune.bridge.colorControls
+import moe.rukamori.archivetune.bridge.lens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 

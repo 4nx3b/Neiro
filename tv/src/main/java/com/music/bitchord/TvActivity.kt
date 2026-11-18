@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.core.view.WindowCompat
-import com.music.bitchord.data.together.TogetherDeepLink
 import com.music.bitchord.playback.MusicLink
 import com.music.bitchord.playback.PlayerDeepLink
 import com.music.bitchord.playback.rememberMediaController
@@ -62,8 +61,10 @@ class TvActivity : ComponentActivity() {
 
     private fun consumeLinks(intent: Intent) {
         PlayerDeepLink.consume(intent)
-        TogetherDeepLink.consume(intent)
         MusicLink.consume(intent)
+        // Listen Together invites are deliberately NOT consumed here: the TV
+        // app has no room surface to join from, and leaving the invite untouched
+        // lets the phone activity pick it up from its own next launch intent.
     }
 
     override fun onDestroy() {

@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap
  *    doesn't cost the timing.
  *  - [LyricsPlus] — the YouLy+ backend; finest timing of the lot, flakiest hosting.
  *  - [SimpMusicLyrics] — keyed on the video id, so it can't fetch the wrong edit.
+ *  - [MuzoLyrics] — syllable-timed on the same video-id key, behind Muzo Data's
+ *    own key; the one source whose words arrive already split to the syllable.
  *  - [Unison] — contributed rather than licensed; thin, and occasionally the
  *    only place a track exists.
  *  - [LrcLib], [Musixmatch], [KuGou] — line-synced only, but between them
@@ -203,6 +205,7 @@ object LyricsRepository {
                     ?.lines
             LyricsSource.UNISON -> Unison.lyrics(title, artist, durationMs, album)
             LyricsSource.SIMP_MUSIC -> SimpMusicLyrics.lyrics(videoId, durationMs)
+            LyricsSource.MUZO -> MuzoLyrics.lyrics(videoId, durationMs)
             LyricsSource.YOUTUBE_TRANSCRIPT -> YouTubeTranscriptLyrics.lyrics(videoId)
             LyricsSource.YOUTUBE_MUSIC -> YouTubeMusicLyrics.lyrics(videoId)
             LyricsSource.LRCLIB -> LrcLib.lyrics(title, artist, durationMs)

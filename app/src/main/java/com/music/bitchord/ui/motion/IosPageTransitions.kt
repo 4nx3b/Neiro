@@ -42,8 +42,6 @@ import androidx.compose.ui.unit.dp
 
 val IosSlideEasing = Easing { PageMotion.slideEase(it) }
 
-private val ZoomEasing = Easing { PageMotion.zoomEase(it) }
-
 @Stable
 class PageMotionState {
 
@@ -82,6 +80,7 @@ class PageMotionState {
 fun AnimatedContentTransitionScope<*>.iosPageTransform(
     motion: PageMotionState,
     reduceMotion: Boolean,
+    density: Float = 1f,
 ): ContentTransform {
     if (reduceMotion) {
         return fadeIn(tween(150, easing = LinearEasing)) togetherWith fadeOut(tween(150, easing = LinearEasing))
@@ -94,16 +93,12 @@ fun AnimatedContentTransitionScope<*>.iosPageTransform(
             (EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished)
                 .apply { targetContentZIndex = -1f }
         motion.push ->
-            slideInHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) { it } togetherWith
-                slideOutHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) {
-                    -(it * PageMotion.UNDER_SHIFT).toInt()
-                }
+            slideInHorizontally(IosNavigationSpring()) { it } togetherWith
+                slideOutHorizontally(IosNavigationSpring()) { -iosNavigationParallaxOffset(it, density) }
         else ->
             (
-                slideInHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) {
-                    -(it * PageMotion.UNDER_SHIFT).toInt()
-                } togetherWith
-                    slideOutHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) { it }
+                slideInHorizontally(IosNavigationSpring()) { -iosNavigationParallaxOffset(it, density) } togetherWith
+                    slideOutHorizontally(IosNavigationSpring()) { it }
                 ).apply { targetContentZIndex = -1f }
     }
 }
@@ -122,11 +117,9 @@ fun AnimatedVisibilityScope.IosPageFrame(
     val progress by transition.animateFloat(
         transitionSpec = {
             if (zoomBrowseId != null && targetState != EnterExitState.Visible) {
-                tween(PageMotion.CLOSE_MS, easing = LinearEasing)
-            } else if (zoomBrowseId != null) {
-                tween(PageMotion.OPEN_MS, easing = ZoomEasing)
+                tween(IosNavigationDurationMillis, easing = LinearEasing)
             } else {
-                tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)
+                IosNavigationSpring()
             }
         },
         label = "page",
@@ -182,7 +175,7 @@ fun AnimatedVisibilityScope.IosPageFrame(
                     val under = if (motion.push) transition.targetState != EnterExitState.Visible
                     else transition.targetState == EnterExitState.Visible
                     if (under) {
-                        val dim = PageMotion.UNDER_DIM * (1f - progress)
+                        val dim = IosNavigationDim * (1f - progress)
                         if (dim > 0.001f) drawRect(Color.Black.copy(alpha = dim))
                     }
                 }

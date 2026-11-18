@@ -14,12 +14,20 @@
  * implementations, so the player runs on BitChord's playback while looking
  * and behaving exactly like ArchiveTune's.
  *
+ * One exception to byte-for-byte, made at the owner's request: Kyant's
+ * backdrop library is gone from this app, so the seven files that drew
+ * through it (BottomSheetMenu, CompactBottomControls,
+ * FloatingNavigationToolbar, FrostedHeaderPill, LiquidGlass, LyricsMenu,
+ * FlamingoPlayer) import Glasmio's API-identical renderer instead, and
+ * colorControls/lens through bridge/GlasmioEffects.kt. Only import lines and
+ * one fully qualified Backdrop type changed; the glass parameters did not.
+ *
  * Library versions follow the app's own pins (Compose BOM 2024.12.01 with
  * foundation 1.10.0, material3 1.3.1, haze 1.3.1, coil 3.0.4, media3 1.11.0)
  * so adding this module never moves the versions the rest of the app
  * compiled against. Where ArchiveTune's stack needs a library this app
  * doesn't use (lottie, reorderable, squigglyslider,
- * backdrop, datastore, timber), it is declared here at the
+ * datastore, timber), it is declared here at the
  * newest version that still compiles against those pins.
  */
 import java.util.Properties
@@ -173,8 +181,9 @@ dependencies {
     // ---- Libraries ArchiveTune's stack needs that the app doesn't use ----
     // The wavy seek bar.
     implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
-    // Liquid-glass effects behind the ported components.
-    implementation("io.github.kyant0:backdrop:2.0.0")
+    // Liquid-glass effects behind the ported components: Glasmio's renderer,
+    // vendored at glasmio/, in place of Kyant's backdrop library.
+    implementation(project(":glasmio:glass"))
     implementation("com.valentinilk.shimmer:compose-shimmer:1.5.0")
     // Reorderable queues and lists.
     implementation("sh.calvin.reorderable:reorderable:3.1.0")

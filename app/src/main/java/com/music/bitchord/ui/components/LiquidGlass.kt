@@ -1,7 +1,7 @@
 /*
- * The glass rendering itself is Kyant0/backdrop (Apache-2.0), vendored at
- * [com.music.bitchord.ui.components.backdrop] — see that package for the
- * upstream attribution. This file is the integration glue, adapted from
+ * The glass rendering itself is Glasmio's (NEORUAA/Glasmio, Apache-2.0),
+ * vendored as source at glasmio/ — see glasmio/README.md for the upstream
+ * attribution. This file is the integration glue, adapted from
  * EchoMusicApp/Echo-Music's GlassEffectConfig/Modifier.liquidGlass
  * (GPL-3.0), cut down from Echo's full per-component/vibrancy-slider config
  * to the single on/off switch BitChord exposes in Settings. It is used by the
@@ -36,16 +36,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.LiquidGlassIntensity
-import com.music.bitchord.ui.components.backdrop.Backdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
-import com.music.bitchord.ui.components.backdrop.drawBackdrop
-import com.music.bitchord.ui.components.backdrop.effects.blur
-import com.music.bitchord.ui.components.backdrop.effects.colorControls
-import com.music.bitchord.ui.components.backdrop.effects.lens
-import com.music.bitchord.ui.components.backdrop.highlight.Highlight
-import com.music.bitchord.ui.components.backdrop.highlight.HighlightElement
-import com.music.bitchord.ui.components.backdrop.internal.ShapeProvider
-import com.music.bitchord.ui.components.backdrop.shadow.Shadow
+import io.github.neoruaa.glasmio.glass.render.Backdrop
+import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import com.music.bitchord.ui.components.colorControls
+import io.github.neoruaa.glasmio.glass.render.effects.lens
+import io.github.neoruaa.glasmio.glass.render.highlight.Highlight
+import io.github.neoruaa.glasmio.glass.render.shadow.Shadow
+import io.github.neoruaa.glasmio.glass.render.backdrops.emptyBackdrop
 import androidx.compose.ui.unit.dp
 
 /** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
@@ -64,10 +63,10 @@ val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdro
 internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 
 /**
- * The backdrop blur pipeline requires [android.graphics.RenderEffect] on a
- * [android.graphics.RenderNode], available from Android 12 (API 31).
+ * Glasmio's renderer draws through [android.graphics.RuntimeShader], available
+ * from Android 13 (API 33) — the same line as [glasmioAvailable].
  */
-fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.S
+fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.TIRAMISU
 
 /** Apple-matched defaults (Echo's GlassEffectConfig()), fixed rather than user sliders. */
 private const val VIBRANCY = 1f
@@ -256,23 +255,12 @@ fun Modifier.lightweightLiquidGlass(
     } else {
         Color(0xFF121212)
     }
-    val shapeProvider = ShapeProvider { shape }
-
     return clip(shape)
         .background(
             color = if (useGlass) glassTint.copy(alpha = SURFACE_OPACITY) else fallbackColor,
             shape = shape,
         )
-        .then(
-            if (useGlass) {
-                HighlightElement(
-                    shapeProvider = shapeProvider,
-                    highlight = { Highlight.Default },
-                )
-            } else {
-                Modifier
-            },
-        )
+        .then(if (useGlass) Modifier.glassRimOnly(shape) else Modifier)
         .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
 }
 
@@ -289,14 +277,16 @@ fun Modifier.lightweightLiquidGlass(
 fun Modifier.liquidGlassRim(shape: CornerBasedShape): Modifier {
     val glassHeaderPills by AppSettings.glassHeaderPills.collectAsStateWithLifecycle()
     if (!LocalLiquidGlassEnabled.current || !glassHeaderPills || !isGlassSupported()) return this
-    val shapeProvider = remember(shape) { ShapeProvider { shape } }
-    return then(
-        HighlightElement(
-            shapeProvider = shapeProvider,
-            highlight = { Highlight.Default },
-        ),
-    )
+    return then(Modifier.glassRimOnly(shape))
 }
+
+private fun Modifier.glassRimOnly(shape: Shape): Modifier = drawBackdrop(
+    backdrop = emptyBackdrop(),
+    shape = { shape },
+    effects = {},
+    highlight = { Highlight.Default },
+    shadow = null,
+)
 
 /**
  * Renders this composable as a liquid glass surface sampling [LocalAppBackdrop]:
@@ -354,7 +344,7 @@ fun Modifier.liquidGlass(
         effects = {
             colorControls(saturation = 1f + 0.5f * VIBRANCY * tuning.vibrancyFactor)
             blur(blurPx)
-            if (!glassPerformance && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!glassPerformance) {
                 lens(
                     refractionHeight = lensHeightPx,
                     refractionAmount = lensAmountPx,
@@ -369,7 +359,7 @@ fun Modifier.liquidGlass(
             drawRect(color = surfaceTintColor, size = size)
         },
         exportedBackdrop = exportedBackdrop,
-        backdropScale = resolutionScale,
+        samplingScale = { _, _ -> resolutionScale },
     )
 }
 

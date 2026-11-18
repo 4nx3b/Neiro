@@ -314,6 +314,15 @@ private fun MediaMetadata.toNeiroSong(): Song =
  * bare terminator stamp at the line's end, which the parser reads as the
  * final word's end and nothing else, so the sweep stops where the line
  * stops instead of drifting into the next one.
+ *
+ * A word stamp is angle brackets and *nothing else* — `<mm:ss.xx>`. The
+ * first port wrapped the time in the line stamp's square brackets too
+ * (`<[mm:ss.xx]>`), which matches neither the enhanced-LRC word regex nor
+ * any of the inline-timing cleaners, so the receiving parser fell through
+ * to the line-synced branch and drew every stamp as literal text: each word
+ * arrived on screen wearing its own `<[0:27.61]>`. Writing the bare time —
+ * the format the parser's own docs promise — is what makes the ported
+ * styles sweep word by word the way the app's own player does.
  */
 internal fun List<LyricLine>.toArchiveTuneLrc(): String =
     joinToString("\n") { line ->
@@ -322,9 +331,9 @@ internal fun List<LyricLine>.toArchiveTuneLrc(): String =
             "$stamp ${line.text}".trimEnd()
         } else {
             val runs = line.words.joinToString("") { word ->
-                "<${formatLrcTime(word.startMs)}>${word.text} "
+                "<${formatWordTime(word.startMs)}>${word.text} "
             }
-            "$stamp $runs".trimEnd() + "<${formatLrcTime(line.endMs)}>"
+            "$stamp $runs".trimEnd() + "<${formatWordTime(line.endMs)}>"
         }
     }
 
@@ -334,4 +343,13 @@ private fun formatLrcTime(ms: Long): String {
     val seconds = totalSeconds % 60
     val hundredths = (ms % 1000) / 10
     return "[%d:%02d.%02d]".format(minutes, seconds, hundredths)
+}
+
+/** The word stamp's own shape: the same time, bare, without the line stamp's square brackets. */
+private fun formatWordTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    val hundredths = (ms % 1000) / 10
+    return "%d:%02d.%02d".format(minutes, seconds, hundredths)
 }

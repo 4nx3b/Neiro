@@ -31,7 +31,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -62,13 +64,21 @@ fun GlassAlertDialog(
     text: (@Composable () -> Unit)? = null,
 ) {
     val reduceMotion by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val density = LocalDensity.current.density
     val progress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     var closing by remember { mutableStateOf(false) }
+    val driver = remember { GlasmioMorphDriver() }
+    val liquid = glasmioAvailable && !reduceMotion && !driver.fallback
     val close: () -> Unit = {
         if (!closing) {
             closing = true
             scope.launch {
+                if (liquid) {
+                    driver.close()
+                    onDismissRequest()
+                    return@launch
+                }
                 progress.animateTo(
                     0f,
                     tween(if (reduceMotion) 100 else MORPH_CLOSE_MS, easing = FastOutSlowInEasing),
@@ -78,6 +88,11 @@ fun GlassAlertDialog(
         }
     }
     LaunchedEffect(Unit) {
+        if (glasmioAvailable && !reduceMotion && driver.prepare()) {
+            progress.snapTo(1f)
+            driver.expand()
+            return@LaunchedEffect
+        }
         progress.animateTo(
             1f,
             if (reduceMotion) tween(120, easing = LinearEasing) else spring(MORPH_DAMPING, MORPH_STIFFNESS),
@@ -102,7 +117,11 @@ fun GlassAlertDialog(
         Box(
             Modifier
                 .fillMaxSize()
-                .onGloballyPositioned { screenBox = MorphBox(0f, 0f, it.size.width.toFloat(), it.size.height.toFloat()) }
+                .onGloballyPositioned {
+                    screenBox = MorphBox(0f, 0f, it.size.width.toFloat(), it.size.height.toFloat())
+                    val centre = centreSource(screenBox!!, CENTRE_SOURCE_DP * density)
+                    driver.source = Rect(centre.left, centre.top, centre.right, centre.bottom)
+                }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -119,12 +138,17 @@ fun GlassAlertDialog(
                     .onGloballyPositioned {
                         val p = it.positionInRoot()
                         panelBox = MorphBox(p.x, p.y, it.size.width.toFloat(), it.size.height.toFloat())
+                        driver.target = Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height)
+                        driver.radius = PANEL_RADIUS_DP * density
+                        driver.density = density
                     }
                     .graphicsLayer {
                         val p = progress.value
                         val to = panelBox
                         val screen = screenBox
-                        if (reduceMotion || to == null || screen == null) {
+                        if (liquid && to != null) {
+                            applyGlasmioPanel(driver, Rect(to.left, to.top, to.right, to.bottom))
+                        } else if (reduceMotion || to == null || screen == null) {
                             alpha = p.coerceIn(0f, 1f)
                         } else {
                             val frame = morphFrame(p, centreSource(screen, 48.dp.toPx()), to)
@@ -141,7 +165,7 @@ fun GlassAlertDialog(
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                     .padding(horizontal = 22.dp, vertical = 20.dp),
             ) {
-                Column(Modifier.morphContent(progress::value, reduceMotion)) {
+                Column(if (liquid) Modifier.glasmioMorphContent(driver) else Modifier.morphContent(progress::value, reduceMotion)) {
                     CompositionLocalProvider(LocalContentColor provides colors.label) {
                         title?.let {
                             ProvideTextStyle(MaterialTheme.typography.titleLarge) { it() }
@@ -165,3 +189,6 @@ fun GlassAlertDialog(
         }
     }
 }
+
+private const val CENTRE_SOURCE_DP = 48f
+private const val PANEL_RADIUS_DP = 30f

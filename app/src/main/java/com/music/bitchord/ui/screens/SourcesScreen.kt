@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.music.bitchord.ui.components.IosSwitch
@@ -75,6 +76,8 @@ import com.music.bitchord.data.smb.SmbRepository
 import com.music.bitchord.data.webdav.WebDavRepository
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.sources.AddonSource
+import com.music.bitchord.data.sources.MuzoApiCheck
+import com.music.bitchord.data.sources.MuzoService
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceHealth
 import com.music.bitchord.data.sources.SourceKind
@@ -131,6 +134,8 @@ fun SourcesScreen(
     onEditWebDav: () -> Unit,
     /** As [onEditWebDav], for the SMB share editor. */
     onEditSmb: () -> Unit,
+    /** As [onEditWebDav], for the Muzo Data API key editor. */
+    onEditMuzoKey: () -> Unit,
     /** Opens the full-window warning before JioSaavn is opted into. */
     onConfirmJioSaavn: () -> Unit,
     /** Opens the Tidal account sign-in screen, raised for the same reason as [onEditSource]. */
@@ -443,6 +448,114 @@ fun SourcesScreen(
                     null
                 },
                 onClick = if (soundCloudSignedIn) onSignOutSoundCloud else onSignInSoundCloud,
+            )
+        }
+
+        // The Muzo Data credential — the account row this source's own group
+        // sits on, in the account block because it is the same shape as them:
+        // a third party this app only reaches once the listener has connected
+        // something. The something is an API key rather than a sign-in, and the
+        // group holds the key editor plus the one question — Check API — that
+        // proves the key without playing a track.
+        //
+        // One usage question is asked per visit, and again whenever the key
+        // changes, because that is the one edit that can turn a refusal into
+        // an answer. Its result feeds this group's rows *and* the numbered row
+        // above through the [health] map, so both tell one story.
+        val muzoApiKey by AppSettings.muzoApiKey.collectAsStateWithLifecycle()
+        val muzoConfig = configs.firstOrNull { it.kind == SourceKind.MUZO }
+        var muzoCheck by remember { mutableStateOf<MuzoApiCheck?>(null) }
+        var muzoChecking by remember { mutableStateOf(false) }
+        val muzoScope = rememberCoroutineScope()
+
+        /** One usage question against the key as it stands. Keyless answers locally, without the network. */
+        fun runMuzoCheck() {
+            if (muzoChecking) return
+            muzoChecking = true
+            muzoScope.launch {
+                val check = withContext(Dispatchers.IO) {
+                    runCatching { MuzoService.checkApi(muzoApiKey) }
+                        .getOrElse { MuzoApiCheck.Unreachable(it.message ?: "Failed") }
+                }
+                muzoCheck = check
+                muzoConfig?.let { config -> health[config.id] = check.asSourceHealth() }
+                muzoChecking = false
+            }
+        }
+
+        LaunchedEffect(muzoApiKey, muzoConfig?.id) {
+            runMuzoCheck()
+        }
+
+        val muzoStreamingUnlimited = stringResource(R.string.muzo_streaming_unlimited)
+        val muzoResult = when (val check = muzoCheck) {
+            is MuzoApiCheck.Ok -> stringResource(
+                R.string.muzo_api_ok,
+                check.usageToday,
+                check.dailyLimit,
+                // The service says "unlimited"; anything else it ever names
+                // is worth reading as itself rather than translated into the
+                // word for the state it isn't.
+                check.streamLimit
+                    ?.takeIf { it.isNotBlank() && !it.equals("unlimited", ignoreCase = true) }
+                    ?: muzoStreamingUnlimited,
+            )
+            is MuzoApiCheck.Rejected -> stringResource(R.string.muzo_api_rejected, check.reason)
+            is MuzoApiCheck.Unreachable -> stringResource(R.string.source_unreachable, check.reason)
+            null -> stringResource(R.string.muzo_api_checking)
+        }
+
+        SettingsGroup(
+            header = stringResource(R.string.muzo_data),
+            footer = stringResource(R.string.muzo_data_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.AutoAwesome,
+                title = stringResource(R.string.muzo_data),
+                subtitle = when {
+                    muzoApiKey.isBlank() -> stringResource(R.string.muzo_api_key_required)
+                    muzoChecking -> stringResource(R.string.muzo_api_checking)
+                    else -> muzoResult
+                },
+                onClick = onEditMuzoKey,
+            )
+            RowDivider()
+            SettingsRow(
+                icon = SfIcons.Key,
+                title = stringResource(R.string.muzo_api_key),
+                subtitle = when {
+                    muzoApiKey.isBlank() -> stringResource(R.string.muzo_api_key_subtitle)
+                    else -> stringResource(R.string.muzo_api_key_set)
+                },
+                onClick = onEditMuzoKey,
+            )
+            RowDivider()
+            // The forced re-check: the rows above hold the last answer, this
+            // one asks again now. A spinner while it runs, the reason when it
+            // refuses — the same shape the WebDAV test row gives its server,
+            // with the spinner this screen's rows have room for in [trailing].
+            SettingsRow(
+                icon = SfIcons.Cached,
+                title = when {
+                    muzoChecking -> stringResource(R.string.muzo_api_checking)
+                    muzoCheck == null -> stringResource(R.string.muzo_check_api)
+                    else -> muzoResult
+                },
+                subtitle = stringResource(R.string.muzo_check_api_subtitle),
+                onClick = { runMuzoCheck() },
+                trailing = if (muzoChecking) {
+                    // Only while the question is in flight: the moment it
+                    // lands, the trailing slot frees the chevron back and the
+                    // answer takes its place on the row instead.
+                    {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                } else {
+                    null
+                },
             )
         }
 
@@ -992,6 +1105,7 @@ private fun SourceRow(
                 SourceKind.TIDAL -> SfIcons.Waves
                 SourceKind.DEEZER -> SfIcons.MusicNote
                 SourceKind.QOBUZ -> SfIcons.SurroundSound
+                SourceKind.MUZO -> SfIcons.AutoAwesome
                 SourceKind.SOUNDCLOUD -> SfIcons.Cloud
                 SourceKind.JIOSAAVN -> SfIcons.GraphicEq // or some other icon
                 SourceKind.YOUTUBE -> SfIcons.PlayCircle

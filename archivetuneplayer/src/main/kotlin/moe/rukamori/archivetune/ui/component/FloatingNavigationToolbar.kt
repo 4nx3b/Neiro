@@ -123,12 +123,12 @@ import moe.rukamori.archivetune.constants.NavigationBarTransparencyKey
 import moe.rukamori.archivetune.constants.NavigationBarWidthKey
 import moe.rukamori.archivetune.ui.screens.Screens
 import moe.rukamori.archivetune.utils.rememberPreference
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.colorControls
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.shadow.Shadow as KyantShadow
+import io.github.neoruaa.glasmio.glass.render.Backdrop
+import moe.rukamori.archivetune.bridge.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import moe.rukamori.archivetune.bridge.colorControls
+import moe.rukamori.archivetune.bridge.lens
+import io.github.neoruaa.glasmio.glass.render.shadow.Shadow as KyantShadow
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign

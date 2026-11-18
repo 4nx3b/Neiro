@@ -140,24 +140,60 @@ its own source system. Porting rules:
   When touching a BitChord file, leave its comments alone; when creating a new
   file, keep it comment-clean.
 
-- **iOS motion must survive merges**: `app/.../ui/motion/` (`PageMotion`,
-  `IosPageTransitions` — the page area's push/pop slide and the album zoom),
-  `sharedUi/.../ui/motion/ReleaseOrigin.kt`, and a `.releaseOrigin(browseId)`
-  on every release cover (Home/Library/Explore `ShelfCard`, Search rows, the
-  artist page's top release and discography cards, local album cards). A
-  cover that does not register falls back to the push, which is how the zoom
-  silently vanished once. `ReleaseOriginCoverageTest` fails the build when a
-  call site or the MainActivity wiring (`iosPageTransform`, `IosPageFrame`,
-  `pageMotion.onDestination`) goes missing; when adding a new release card,
-  tag its cover and add it to that test. Popups grow out of their anchor via
-  `ui/components/GlassMorph.kt` (`morphFrame`, tested by `GlassMorphTest`).
-
 ## Modules & submodules
 
 - Gradle modules: `:app` (Android phone), `:tv`, `:wearos`, `:shared` (plain JVM
   common data), `:sharedUi` (Compose Multiplatform screens), `:web`, `:backend`
   (Go Listen-Together server). Android modules are only included when an SDK is
   present (`settings.gradle.kts`).
+- **Glasmio** (`glasmio/`, NEORUAA/Glasmio @ 905919bc, Apache-2.0) is the
+  app's liquid-glass renderer and control/motion library. Kyant's backdrop is
+  gone: there is no vendored copy, and no `io.github.kyant0:backdrop`.
+  - **Modules.** `:glasmio:core`, `:glasmio:glass`, `:glasmio:icons` and
+    `:glasmio:ui` are vendored as source. Each `src/main` stays byte-for-byte
+    with upstream (`diff -r` against the pinned commit must print nothing).
+    Only the build files are Neiro's; every difference is listed in
+    `glasmio/README.md`.
+  - **The API-33 gate.** The modules are minSdk 33, and app, tv and
+    archivetuneplayer carry `tools:overrideLibrary` for them, so minSdk stays
+    26. Every Glasmio control and morph goes through `glasmioAvailable`
+    (`ui/components/GlasmioSupport.kt`). Below 33 each surface keeps its old
+    Neiro implementation, and `isGlassSupported()` is API 33 too.
+    MainActivity provides Glasmio's backdrop, colour and appearance locals
+    from Neiro's theme (`rememberGlasmioLocals`). It never uses
+    `GlasmioTheme`, which would replace Neiro's MaterialTheme.
+  - **Owners of each surface.**
+    - `IosSwitch` → `GlasmioSwitch`.
+    - The settings `SliderRow` → `GlassSlider` (`GlasmioSlider` +
+      `snapToSteps`, tested in `GlassSliderStepTest`). A degenerate or
+      non-finite range falls back to Material's `Slider`.
+    - sharedUi `ThinSlider` (scrubber, volume, lyrics offset, audio output)
+      → `GlassSlider` through the `LocalGlassSlider` slot. The app provides
+      it only on API 33+. ThinSlider keeps drawing itself while it is
+      loading, mixing, pulsing or showing an Automix window.
+    - `IosMenuPopover`, `GlassAlertDialog` and `HeldContextMenu` → Glasmio's
+      `LiquidMenuMorphMotion`, through `GlasmioMorphDriver`. `morphFrame`
+      (GlassMorphTest) is the fallback below 33, under reduced motion, and
+      whenever `prepare()` finds no positive anchor/panel rects. A failed
+      prepare sets `fallback`, so a popup is never left invisible.
+    - `GlassNavBar` → `GlasmioNavigationBar`, with Neiro's icons through
+      `LocalGlasmioIconResolver` and Search as a separate glass circle.
+    - Page push/pop and the album zoom → Glasmio's navigation spring,
+      parallax and dim (`ui/motion/GlasmioNavigationMotion.kt`, copied from
+      glasmio-scaffold with its Apache header). The zoom geometry is still
+      `PageMotion.card`.
+  - **Kyant leftovers, re-homed.** `SnapshotBackdrop` is Neiro's own file
+    on Glasmio's `Backdrop`. `colorControls` is re-implemented in
+    GlasmioSupport. Neiro's old `backdropScale` is Glasmio's
+    `samplingScale`.
+  - **archivetuneplayer exception.** At the owner's request its seven glass
+    files import Glasmio instead of Kyant (import lines only, plus one fully
+    qualified type). `colorControls`, an API-guarded `lens` and a
+    `drawBackdrop` that drops highlight and shadows below API 33 come from
+    `bridge/GlasmioEffects.kt`. Glasmio draws those through RuntimeShader, so
+    the gate is enforced there, not assumed.
+  - Android 12/12L devices lose the app's own glass surfaces (they get the
+    non-glass fallbacks). Glasmio's renderer needs API 33.
 - `shared/…/data/model/Models.kt` owns `Song`; the app module has no model file.
 - Source system: `app/…/data/sources/` — `MusicSource` (search + stream),
   `SourceKind` (rank-ordered), `SourceRegistry` (encrypted-prefs persistence,
