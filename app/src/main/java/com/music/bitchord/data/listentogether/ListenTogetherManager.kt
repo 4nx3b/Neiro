@@ -47,10 +47,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -430,8 +430,9 @@ class ListenTogetherManager(
         // PORT-NOTE: vivi read these out of the DataStore; Neiro's AppSettings is
         // already a flow source, so the collectors attach straight to it.
         scope.launch {
+            // StateFlow is already distinct — the explicit operator here was
+            // deprecated-as-error on this coroutine version.
             AppSettings.listenTogetherSyncHostVolume
-                .distinctUntilChanged()
                 .collect { enabled ->
                     syncHostVolumeEnabled.value = enabled
                 }
@@ -440,7 +441,6 @@ class ListenTogetherManager(
         // the same launch was never reached and the smart-resync switch did nothing.
         scope.launch {
             AppSettings.listenTogetherSmartResync
-                .distinctUntilChanged()
                 .collect { enabled ->
                     smartResyncEnabled.value = enabled
                 }
