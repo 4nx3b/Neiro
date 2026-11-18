@@ -284,6 +284,8 @@ internal fun LandscapeArtwork(
     canvasRendered: Boolean,
     isPlaying: Boolean,
     onCanvasRenderedChange: (Boolean) -> Unit,
+    /** Whether the still cover breathes — see [staticArtworkBreathing]. */
+    breathe: Boolean = false,
     modifier: Modifier = Modifier,
     /** Halts the clip for a transition — see [CanvasArtworkPlayer]'s own. */
     pausedForTransition: Boolean = false,
@@ -337,6 +339,7 @@ internal fun LandscapeArtwork(
                 // portrait sleeve's note on TextureView stacking order.
                 modifier = Modifier
                     .fillMaxSize()
+                    .staticArtworkBreathing(breathe)
                     .drawWithContent { if (artLoaded || !canvasRendered) drawContent() },
             )
             canvas?.let { clip ->

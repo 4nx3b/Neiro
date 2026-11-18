@@ -53,12 +53,14 @@ import okhttp3.Request
  * The Internet page, ported from ArchiveTune's Internet settings: the region
  * YouTube Music requests pin themselves to, DNS over HTTPS, and a proxy the
  * whole shared client routes through — the categorization is upstream's. The
- * warning card leads, because the two rows below it are the ones a listener
- * in a blocked region reaches for, and the choices they enable are the ones
- * worth a caution. ArchiveTune's IP rotation and stream bypass stay off this
- * page — nothing behind them exists here — and the region picker is the
- * app's own choice page rather than upstream's dialog, because a
- * thirty-six-option list is a page, not an alert.
+ * audio-quality ceilings moved here from the main settings page: which rung a
+ * stream may climb rides the connection in force, the same connection the
+ * rest of this page shapes. The warning card leads, because the rows below
+ * it are the ones a listener in a blocked region reaches for, and the choices
+ * they enable are the ones worth a caution. ArchiveTune's IP rotation and
+ * stream bypass stay off this page — nothing behind them exists here — and
+ * the region picker is the app's own choice page rather than upstream's
+ * dialog, because a thirty-six-option list is a page, not an alert.
  */
 @Composable
 fun InternetScreen(
@@ -66,12 +68,17 @@ fun InternetScreen(
     onOpenRegion: () -> Unit,
     /** Opens one of this page's dialogs — see [InternetDialogHost]. */
     onOpenDialog: (InternetDialog) -> Unit,
+    /** Opens an audio-quality ceiling's choice page, as the region row opens the region's. */
+    onOpenChoice: (SettingsChoiceKind) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val region by AppSettings.ytMusicRegion.collectAsStateWithLifecycle()
+    val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
+    val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
+    val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val dnsOverHttpsEnabled by AppSettings.dnsOverHttpsEnabled.collectAsStateWithLifecycle()
     val dnsOverHttpsProvider by AppSettings.dnsOverHttpsProvider.collectAsStateWithLifecycle()
     val proxyEnabled by AppSettings.proxyEnabled.collectAsStateWithLifecycle()
@@ -104,6 +111,25 @@ fun InternetScreen(
                 subtitle = stringResource(R.string.youtube_music_region_desc),
                 value = ytRegionLabel(region, systemDefaultLabel),
                 onClick = onOpenRegion,
+            )
+        }
+
+        // ── Audio quality ───────────────────────────────────────────────
+        SettingsGroup(header = stringResource(R.string.audio_quality)) {
+            SettingsRow(
+                icon = SfIcons.Wifi,
+                title = stringResource(R.string.on_wifi),
+                badge = stringResource(R.string.in_use).takeIf { metered == false },
+                value = wifiQuality.localizedLabel(),
+                onClick = { onOpenChoice(SettingsChoiceKind.AUDIO_QUALITY_WIFI) },
+            )
+            RowDivider()
+            SettingsRow(
+                icon = SfIcons.SignalCellularAlt,
+                title = stringResource(R.string.on_mobile_data),
+                badge = stringResource(R.string.in_use).takeIf { metered == true },
+                value = cellularQuality.localizedLabel(),
+                onClick = { onOpenChoice(SettingsChoiceKind.AUDIO_QUALITY_CELLULAR) },
             )
         }
 

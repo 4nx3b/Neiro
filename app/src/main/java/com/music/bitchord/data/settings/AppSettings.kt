@@ -14,6 +14,7 @@ import com.music.bitchord.data.NetPolicy
 import com.music.bitchord.data.canvas.SpotifyToken
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.scrobbling.LastFM
+import com.music.bitchord.data.backup.ScheduledBackupFrequency
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.playback.EqLayout
 import com.music.bitchord.playback.EqualizerPreset
@@ -273,6 +274,28 @@ object AppSettings {
      * without being asked each time. See [com.music.bitchord.download.PlaylistSync].
      */
     val syncDownloadedPlaylists = MutableStateFlow(false)
+
+    /**
+     * Queue a download for a song the moment it is liked, ported from
+     * ArchiveTune's auto download on like. Off by default: it spends data and
+     * storage without being asked each time. [wifiOnlyDownloads] still gates
+     * it — [Downloads.enqueue][com.music.bitchord.download.Downloads.enqueue]
+     * is the one door into the queue, and it refuses a metered connection.
+     */
+    val autoDownloadOnLike = MutableStateFlow(false)
+
+    /**
+     * Hand the download of a YouTube track to an external app instead of
+     * downloading it here, ported from ArchiveTune's external downloader: the
+     * song menu's Download row launches the app named by
+     * [externalDownloaderPackage] with the track's watch URL. A track another
+     * source serves still downloads through this app — an external downloader
+     * cannot reach the accounts those streams ride.
+     */
+    val externalDownloaderEnabled = MutableStateFlow(false)
+
+    /** The external downloader app, as a package name. Blank means unconfigured. */
+    val externalDownloaderPackage = MutableStateFlow("")
 
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
@@ -539,6 +562,29 @@ object AppSettings {
 
     /** Show the output / Listen Together pill under the player's transport. */
     val showListenTogetherButton = MutableStateFlow(false)
+
+    // ── Music Together ───────────────────────────────────────────────────
+
+    /** The name this device shows every other participant in a session. */
+    val togetherDisplayName = MutableStateFlow("")
+
+    /** The LAN port the embedded session server listens on. */
+    val togetherDefaultPort = MutableStateFlow(42117)
+
+    /** Whether guests may put songs on the host's queue. */
+    val togetherAllowGuestsToAddTracks = MutableStateFlow(true)
+
+    /** Whether guests may drive the host's playback (play, pause, seek, skip). */
+    val togetherAllowGuestsControlPlayback = MutableStateFlow(false)
+
+    /** Whether a joining guest waits for the host to let them in. */
+    val togetherRequireHostApproval = MutableStateFlow(false)
+
+    /** The last join input — a link or a code — offered as the next one to try. */
+    val togetherLastJoinLink = MutableStateFlow("")
+
+    /** Whether the one-time Music Together welcome has been dismissed for good. */
+    val togetherWelcomeShown = MutableStateFlow(false)
 
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
@@ -846,6 +892,37 @@ object AppSettings {
     val prioritizeSpotifyCanvas = MutableStateFlow(false)
 
     /**
+     * Whether the Spotify provider takes part in the canvas lookup at all —
+     * [CanvasRepository][com.music.bitchord.data.canvas.CanvasRepository] skips
+     * it while this is off, whatever [prioritizeSpotifyCanvas] says. On by
+     * default: with no `sp_dc` cookie it is a free no-op anyway, so the switch
+     * only bites for a listener who has connected one.
+     */
+    val spotifyCanvasEnabled = MutableStateFlow(true)
+
+    /**
+     * Whether the album, playlist and artist page headers play the looping
+     * motion artwork behind them. On by default — that is what they have always
+     * done while [animatedCanvas] was on; off, every header keeps to the static
+     * cover while the player still gets its clip.
+     */
+    val canvasInHeaders = MutableStateFlow(true)
+
+    /**
+     * Fall back to a Tidal cover when a track resolves no artwork at all — a
+     * network lookup for a sleeve the player would otherwise tile over. Off by
+     * default: it is one more third party reached on the listener's connection.
+     */
+    val tidalArtworkFallback = MutableStateFlow(false)
+
+    /**
+     * Breathe a slow on-device scale into the sleeve while a track has no
+     * animated canvas to play. Off by default — motion the listener did not ask
+     * for costs battery, and the still sleeve has always been still.
+     */
+    val animateStaticArtwork = MutableStateFlow(false)
+
+    /**
      * Secondary artist art: a user-hosted artist-signature API used only when
      * Apple Music has no title logo. Blank URL means unconfigured and the
      * lookup is skipped entirely — there is no hosted default.
@@ -949,6 +1026,22 @@ object AppSettings {
     val audioCacheLimitBytes = MutableStateFlow(DEFAULT_CACHE_LIMIT_BYTES)
 
     /**
+     * Disk budget for cached canvas clips, in MB. [UNLIMITED_CANVAS_CACHE_MB]
+     * means no ceiling; 0 keeps nothing on disk at all, so every loop of a
+     * clip is fetched over the network again. See
+     * [CanvasCache][com.music.bitchord.data.canvas.CanvasCache].
+     */
+    val maxCanvasCacheSizeMb = MutableStateFlow(DEFAULT_CANVAS_CACHE_SIZE_MB)
+
+    /**
+     * Prune the image and song caches to their limits once per launch, ported
+     * from ArchiveTune's smart trimmer. Off by default: both caches already
+     * evict on their own while running, so this is the one pass that also
+     * reclaims what a session that never wrote anything left behind.
+     */
+    val smartTrimmer = MutableStateFlow(false)
+
+    /**
      * Whether Library's "On device" shelf carries the Cached songs folder —
      * the YouTube and JioSaavn tracks the song cache is holding. Off by
      * default: the cache is an implementation detail most people never need
@@ -991,6 +1084,28 @@ object AppSettings {
 
     /** Empty means every MediaStore folder; otherwise this is a persisted SAF tree URI. */
     val localMusicFolderUri = MutableStateFlow("")
+
+    // ── Scheduled backup ─────────────────────────────────────────────────
+
+    /**
+     * The Scheduled auto backup card's state, as flows for the rows that read
+     * it and the worker that runs it. Ported from ArchiveTune's DataStore
+     * keys of the same names; the directory URIs and the cloud folder are
+     * [device-local][DEVICE_LOCAL] — a SAF tree grant means one phone only.
+     */
+    val scheduledBackupEnabled = MutableStateFlow(false)
+    val scheduledBackupFrequency = MutableStateFlow(ScheduledBackupFrequency.WEEKLY)
+    val scheduledBackupCustomDateEpochDay = MutableStateFlow<Long?>(null)
+    val scheduledBackupDirectoryUri = MutableStateFlow("")
+    val scheduledBackupDirectoryName = MutableStateFlow("")
+    val scheduledBackupOverwriteExisting = MutableStateFlow(false)
+
+    /** The Cloud storage sync card, one folder in a cloud provider's app. */
+    val cloudSyncEnabled = MutableStateFlow(false)
+    val cloudSyncFolderUri = MutableStateFlow("")
+    val cloudSyncFolderName = MutableStateFlow("")
+    val cloudSyncOverwriteExisting = MutableStateFlow(false)
+    val cloudSyncLastRunAt = MutableStateFlow(0L)
 
     // ── WebDAV ────────────────────────────────────────────────────────────
 
@@ -1449,6 +1564,13 @@ object AppSettings {
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, false)
+        togetherDisplayName.value = prefs.getString(KEY_TOGETHER_DISPLAY_NAME, null).orEmpty()
+        togetherDefaultPort.value = prefs.getInt(KEY_TOGETHER_DEFAULT_PORT, 42117).coerceIn(1..65535)
+        togetherAllowGuestsToAddTracks.value = prefs.getBoolean(KEY_TOGETHER_ALLOW_GUESTS_ADD_TRACKS, true)
+        togetherAllowGuestsControlPlayback.value = prefs.getBoolean(KEY_TOGETHER_ALLOW_GUESTS_CONTROL_PLAYBACK, false)
+        togetherRequireHostApproval.value = prefs.getBoolean(KEY_TOGETHER_REQUIRE_HOST_APPROVAL, false)
+        togetherLastJoinLink.value = prefs.getString(KEY_TOGETHER_LAST_JOIN_LINK, null).orEmpty()
+        togetherWelcomeShown.value = prefs.getBoolean(KEY_TOGETHER_WELCOME_SHOWN, false)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         onboardingComplete.value = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
         diwaliGreetingShown.value = prefs.getBoolean(KEY_DIWALI_GREETING_SHOWN, false)
@@ -1560,6 +1682,10 @@ object AppSettings {
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
+        spotifyCanvasEnabled.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_ENABLED, true)
+        canvasInHeaders.value = prefs.getBoolean(KEY_CANVAS_IN_HEADERS, true)
+        tidalArtworkFallback.value = prefs.getBoolean(KEY_TIDAL_ARTWORK_FALLBACK, false)
+        animateStaticArtwork.value = prefs.getBoolean(KEY_ANIMATE_STATIC_ARTWORK, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, false)
         signatureApiUrl.value = normalizeSignatureApiUrl(prefs.getString(KEY_SIGNATURE_API_URL, "").orEmpty())
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
@@ -1586,6 +1712,11 @@ object AppSettings {
         paxSenixApiKey.value = prefs.getString(KEY_PAXSENIX_API_KEY, "").orEmpty()
         com.music.bitchord.data.lyrics.PaxSenix.setApiKey(paxSenixApiKey.value)
         audioCacheLimitBytes.value = clampCacheLimit(prefs.getLong(KEY_CACHE_LIMIT, DEFAULT_CACHE_LIMIT_BYTES))
+        maxCanvasCacheSizeMb.value = prefs.getInt(KEY_MAX_CANVAS_CACHE_SIZE_MB, DEFAULT_CANVAS_CACHE_SIZE_MB)
+        smartTrimmer.value = prefs.getBoolean(KEY_SMART_TRIMMER, false)
+        autoDownloadOnLike.value = prefs.getBoolean(KEY_AUTO_DOWNLOAD_ON_LIKE, false)
+        externalDownloaderEnabled.value = prefs.getBoolean(KEY_EXTERNAL_DOWNLOADER_ENABLED, false)
+        externalDownloaderPackage.value = prefs.getString(KEY_EXTERNAL_DOWNLOADER_PACKAGE, "").orEmpty()
         showCacheFolder.value = prefs.getBoolean(KEY_SHOW_CACHE_FOLDER, false)
         lastfmEnabled.value = prefs.getBoolean(KEY_LASTFM_ENABLED, false)
         lastfmUsername.value = prefs.getString(KEY_LASTFM_USERNAME, "").orEmpty()
@@ -1625,6 +1756,22 @@ object AppSettings {
             ?: LibrarySort.DEFAULT
         detailSongSorts.value = readDetailSongSorts()
         localMusicFolderUri.value = prefs.getString(KEY_LOCAL_MUSIC_FOLDER_URI, "").orEmpty()
+        scheduledBackupEnabled.value = prefs.getBoolean(KEY_SCHEDULED_BACKUP_ENABLED, false)
+        scheduledBackupFrequency.value = runCatching {
+            ScheduledBackupFrequency.valueOf(
+                prefs.getString(KEY_SCHEDULED_BACKUP_FREQUENCY, null) ?: ScheduledBackupFrequency.WEEKLY.name,
+            )
+        }.getOrDefault(ScheduledBackupFrequency.WEEKLY)
+        scheduledBackupCustomDateEpochDay.value =
+            if (prefs.contains(KEY_SCHEDULED_BACKUP_CUSTOM_DATE)) prefs.getLong(KEY_SCHEDULED_BACKUP_CUSTOM_DATE, 0L) else null
+        scheduledBackupDirectoryUri.value = prefs.getString(KEY_SCHEDULED_BACKUP_DIRECTORY_URI, "").orEmpty()
+        scheduledBackupDirectoryName.value = prefs.getString(KEY_SCHEDULED_BACKUP_DIRECTORY_NAME, "").orEmpty()
+        scheduledBackupOverwriteExisting.value = prefs.getBoolean(KEY_SCHEDULED_BACKUP_OVERWRITE, false)
+        cloudSyncEnabled.value = prefs.getBoolean(KEY_CLOUD_SYNC_ENABLED, false)
+        cloudSyncFolderUri.value = prefs.getString(KEY_CLOUD_SYNC_FOLDER_URI, "").orEmpty()
+        cloudSyncFolderName.value = prefs.getString(KEY_CLOUD_SYNC_FOLDER_NAME, "").orEmpty()
+        cloudSyncOverwriteExisting.value = prefs.getBoolean(KEY_CLOUD_SYNC_OVERWRITE, false)
+        cloudSyncLastRunAt.value = prefs.getLong(KEY_CLOUD_SYNC_LAST_RUN, 0L)
         webdavUrl.value = prefs.getString(KEY_WEBDAV_URL, "").orEmpty()
         webdavUsername.value = prefs.getString(KEY_WEBDAV_USERNAME, "").orEmpty()
         webdavPassword.value = authStore.webdavPassword.orEmpty()
@@ -1963,6 +2110,66 @@ object AppSettings {
     fun setShowListenTogetherButton(value: Boolean) {
         showListenTogetherButton.value = value
         prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_BUTTON, value).apply()
+    }
+
+    fun setTogetherDisplayName(value: String) {
+        val trimmed = value.trim().take(80)
+        togetherDisplayName.value = trimmed
+        prefs.edit().putString(KEY_TOGETHER_DISPLAY_NAME, trimmed).apply()
+    }
+
+    fun setTogetherDefaultPort(value: Int) {
+        val port = value.coerceIn(1..65535)
+        togetherDefaultPort.value = port
+        prefs.edit().putInt(KEY_TOGETHER_DEFAULT_PORT, port).apply()
+    }
+
+    fun setTogetherAllowGuestsToAddTracks(value: Boolean) {
+        togetherAllowGuestsToAddTracks.value = value
+        prefs.edit().putBoolean(KEY_TOGETHER_ALLOW_GUESTS_ADD_TRACKS, value).apply()
+    }
+
+    fun setTogetherAllowGuestsControlPlayback(value: Boolean) {
+        togetherAllowGuestsControlPlayback.value = value
+        prefs.edit().putBoolean(KEY_TOGETHER_ALLOW_GUESTS_CONTROL_PLAYBACK, value).apply()
+    }
+
+    fun setTogetherRequireHostApproval(value: Boolean) {
+        togetherRequireHostApproval.value = value
+        prefs.edit().putBoolean(KEY_TOGETHER_REQUIRE_HOST_APPROVAL, value).apply()
+    }
+
+    fun setTogetherLastJoinLink(value: String) {
+        togetherLastJoinLink.value = value
+        prefs.edit().putString(KEY_TOGETHER_LAST_JOIN_LINK, value).apply()
+    }
+
+    fun setTogetherWelcomeShown(value: Boolean) {
+        togetherWelcomeShown.value = value
+        prefs.edit().putBoolean(KEY_TOGETHER_WELCOME_SHOWN, value).apply()
+    }
+
+    /** The persistent identity a session client says hello with. Generated on first read. */
+    fun togetherClientId(): String {
+        val existing = prefs.getString(KEY_TOGETHER_CLIENT_ID, null)?.trim().orEmpty()
+        if (existing.isNotBlank()) return existing
+        val generated = java.util.UUID.randomUUID().toString()
+        prefs.edit().putString(KEY_TOGETHER_CLIENT_ID, generated).apply()
+        return generated
+    }
+
+    /** The cached online relay endpoint, and when it was last confirmed. */
+    fun togetherOnlineEndpointCache(): String? =
+        prefs.getString(KEY_TOGETHER_ONLINE_ENDPOINT, null)?.trim()
+
+    fun togetherOnlineEndpointCheckedAt(): Long =
+        prefs.getLong(KEY_TOGETHER_ONLINE_ENDPOINT_CHECKED_AT, 0L)
+
+    fun setTogetherOnlineEndpointCache(value: String, checkedAt: Long) {
+        prefs.edit()
+            .putString(KEY_TOGETHER_ONLINE_ENDPOINT, value)
+            .putLong(KEY_TOGETHER_ONLINE_ENDPOINT_CHECKED_AT, checkedAt)
+            .apply()
     }
 
     fun setThemeMode(value: ThemeMode) {
@@ -2554,6 +2761,26 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, value).apply()
     }
 
+    fun setSpotifyCanvasEnabled(value: Boolean) {
+        spotifyCanvasEnabled.value = value
+        prefs.edit().putBoolean(KEY_SPOTIFY_CANVAS_ENABLED, value).apply()
+    }
+
+    fun setCanvasInHeaders(value: Boolean) {
+        canvasInHeaders.value = value
+        prefs.edit().putBoolean(KEY_CANVAS_IN_HEADERS, value).apply()
+    }
+
+    fun setTidalArtworkFallback(value: Boolean) {
+        tidalArtworkFallback.value = value
+        prefs.edit().putBoolean(KEY_TIDAL_ARTWORK_FALLBACK, value).apply()
+    }
+
+    fun setAnimateStaticArtwork(value: Boolean) {
+        animateStaticArtwork.value = value
+        prefs.edit().putBoolean(KEY_ANIMATE_STATIC_ARTWORK, value).apply()
+    }
+
     fun setSignatureApiEnabled(value: Boolean) {
         signatureApiEnabled.value = value
         prefs.edit().putBoolean(KEY_SIGNATURE_API_ENABLED, value).apply()
@@ -2614,6 +2841,41 @@ object AppSettings {
     fun setShowCacheFolder(value: Boolean) {
         showCacheFolder.value = value
         prefs.edit().putBoolean(KEY_SHOW_CACHE_FOLDER, value).apply()
+    }
+
+    /**
+     * Clamped to the choice list's values — off, the fixed sizes, or
+     * [UNLIMITED_CANVAS_CACHE_MB]. CanvasCache picks the change up itself.
+     */
+    fun setMaxCanvasCacheSizeMb(value: Int) {
+        val clamped = normalizeCanvasCacheSizeMb(value)
+        maxCanvasCacheSizeMb.value = clamped
+        prefs.edit().putInt(KEY_MAX_CANVAS_CACHE_SIZE_MB, clamped).apply()
+    }
+
+    private fun normalizeCanvasCacheSizeMb(value: Int): Int =
+        if (value == UNLIMITED_CANVAS_CACHE_MB) UNLIMITED_CANVAS_CACHE_MB else value.coerceIn(0, 2048)
+
+    fun setSmartTrimmer(value: Boolean) {
+        smartTrimmer.value = value
+        prefs.edit().putBoolean(KEY_SMART_TRIMMER, value).apply()
+    }
+
+    fun setAutoDownloadOnLike(value: Boolean) {
+        autoDownloadOnLike.value = value
+        prefs.edit().putBoolean(KEY_AUTO_DOWNLOAD_ON_LIKE, value).apply()
+    }
+
+    fun setExternalDownloaderEnabled(value: Boolean) {
+        externalDownloaderEnabled.value = value
+        prefs.edit().putBoolean(KEY_EXTERNAL_DOWNLOADER_ENABLED, value).apply()
+    }
+
+    /** Trimmed; blank forgets the app. */
+    fun setExternalDownloaderPackage(value: String) {
+        val normalized = value.trim()
+        externalDownloaderPackage.value = normalized
+        prefs.edit().putString(KEY_EXTERNAL_DOWNLOADER_PACKAGE, normalized).apply()
     }
 
     fun setLastfmEnabled(value: Boolean) {
@@ -2872,6 +3134,64 @@ object AppSettings {
         prefs.edit().putString(KEY_LOCAL_MUSIC_FOLDER_URI, value).apply()
     }
 
+    fun setScheduledBackupEnabled(value: Boolean) {
+        scheduledBackupEnabled.value = value
+        prefs.edit().putBoolean(KEY_SCHEDULED_BACKUP_ENABLED, value).apply()
+    }
+
+    fun setScheduledBackupFrequency(value: ScheduledBackupFrequency) {
+        scheduledBackupFrequency.value = value
+        prefs.edit().putString(KEY_SCHEDULED_BACKUP_FREQUENCY, value.name).apply()
+    }
+
+    /** A custom date is what makes the frequency custom, so it sets both. */
+    fun setScheduledBackupCustomDate(epochDay: Long) {
+        scheduledBackupFrequency.value = ScheduledBackupFrequency.CUSTOM
+        scheduledBackupCustomDateEpochDay.value = epochDay
+        prefs.edit()
+            .putString(KEY_SCHEDULED_BACKUP_FREQUENCY, ScheduledBackupFrequency.CUSTOM.name)
+            .putLong(KEY_SCHEDULED_BACKUP_CUSTOM_DATE, epochDay)
+            .apply()
+    }
+
+    fun setScheduledBackupDirectory(uri: String, name: String) {
+        scheduledBackupDirectoryUri.value = uri
+        scheduledBackupDirectoryName.value = name
+        prefs.edit()
+            .putString(KEY_SCHEDULED_BACKUP_DIRECTORY_URI, uri)
+            .putString(KEY_SCHEDULED_BACKUP_DIRECTORY_NAME, name)
+            .apply()
+    }
+
+    fun setScheduledBackupOverwriteExisting(value: Boolean) {
+        scheduledBackupOverwriteExisting.value = value
+        prefs.edit().putBoolean(KEY_SCHEDULED_BACKUP_OVERWRITE, value).apply()
+    }
+
+    fun setCloudSyncEnabled(value: Boolean) {
+        cloudSyncEnabled.value = value
+        prefs.edit().putBoolean(KEY_CLOUD_SYNC_ENABLED, value).apply()
+    }
+
+    fun setCloudSyncFolder(uri: String, name: String) {
+        cloudSyncFolderUri.value = uri
+        cloudSyncFolderName.value = name
+        prefs.edit()
+            .putString(KEY_CLOUD_SYNC_FOLDER_URI, uri)
+            .putString(KEY_CLOUD_SYNC_FOLDER_NAME, name)
+            .apply()
+    }
+
+    fun setCloudSyncOverwriteExisting(value: Boolean) {
+        cloudSyncOverwriteExisting.value = value
+        prefs.edit().putBoolean(KEY_CLOUD_SYNC_OVERWRITE, value).apply()
+    }
+
+    fun setCloudSyncLastRunAt(value: Long) {
+        cloudSyncLastRunAt.value = value
+        prefs.edit().putLong(KEY_CLOUD_SYNC_LAST_RUN, value).apply()
+    }
+
     fun setWebDavUrl(value: String) {
         val normalized = value.trim().trimEnd('/')
         webdavUrl.value = normalized
@@ -3099,6 +3419,11 @@ object AppSettings {
         KEY_LOCAL_MUSIC_FOLDER_URI,
         KEY_LAST_VERSION_CODE,
         KEY_ONBOARDING_COMPLETE,
+        KEY_SCHEDULED_BACKUP_DIRECTORY_URI,
+        KEY_SCHEDULED_BACKUP_DIRECTORY_NAME,
+        KEY_CLOUD_SYNC_FOLDER_URI,
+        KEY_CLOUD_SYNC_FOLDER_NAME,
+        KEY_CLOUD_SYNC_LAST_RUN,
     )
 
     const val DEFAULT_CACHE_LIMIT_BYTES = 512L * 1024 * 1024
@@ -3106,6 +3431,12 @@ object AppSettings {
 
     /** The cache limit with no ceiling: only free storage bounds it. */
     const val UNLIMITED_CACHE_LIMIT_BYTES = Long.MAX_VALUE
+
+    /** The canvas cache's own budget, in MB — see [maxCanvasCacheSizeMb]. */
+    const val DEFAULT_CANVAS_CACHE_SIZE_MB = 256
+
+    /** The [maxCanvasCacheSizeMb] value for no ceiling at all. */
+    const val UNLIMITED_CANVAS_CACHE_MB = -1
 
     const val MIN_LYRICS_OFFSET_MS = -5_000
     const val MAX_LYRICS_OFFSET_MS = 5_000
@@ -3168,6 +3499,16 @@ object AppSettings {
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
+    private const val KEY_TOGETHER_DISPLAY_NAME = "together_display_name"
+    private const val KEY_TOGETHER_CLIENT_ID = "together_client_id"
+    private const val KEY_TOGETHER_DEFAULT_PORT = "together_default_port"
+    private const val KEY_TOGETHER_ALLOW_GUESTS_ADD_TRACKS = "together_allow_guests_add_tracks"
+    private const val KEY_TOGETHER_ALLOW_GUESTS_CONTROL_PLAYBACK = "together_allow_guests_control_playback"
+    private const val KEY_TOGETHER_REQUIRE_HOST_APPROVAL = "together_require_host_approval"
+    private const val KEY_TOGETHER_LAST_JOIN_LINK = "together_last_join_link"
+    private const val KEY_TOGETHER_WELCOME_SHOWN = "together_welcome_shown"
+    private const val KEY_TOGETHER_ONLINE_ENDPOINT = "together_online_endpoint"
+    private const val KEY_TOGETHER_ONLINE_ENDPOINT_CHECKED_AT = "together_online_endpoint_checked_at"
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
@@ -3274,6 +3615,15 @@ object AppSettings {
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"
+    private const val KEY_SPOTIFY_CANVAS_ENABLED = "spotify_canvas_enabled"
+    private const val KEY_CANVAS_IN_HEADERS = "canvas_in_headers"
+    private const val KEY_TIDAL_ARTWORK_FALLBACK = "tidal_artwork_fallback"
+    private const val KEY_ANIMATE_STATIC_ARTWORK = "animate_static_artwork"
+    private const val KEY_MAX_CANVAS_CACHE_SIZE_MB = "max_canvas_cache_size_mb"
+    private const val KEY_SMART_TRIMMER = "smart_trimmer"
+    private const val KEY_AUTO_DOWNLOAD_ON_LIKE = "auto_download_on_like"
+    private const val KEY_EXTERNAL_DOWNLOADER_ENABLED = "external_downloader_enabled"
+    private const val KEY_EXTERNAL_DOWNLOADER_PACKAGE = "external_downloader_package"
     private const val KEY_SIGNATURE_API_ENABLED = "signature_api_enabled"
     private const val KEY_SIGNATURE_API_URL = "signature_api_url"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
@@ -3299,6 +3649,17 @@ object AppSettings {
     private const val KEY_LOCAL_MUSIC_VIEW_TYPE = "local_music_view_type"
     private const val KEY_DOWNLOADED_MUSIC_VIEW_TYPE = "downloaded_music_view_type"
     private const val KEY_LOCAL_MUSIC_FOLDER_URI = "local_music_folder_uri"
+    private const val KEY_SCHEDULED_BACKUP_ENABLED = "scheduledBackupEnabled"
+    private const val KEY_SCHEDULED_BACKUP_FREQUENCY = "scheduledBackupFrequency"
+    private const val KEY_SCHEDULED_BACKUP_CUSTOM_DATE = "scheduledBackupCustomDateEpochDay"
+    private const val KEY_SCHEDULED_BACKUP_DIRECTORY_URI = "scheduledBackupDirectoryUri"
+    private const val KEY_SCHEDULED_BACKUP_DIRECTORY_NAME = "scheduledBackupDirectoryName"
+    private const val KEY_SCHEDULED_BACKUP_OVERWRITE = "scheduledBackupOverwriteExisting"
+    private const val KEY_CLOUD_SYNC_ENABLED = "cloudSyncEnabled"
+    private const val KEY_CLOUD_SYNC_FOLDER_URI = "cloudSyncFolderUri"
+    private const val KEY_CLOUD_SYNC_FOLDER_NAME = "cloudSyncFolderName"
+    private const val KEY_CLOUD_SYNC_OVERWRITE = "cloudSyncOverwriteExisting"
+    private const val KEY_CLOUD_SYNC_LAST_RUN = "cloudSyncLastRunAt"
     private const val KEY_WEBDAV_URL = "webdav_url"
     private const val KEY_WEBDAV_USERNAME = "webdav_username"
     private const val KEY_SMB_HOST = "smb_host"

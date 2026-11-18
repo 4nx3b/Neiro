@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
+import com.music.bitchord.auth.clearSpotifyWebSession
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.permits
 import com.music.bitchord.data.smb.SmbRepository
@@ -82,12 +83,15 @@ import com.music.bitchord.data.deezer.DeezerAccountStore
 import com.music.bitchord.data.qobuz.QobuzAccountStore
 import com.music.bitchord.data.soundcloud.SoundCloudAccountStore
 import com.music.bitchord.data.tidal.TidalAccountStore
+import com.music.bitchord.sharedui.resources.Res
+import com.music.bitchord.sharedui.resources.spotify_logo
 import com.music.bitchord.ui.components.AddonEditorAlert
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * Where the app is allowed to get audio from.
@@ -145,6 +149,12 @@ fun SourcesScreen(
     onSignInSoundCloud: () -> Unit,
     /** Opens the SoundCloud sign-out confirmation, raised for the same reason. */
     onSignOutSoundCloud: () -> Unit,
+    /**
+     * Opens the Spotify page — the one external catalogue this app talks to
+     * without playing from it. Moved here from the Integration page, where it
+     * sat in an External sources group of its own.
+     */
+    onOpenSpotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -160,6 +170,7 @@ fun SourcesScreen(
     val smbShare by AppSettings.smbShare.collectAsStateWithLifecycle()
     val smbUsername by AppSettings.smbUsername.collectAsStateWithLifecycle()
     val smbPassword by AppSettings.smbPassword.collectAsStateWithLifecycle()
+    val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
 
     /** Last known reachability per source, filled in as the probes come back. */
     val health = remember { mutableStateMapOf<String, SourceHealth>() }
@@ -433,6 +444,35 @@ fun SourcesScreen(
                 },
                 onClick = if (soundCloudSignedIn) onSignOutSoundCloud else onSignInSoundCloud,
             )
+        }
+
+        // Spotify, the one service this app talks to without playing from it:
+        // Canvas artwork and the playlists Browse reaches into, played back
+        // through the sources above. Moved here from the Integration page so
+        // every account the app signs into is on the page that owns the rest
+        // of them.
+        SettingsGroup(
+            header = stringResource(R.string.spotify),
+            footer = stringResource(R.string.spotify_connect_subtitle),
+        ) {
+            SettingsRow(
+                iconPainter = painterResource(Res.drawable.spotify_logo),
+                title = stringResource(R.string.spotify),
+                subtitle = stringResource(
+                    if (spotifyConnected.isNotBlank()) R.string.connected else R.string.tap_to_connect,
+                ),
+                onClick = onOpenSpotify,
+            )
+            if (spotifyConnected.isNotBlank()) {
+                RowDivider()
+                DestructiveRow(
+                    label = stringResource(R.string.spotify_disconnect),
+                    onClick = {
+                        clearSpotifyWebSession()
+                        AppSettings.setSpotifySpdcToken("")
+                    },
+                )
+            }
         }
 
         // A personal library rather than a catalogue in the order above: it
@@ -1135,16 +1175,6 @@ private fun SourceRow(
         }
     }
 }
-
-@Composable
-private fun AudioQuality.localizedLabel(): String = stringResource(
-    when (this) {
-        AudioQuality.LOW -> R.string.low
-        AudioQuality.MEDIUM -> R.string.medium
-        AudioQuality.HIGH -> R.string.high
-        AudioQuality.LOSSLESS -> R.string.lossless
-    },
-)
 
 /** The second line of a row: what this source is, or what is wrong with it. */
 @Composable

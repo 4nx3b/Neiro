@@ -71,7 +71,10 @@
 # Referenced by desktop-only paths in Rhino (JSR-223, java.beans, dynalink),
 # mbassy's EL filters, SMBJ's Kerberos and Ktor's IntelliJ debugger probe. None
 # of them exist on Android and none of those paths run here — the debug build,
-# which R8 never touches, has always lived without them.
+# which R8 never touches, has always lived without them. The com.sun.nio one is
+# the Music Together port's addition: ktor-server's zip-reload filesystem
+# watches the JDK's own jar files for edits, a feature a phone never runs.
+-dontwarn com.sun.nio.file.**
 -dontwarn java.beans.**
 -dontwarn java.lang.management.**
 -dontwarn javax.el.**

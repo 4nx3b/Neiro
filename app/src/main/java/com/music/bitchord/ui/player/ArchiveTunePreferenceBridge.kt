@@ -32,6 +32,7 @@ import moe.rukamori.archivetune.constants.LiquidGlassRefractionHeightKey
 import moe.rukamori.archivetune.constants.LiquidGlassShadowDepthKey
 import moe.rukamori.archivetune.constants.LiquidGlassTintOpacityKey
 import moe.rukamori.archivetune.constants.LyricsLineBlurKey
+import moe.rukamori.archivetune.constants.LyricsSyncOffsetKey
 import moe.rukamori.archivetune.constants.TikTokMainLyricsEnabledKey
 import moe.rukamori.archivetune.constants.AutomixPerformanceModeKey
 import moe.rukamori.archivetune.constants.BackAnimationStyleKey
@@ -176,6 +177,16 @@ object ArchiveTunePreferenceBridge {
         // ---- Twins Neiro already has a row for: one setting, Neiro's row. ----
         boolKey(TikTokMainLyricsEnabledKey, AppSettings.tikTokMainLyrics, AppSettings::setTikTokMainLyrics)
         boolKey(LyricsLineBlurKey, AppSettings.lyricsBlur, AppSettings::setLyricsBlur)
+        // The lyrics sync offset. The two stacks add it with opposite signs —
+        // Neiro's playhead is position − offset, ArchiveTune's position +
+        // offset — so the bridge hands the value over negated and a track
+        // synced in one style stays synced in the other.
+        BridgedPreferences.bridge(
+            key = LyricsSyncOffsetKey,
+            read = { -AppSettings.lyricsOffsetMs.value },
+            write = { AppSettings.setLyricsOffsetMs(-it) },
+            changes = AppSettings.lyricsOffsetMs.map { -it }.distinctUntilChanged(),
+        )
         // ArchiveTune's own animated canvas ↔ Neiro's "Animated cover art".
         boolKey(ArchiveTuneCanvasKey, AppSettings.animatedCanvas, AppSettings::setAnimatedCanvas)
         boolKey(FlamingoHideSlideBarKey, AppSettings.hideSlideBar, AppSettings::setHideSlideBar)

@@ -331,6 +331,22 @@ object AppleMusicCanvas {
 
     // ---- Token ---------------------------------------------------------
 
+    /**
+     * Whether the catalog endpoint answers with this build's token — the
+     * Canvas Check row's probe. A one-row chart read rather than a search, so
+     * it says "reachable" without saying anything about any one track.
+     */
+    internal fun probeHealthy(): Boolean {
+        val bearer = token() ?: return false
+        val url = "$AMP/$storefront/charts".toHttpUrl().newBuilder()
+            .addQueryParameter("types", "albums")
+            .addQueryParameter("limit", "1")
+            .build()
+            .toString()
+        val body = get(url, bearer) ?: return false
+        return body.contains("\"results\"")
+    }
+
     private var cachedToken: String? = null
     private var tokenExpiresAtMs = 0L
     private var retryTokenAfterMs = 0L
