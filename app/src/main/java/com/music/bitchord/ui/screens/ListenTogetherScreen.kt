@@ -481,7 +481,6 @@ fun ListenTogetherScreen(
                 item {
                     RoomStatusCard(
                         roomCode = room.roomCode,
-                        isHost = isHost,
                         context = context,
                         onOpenChat = onOpenChat,
                         unreadMessageCount = unreadMessageCount,
