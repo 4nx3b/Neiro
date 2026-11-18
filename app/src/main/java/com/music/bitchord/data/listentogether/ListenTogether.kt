@@ -160,6 +160,21 @@ object ListenTogether {
         // engine does, and everything reading `state.value` before init gets
         // the blank party it always got.
         scope.launch {
+            // Seven sources is two past the typed combine's last overload, so
+            // this rides the array one — the order the flows are listed in is
+            // the order the array arrives in, and the cast below is the only
+            // place that order is written down.
+            @Suppress("UNCHECKED_CAST")
+            suspend fun read(vararg parts: Any?): Inputs {
+                val room = parts[0] as RoomState?
+                val connection = parts[1] as ConnectionState
+                val userId = parts[2] as String?
+                val role = parts[3] as RoomRole
+                val autoplay = parts[4] as Boolean
+                val autoplayIds = parts[5] as Set<String>
+                val error = parts[6] as String?
+                return Inputs(room, connection, userId, role, autoplay, autoplayIds, error)
+            }
             combine(
                 engine.roomState,
                 engine.connectionState,
@@ -168,9 +183,7 @@ object ListenTogether {
                 AppSettings.autoplay,
                 autoplayTrackIds,
                 lastError,
-            ) { room, connection, userId, role, autoplay, autoplayIds, error ->
-                Inputs(room, connection, userId, role, autoplay, autoplayIds, error)
-            }.collect { inputs -> facadeState.value = buildState(inputs) }
+            ) { parts -> read(*parts) }.collect { inputs -> facadeState.value = buildState(inputs) }
         }
         // The one-slot error memory: the last connection failure or refusal
         // stays until the room is healthy again.
