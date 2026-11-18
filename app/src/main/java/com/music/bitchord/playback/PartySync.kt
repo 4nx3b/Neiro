@@ -2,51 +2,52 @@ package com.music.bitchord.playback
 
 import androidx.media3.common.Player
 import com.music.bitchord.data.DebugLog as Log
+import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.listentogether.PartyTrack
 import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.sources.TrackMatcher
-import com.music.bitchord.data.together.TogetherEngine
-import com.music.bitchord.data.together.isConnectedToSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Binds playback to a Music Together session, when there is one.
+ * Binds playback to a Listen Together room, when there is one.
  *
- * The session machinery itself — the embedded LAN server, the online relay
- * host, the guest socket, the room-state broadcasts — lives in
- * [TogetherEngine], an object every surface can read. What stays here is the
- * half that cannot: the doors [PlaybackService] already calls, which exist
- * because a session has to survive the app being backgrounded and the screen
- * going off, and because only this service-side adapter can tell the player
- * the two directions apart.
+ * The room machinery itself — the WebSocket client, the event handling, the
+ * host's queue observation and heartbeat, applying the room's frames to the
+ * player — lives in the ported engine
+ * ([ListenTogetherManager][com.music.bitchord.data.listentogether.ListenTogetherManager]
+ * behind the [ListenTogether] facade). What stays here is the half that cannot:
+ * the doors [PlaybackService] already calls, which exist because a room has to
+ * survive the app being backgrounded and the screen going off, and because only
+ * this service-side adapter can tell the player the two directions apart.
  *
- * ## Telling the two directions apart
+ * ## What the doors do now
  *
- * Outbound is [onLocalIntent], reached only from the service's `SessionPlayer`
- * — the [androidx.media3.common.ForwardingPlayer] every external surface knocks
- * on — plus the automatic-advance listener, both of which mean "this device's
- * user did something". On a guest, that diff is turned into the room's
- * `ControlRequest` / `AddTrackRequest` messages. The host needs nothing here:
- * its player is the room's authority and [TogetherEngine] publishes it every
- * 500 ms regardless of who moved it.
+ * The ported engine has no guest control protocol: guests cannot broadcast
+ * playback actions at all (their picks travel as suggestions, applied by the
+ * host), so [onLocalIntent]'s old publish step is gone — what it still does is
+ * the one thing a socket cannot express: a listener whose audio focus was
+ * stolen stops *following* the room until their own next action asks to come
+ * back (see [onPlayWhenReadyChanged] and the manager's follow suspension).
  *
  * Inbound never passes through this class at all: the engine applies room
  * state to the raw player (the same "below the wrapper" rule as before), so
- * its own corrections never echo as user intents. What this class adds around
- * that is the two behaviours a socket cannot express — a guest whose audio
- * focus was stolen stops *following* until they ask to come back, and a guest
- * locked out of the controls gets a pause that stays local.
+ * its own corrections never echo as user intents.
  *
  * One deliberate consequence, unchanged from the party era: a pause this app
  * did not ask for — audio focus lost to another app, a call — goes directly
  * to the player and is *not* published. One person taking a call does not stop
  * the music for everyone else.
+ *
+ * ## The queue stash
+ *
+ * Joining a room replaces the player's queue with the room's, so the
+ * listener's own is stashed first and restored on leaving —
+ * [PartyPersonalQueueStash] — surviving process death in between.
  */
 class PartySync(
     private val scope: CoroutineScope,
@@ -55,8 +56,7 @@ class PartySync(
 ) {
 
     private val jobs = mutableListOf<Job>()
-    private var publishJob: Job? = null
-    private var lastInSession = false
+    private var lastInRoom = false
 
     /** A queue row started dragging in the UI. See [onLocalIntent]. */
     private var queueDragActive = false
@@ -65,18 +65,22 @@ class PartySync(
     private var queueDragDirty = false
 
     fun start() {
-        TogetherEngine.attachPlayer(player)
+        // The engine holds the service's live player through this accessor —
+        // a crossfade handoff swaps the instance underneath, and the manager
+        // re-attaches its listener when that happens. Detached again by
+        // [stop] when the service dies.
+        ListenTogether.manager?.attachPlayer(player)
         jobs += scope.launch {
-            TogetherEngine.sessionState
-                .map { it.isConnectedToSession }
+            ListenTogether.state
+                .map { it.inParty }
                 .distinctUntilChanged()
-                .collect { inSession ->
-                    if (inSession && !lastInSession) {
-                        onEnteredSession()
-                    } else if (!inSession && lastInSession) {
-                        onLeftSession()
+                .collect { inRoom ->
+                    if (inRoom && !lastInRoom) {
+                        onEnteredRoom()
+                    } else if (!inRoom && lastInRoom) {
+                        onLeftRoom()
                     }
-                    lastInSession = inSession
+                    lastInRoom = inRoom
                 }
         }
     }
@@ -84,33 +88,32 @@ class PartySync(
     fun stop() {
         jobs.forEach(Job::cancel)
         jobs.clear()
-        publishJob?.cancel()
-        TogetherEngine.detachPlayer()
+        // The service itself is going away: dropping the player through the
+        // manager's own door rather than a bare detachPlayer keeps its
+        // bookkeeping (heartbeat, queue observation) in step.
+        ListenTogether.manager?.onMusicServiceDestroyed()
     }
 
     /**
-     * The user did something to playback on this device — or the queue moved on
-     * by itself, which is the same thing as far as a room is concerned.
+     * The user did something to playback on this device.
      *
-     * Debounced, because one gesture is several calls, and publishing each
-     * would put several control requests on the wire for one tap.
+     * The engine cannot broadcast a guest's transport actions (the wire has no
+     * guest control; their song picks travel as suggestions from the manager's
+     * own listener), so what this door is left with is the one thing that must
+     * happen on a local action: a listener who had dropped out of following the
+     * room — audio focus stolen — asks to come back by acting again.
+     *
+     * Debounced across a queue-row drag, because a drag is many calls and the
+     * ask belongs at the end of it.
      */
     fun onLocalIntent() {
-        if (!TogetherEngine.inSession()) return
-        if (TogetherEngine.isApplyingRemote) return
-        if (!TogetherEngine.isGuestControlSession() && !TogetherEngine.isGuestAddSession()) return
-        TogetherEngine.clearFocusLost()
+        val manager = ListenTogether.manager ?: return
+        if (!manager.isInRoom) return
         if (queueDragActive) {
             queueDragDirty = true
-            publishJob?.cancel()
             return
         }
-        publishJob?.cancel()
-        publishJob = scope.launch {
-            delay(PUBLISH_DEBOUNCE_MS)
-            TogetherEngine.publishGuestIntent()
-            TogetherEngine.publishGuestQueueAdds()
-        }
+        manager.resumeFollow()
     }
 
     /** A queue row started dragging in the UI. See [onLocalIntent]. */
@@ -139,15 +142,15 @@ class PartySync(
      * the audio straight off whatever the listener had just started.
      */
     fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        val manager = ListenTogether.manager ?: return
         if (playWhenReady) {
-            TogetherEngine.clearFocusLost()
+            // Resuming is as good as acting: the listener is asking to hear it.
+            manager.resumeFollow()
             return
         }
-        if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS &&
-            TogetherEngine.inSession()
-        ) {
-            Log.i(TAG, "another app took the audio; dropping out of the session until asked back")
-            TogetherEngine.markFocusLost()
+        if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS && manager.isInRoom) {
+            Log.i(TAG, "another app took the audio; dropping out of the room until asked back")
+            manager.suspendFollowForFocusLoss()
         }
     }
 
@@ -165,17 +168,17 @@ class PartySync(
      * device performs on its own behalf while locked.
      */
     fun onLockedTransport(playing: Boolean): Boolean {
-        if (!TogetherEngine.controlsLockedForSelf()) return false
+        val party = ListenTogether.state.value
+        if (!party.controlsLocked) return false
         val exo = player() ?: return false
         if (playing) {
-            TogetherEngine.clearLocallyPaused()
-            val room = TogetherEngine.roomState.value ?: return true
-            if (!room.isPlaying) return true
-            TogetherEngine.guestTargetPositionMs()
-                ?.let(exo::seekTo)
+            ListenTogether.manager?.resumeFollow()
+            if (!party.playback.isPlaying) return true
+            exo.seekTo(party.playback.effectivePositionMs)
             exo.play()
         } else {
-            TogetherEngine.markLocallyPaused()
+            // Staying quiet is the listener's own business: a local pause that
+            // the room must not see and nothing downstream should undo.
             exo.pause()
         }
         return true
@@ -184,32 +187,22 @@ class PartySync(
     /**
      * Whether a `play()` from this device should be held back for the room.
      *
-     * True means the caller must *not* start the player: the engine sends the
-     * guest's `Play` request to the host, the host applies it, and the next
-     * room state starts this device with everybody else. If the host never
-     * answers, the engine's fallback starts the player anyway — the press is
-     * never simply swallowed.
-     *
-     * False whenever the room could not be asked anything — no session, a
-     * locked room, a player that never stopped — in which case play behaves
-     * exactly as it does outside this feature.
+     * The ported engine has no guest play request — the wire refuses guest
+     * playback actions outright and the host's own play state is what the room
+     * syncs to — so there is nothing to wait for and this always answers false:
+     * play behaves exactly as it does outside this feature. A locked guest never
+     * reaches here anyway; [onLockedTransport] handled their press first.
      */
-    fun shouldDeferPlay(): Boolean {
-        if (!TogetherEngine.isGuestControlSession()) return false
-        val exo = player() ?: return false
-        if (exo.playWhenReady) return false
-        TogetherEngine.requestGuestPlay()
-        return true
-    }
+    fun shouldDeferPlay(): Boolean = false
 
-    private fun onEnteredSession() {
+    private fun onEnteredRoom() {
         val exo = player() ?: return
-        Log.i(TAG, "entered together session, stashing personal queue")
+        Log.i(TAG, "entered listen together room, stashing personal queue")
         PartyPersonalQueueStash.stashFromPlayer(exo)
     }
 
-    private fun onLeftSession() {
-        Log.i(TAG, "left together session, restoring personal queue if stashed")
+    private fun onLeftRoom() {
+        Log.i(TAG, "left listen together room, restoring personal queue if stashed")
         val stashed = PartyPersonalQueueStash.load()
         if (stashed != null) {
             val exo = player() ?: return
@@ -227,14 +220,6 @@ class PartySync(
 
     private companion object {
         const val TAG = "PartySync"
-
-        /**
-         * Long enough to coalesce the burst one tap makes — choosing a track
-         * is `setMediaItems`, `prepare`, `play` within a few milliseconds —
-         * and no longer, because a resume is held until this has elapsed and
-         * every millisecond here is silence after the button was pressed.
-         */
-        const val PUBLISH_DEBOUNCE_MS = 120L
     }
 }
 
@@ -272,40 +257,3 @@ internal fun PartyTrack.toSong(): Song = Song(
     },
     queueTier = if (fromAutoplay) QueueTier.AUTOPLAY else QueueTier.USER_QUEUE,
 )
-
-internal data class QueueMoveDelta(
-    val fromIndex: Int,
-    val toIndex: Int,
-    val videoId: String,
-)
-
-/**
- * Detects if [newList] is the result of moving exactly one item in [oldList].
- * If so, returns the from and to indices (offset by [baseOffset]) and the item's id.
- * Returns null if the lists cannot be explained by a single move.
- */
-internal fun detectSingleMove(
-    oldList: List<String>,
-    newList: List<String>,
-    baseOffset: Int = 0,
-): QueueMoveDelta? {
-    if (oldList.size != newList.size || oldList == newList || oldList.isEmpty()) return null
-    if (oldList.groupingBy { it }.eachCount() != newList.groupingBy { it }.eachCount()) return null
-
-    for (from in oldList.indices) {
-        val item = oldList[from]
-        val withoutItem = oldList.toMutableList().apply { removeAt(from) }
-        for (to in oldList.indices) {
-            if (from == to) continue
-            val simulated = withoutItem.toMutableList().apply { add(to, item) }
-            if (simulated == newList) {
-                return QueueMoveDelta(
-                    fromIndex = baseOffset + from,
-                    toIndex = baseOffset + to,
-                    videoId = item,
-                )
-            }
-        }
-    }
-    return null
-}

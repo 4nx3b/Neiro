@@ -19,6 +19,9 @@ import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.playback.EqLayout
 import com.music.bitchord.playback.EqualizerPreset
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 
 
 /**
@@ -563,28 +566,37 @@ object AppSettings {
     /** Show the output / Listen Together pill under the player's transport. */
     val showListenTogetherButton = MutableStateFlow(false)
 
-    // ── Music Together ───────────────────────────────────────────────────
+    // ── Listen Together ───────────────────────────────────────────────────
 
-    /** The name this device shows every other participant in a session. */
-    val togetherDisplayName = MutableStateFlow("")
+    /** The name this device shows every other member of a Listen Together room. */
+    val listenTogetherUsername = MutableStateFlow("")
 
-    /** The LAN port the embedded session server listens on. */
-    val togetherDefaultPort = MutableStateFlow(42117)
+    /** The WebSocket URL of the Listen Together server a room lives on. */
+    val listenTogetherServerUrl = MutableStateFlow("")
 
-    /** Whether guests may put songs on the host's queue. */
-    val togetherAllowGuestsToAddTracks = MutableStateFlow(true)
+    /** The avatar this device joins rooms with — an index asset, or the custom picture. */
+    val listenTogetherAvatarIndex = MutableStateFlow(0)
 
-    /** Whether guests may drive the host's playback (play, pause, seek, skip). */
-    val togetherAllowGuestsControlPlayback = MutableStateFlow(false)
+    /** Whether a host lets join requests in without being asked. */
+    val listenTogetherAutoApproval = MutableStateFlow(false)
 
-    /** Whether a joining guest waits for the host to let them in. */
-    val togetherRequireHostApproval = MutableStateFlow(false)
+    /** Whether a host takes song suggestions the moment they arrive. */
+    val listenTogetherSuggestionAutoApprove = MutableStateFlow(true)
 
-    /** The last join input — a link or a code — offered as the next one to try. */
-    val togetherLastJoinLink = MutableStateFlow("")
+    /** Whether the room's chat pops notifications while the chat screen is closed. */
+    val listenTogetherChatNotifications = MutableStateFlow(true)
 
-    /** Whether the one-time Music Together welcome has been dismissed for good. */
-    val togetherWelcomeShown = MutableStateFlow(false)
+    /** Whether room events also surface in-app (toasts for suggestions and rooms). */
+    val listenTogetherInAppNotifications = MutableStateFlow(true)
+
+    /** Whether a guest's loudness follows the host's device volume. */
+    val listenTogetherSyncHostVolume = MutableStateFlow(false)
+
+    /** Whether a guest re-syncs to the host's playhead after a reconnect. */
+    val listenTogetherSmartResync = MutableStateFlow(true)
+
+    /** Usernames whose join requests and suggestions never surface again. */
+    val listenTogetherBlockedUsers = MutableStateFlow<Set<String>>(emptySet())
 
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
@@ -797,8 +809,6 @@ object AppSettings {
     val minimalHomeMode = MutableStateFlow(false)
 
     val defaultOpenTab = MutableStateFlow(DefaultOpenTab.HOME)
-
-    val backAnimationStyle = MutableStateFlow(BackAnimationStyle.DEFAULT)
 
     /** Tab labels under the bottom bar's glyphs. */
     val navBarShowLabels = MutableStateFlow(true)
@@ -1018,6 +1028,19 @@ object AppSettings {
 
     /** User-issued credential required by api.paxsenix.org. */
     val paxSenixApiKey = MutableStateFlow("")
+
+    /**
+     * The Muzo Data key (data.kouzu.in), pasted on the Sources screen. Blank
+     * means unconfigured and everything it gates answers nothing — the
+     * lyrics provider is pushed the key the same way PaxSenix's is, because
+     * the shared module cannot see this object.
+     *
+     * The source's *enable* is deliberately not a setting here: it is the
+     * Muzo row's switch in the source list, exactly like Tidal's and Qobuz's,
+     * so there is one place that says whether the resolver may ask Muzo and
+     * no second copy of that fact to drift against it.
+     */
+    val muzoApiKey = MutableStateFlow("")
 
     /**
      * Disk budget for cached audio. [AudioCache][com.music.bitchord.playback.AudioCache] evicts past it.
@@ -1564,13 +1587,29 @@ object AppSettings {
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, false)
-        togetherDisplayName.value = prefs.getString(KEY_TOGETHER_DISPLAY_NAME, null).orEmpty()
-        togetherDefaultPort.value = prefs.getInt(KEY_TOGETHER_DEFAULT_PORT, 42117).coerceIn(1..65535)
-        togetherAllowGuestsToAddTracks.value = prefs.getBoolean(KEY_TOGETHER_ALLOW_GUESTS_ADD_TRACKS, true)
-        togetherAllowGuestsControlPlayback.value = prefs.getBoolean(KEY_TOGETHER_ALLOW_GUESTS_CONTROL_PLAYBACK, false)
-        togetherRequireHostApproval.value = prefs.getBoolean(KEY_TOGETHER_REQUIRE_HOST_APPROVAL, false)
-        togetherLastJoinLink.value = prefs.getString(KEY_TOGETHER_LAST_JOIN_LINK, null).orEmpty()
-        togetherWelcomeShown.value = prefs.getBoolean(KEY_TOGETHER_WELCOME_SHOWN, false)
+        // The name survives the port from the old Music Together feature:
+        // whatever display name it had becomes the Listen Together username, once.
+        listenTogetherUsername.value =
+            prefs.getString(KEY_LISTEN_TOGETHER_USERNAME, null)
+                // The old feature's on-disk key, read as a literal so the
+                // migration does not drag the name back in as a constant.
+                ?: prefs.getString("together_display_name", null)
+            ?: ""
+        listenTogetherServerUrl.value =
+            prefs.getString(KEY_LISTEN_TOGETHER_SERVER_URL, null)?.trim().orEmpty()
+        listenTogetherAvatarIndex.value = prefs.getInt(KEY_LISTEN_TOGETHER_AVATAR_INDEX, 0)
+        listenTogetherAutoApproval.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_AUTO_APPROVAL, false)
+        listenTogetherSuggestionAutoApprove.value =
+            prefs.getBoolean(KEY_LISTEN_TOGETHER_SUGGESTION_AUTO_APPROVE, true)
+        listenTogetherChatNotifications.value =
+            prefs.getBoolean(KEY_LISTEN_TOGETHER_CHAT_NOTIFICATIONS, true)
+        listenTogetherInAppNotifications.value =
+            prefs.getBoolean(KEY_LISTEN_TOGETHER_IN_APP_NOTIFICATIONS, true)
+        listenTogetherSyncHostVolume.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_SYNC_HOST_VOLUME, false)
+        listenTogetherSmartResync.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_SMART_RESYNC, true)
+        listenTogetherBlockedUsers.value = decodeBlockedUsers(
+            prefs.getString(KEY_LISTEN_TOGETHER_BLOCKED_USERS, null),
+        )
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         onboardingComplete.value = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
         diwaliGreetingShown.value = prefs.getBoolean(KEY_DIWALI_GREETING_SHOWN, false)
@@ -1651,7 +1690,6 @@ object AppSettings {
         hideSlideBar.value = prefs.getBoolean(KEY_HIDE_SLIDE_BAR, false)
         minimalHomeMode.value = prefs.getBoolean(KEY_MINIMAL_HOME_MODE, false)
         defaultOpenTab.value = readEnum(KEY_DEFAULT_OPEN_TAB, DefaultOpenTab.HOME)
-        backAnimationStyle.value = readEnum(KEY_BACK_ANIMATION_STYLE, BackAnimationStyle.DEFAULT)
         navBarShowLabels.value = prefs.getBoolean(KEY_NAV_BAR_SHOW_LABELS, true)
         hideSignInBanner.value = prefs.getBoolean(KEY_HIDE_SIGN_IN_BANNER, false)
         hideLibraryReplayCard.value = prefs.getBoolean(KEY_HIDE_LIBRARY_REPLAY_CARD, false)
@@ -1711,6 +1749,8 @@ object AppSettings {
         prioritizeSyllableSync.value = prefs.getBoolean(KEY_PRIORITIZE_SYLLABLE_SYNC, false)
         paxSenixApiKey.value = prefs.getString(KEY_PAXSENIX_API_KEY, "").orEmpty()
         com.music.bitchord.data.lyrics.PaxSenix.setApiKey(paxSenixApiKey.value)
+        muzoApiKey.value = prefs.getString(KEY_MUZO_API_KEY, "").orEmpty().trim()
+        com.music.bitchord.data.lyrics.MuzoLyrics.setApiKey(muzoApiKey.value)
         audioCacheLimitBytes.value = clampCacheLimit(prefs.getLong(KEY_CACHE_LIMIT, DEFAULT_CACHE_LIMIT_BYTES))
         maxCanvasCacheSizeMb.value = prefs.getInt(KEY_MAX_CANVAS_CACHE_SIZE_MB, DEFAULT_CANVAS_CACHE_SIZE_MB)
         smartTrimmer.value = prefs.getBoolean(KEY_SMART_TRIMMER, false)
@@ -2112,64 +2152,88 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_BUTTON, value).apply()
     }
 
-    fun setTogetherDisplayName(value: String) {
+    fun setListenTogetherUsername(value: String) {
         val trimmed = value.trim().take(80)
-        togetherDisplayName.value = trimmed
-        prefs.edit().putString(KEY_TOGETHER_DISPLAY_NAME, trimmed).apply()
+        listenTogetherUsername.value = trimmed
+        prefs.edit().putString(KEY_LISTEN_TOGETHER_USERNAME, trimmed).apply()
     }
 
-    fun setTogetherDefaultPort(value: Int) {
-        val port = value.coerceIn(1..65535)
-        togetherDefaultPort.value = port
-        prefs.edit().putInt(KEY_TOGETHER_DEFAULT_PORT, port).apply()
+    fun setListenTogetherServerUrl(value: String) {
+        val url = value.trim()
+        listenTogetherServerUrl.value = url
+        prefs.edit().putString(KEY_LISTEN_TOGETHER_SERVER_URL, url).apply()
     }
 
-    fun setTogetherAllowGuestsToAddTracks(value: Boolean) {
-        togetherAllowGuestsToAddTracks.value = value
-        prefs.edit().putBoolean(KEY_TOGETHER_ALLOW_GUESTS_ADD_TRACKS, value).apply()
+    fun setListenTogetherAvatarIndex(value: Int) {
+        listenTogetherAvatarIndex.value = value
+        prefs.edit().putInt(KEY_LISTEN_TOGETHER_AVATAR_INDEX, value).apply()
     }
 
-    fun setTogetherAllowGuestsControlPlayback(value: Boolean) {
-        togetherAllowGuestsControlPlayback.value = value
-        prefs.edit().putBoolean(KEY_TOGETHER_ALLOW_GUESTS_CONTROL_PLAYBACK, value).apply()
+    fun setListenTogetherAutoApproval(value: Boolean) {
+        listenTogetherAutoApproval.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_AUTO_APPROVAL, value).apply()
     }
 
-    fun setTogetherRequireHostApproval(value: Boolean) {
-        togetherRequireHostApproval.value = value
-        prefs.edit().putBoolean(KEY_TOGETHER_REQUIRE_HOST_APPROVAL, value).apply()
+    fun setListenTogetherSuggestionAutoApprove(value: Boolean) {
+        listenTogetherSuggestionAutoApprove.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_SUGGESTION_AUTO_APPROVE, value).apply()
     }
 
-    fun setTogetherLastJoinLink(value: String) {
-        togetherLastJoinLink.value = value
-        prefs.edit().putString(KEY_TOGETHER_LAST_JOIN_LINK, value).apply()
+    fun setListenTogetherChatNotifications(value: Boolean) {
+        listenTogetherChatNotifications.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_CHAT_NOTIFICATIONS, value).apply()
     }
 
-    fun setTogetherWelcomeShown(value: Boolean) {
-        togetherWelcomeShown.value = value
-        prefs.edit().putBoolean(KEY_TOGETHER_WELCOME_SHOWN, value).apply()
+    fun setListenTogetherInAppNotifications(value: Boolean) {
+        listenTogetherInAppNotifications.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_IN_APP_NOTIFICATIONS, value).apply()
     }
 
-    /** The persistent identity a session client says hello with. Generated on first read. */
-    fun togetherClientId(): String {
-        val existing = prefs.getString(KEY_TOGETHER_CLIENT_ID, null)?.trim().orEmpty()
-        if (existing.isNotBlank()) return existing
-        val generated = java.util.UUID.randomUUID().toString()
-        prefs.edit().putString(KEY_TOGETHER_CLIENT_ID, generated).apply()
-        return generated
+    fun setListenTogetherSyncHostVolume(value: Boolean) {
+        listenTogetherSyncHostVolume.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_SYNC_HOST_VOLUME, value).apply()
     }
 
-    /** The cached online relay endpoint, and when it was last confirmed. */
-    fun togetherOnlineEndpointCache(): String? =
-        prefs.getString(KEY_TOGETHER_ONLINE_ENDPOINT, null)?.trim()
+    fun setListenTogetherSmartResync(value: Boolean) {
+        listenTogetherSmartResync.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_SMART_RESYNC, value).apply()
+    }
 
-    fun togetherOnlineEndpointCheckedAt(): Long =
-        prefs.getLong(KEY_TOGETHER_ONLINE_ENDPOINT_CHECKED_AT, 0L)
+    fun setListenTogetherBlockedUsers(value: Set<String>) {
+        listenTogetherBlockedUsers.value = value
+        prefs.edit().putString(KEY_LISTEN_TOGETHER_BLOCKED_USERS, encodeBlockedUsers(value)).apply()
+    }
 
-    fun setTogetherOnlineEndpointCache(value: String, checkedAt: Long) {
-        prefs.edit()
-            .putString(KEY_TOGETHER_ONLINE_ENDPOINT, value)
-            .putLong(KEY_TOGETHER_ONLINE_ENDPOINT_CHECKED_AT, checkedAt)
-            .apply()
+    /**
+     * The room chat's persisted history — one JSON blob the manager rewrites
+     * after every message and restores on the next session. Not a flow: it is
+     * read exactly twice (leave and rejoin) and never while a chat is on screen.
+     */
+    fun listenTogetherChatHistory(): String? = prefs.getString(KEY_LISTEN_TOGETHER_CHAT_HISTORY, null)
+
+    fun setListenTogetherChatHistory(value: String?) {
+        prefs.edit().apply {
+            if (value == null) {
+                remove(KEY_LISTEN_TOGETHER_CHAT_HISTORY)
+            } else {
+                putString(KEY_LISTEN_TOGETHER_CHAT_HISTORY, value)
+            }
+        }.apply()
+    }
+
+    private val blockedUsersJson = Json { ignoreUnknownKeys = true }
+
+    private fun encodeBlockedUsers(users: Set<String>): String =
+        runCatching {
+            blockedUsersJson.encodeToString(ListSerializer(String.serializer()), users.toList())
+        }.getOrDefault("[]")
+
+    private fun decodeBlockedUsers(raw: String?): Set<String> {
+        val stored = raw?.takeIf { it.isNotBlank() } ?: return emptySet()
+        return runCatching {
+            blockedUsersJson.decodeFromString(ListSerializer(String.serializer()), stored)
+        }.getOrDefault(emptyList())
+            .toSet()
     }
 
     fun setThemeMode(value: ThemeMode) {
@@ -2503,11 +2567,6 @@ object AppSettings {
         prefs.edit().putString(KEY_DEFAULT_OPEN_TAB, value.name).apply()
     }
 
-    fun setBackAnimationStyle(value: BackAnimationStyle) {
-        backAnimationStyle.value = value
-        prefs.edit().putString(KEY_BACK_ANIMATION_STYLE, value.name).apply()
-    }
-
     fun setNavBarShowLabels(value: Boolean) {
         navBarShowLabels.value = value
         prefs.edit().putBoolean(KEY_NAV_BAR_SHOW_LABELS, value).apply()
@@ -2728,6 +2787,19 @@ object AppSettings {
         paxSenixApiKey.value = normalized
         prefs.edit().putString(KEY_PAXSENIX_API_KEY, normalized).apply()
         com.music.bitchord.data.lyrics.PaxSenix.setApiKey(normalized)
+    }
+
+    /**
+     * Stores the Muzo Data key, trimmed the way the service's own editor
+     * trims one — a stray space either side of a paste is not part of the
+     * credential — and hands it to the lyrics provider, which reads it live
+     * from here rather than from this object it cannot see.
+     */
+    fun setMuzoApiKey(value: String) {
+        val trimmed = value.trim()
+        muzoApiKey.value = trimmed
+        prefs.edit().putString(KEY_MUZO_API_KEY, trimmed).apply()
+        com.music.bitchord.data.lyrics.MuzoLyrics.setApiKey(trimmed)
     }
 
     /**
@@ -3399,6 +3471,7 @@ object AppSettings {
         KEY_LISTENBRAINZ_TOKEN,
         KEY_SPOTIFY_SPDC_TOKEN,
         KEY_PAXSENIX_API_KEY,
+        KEY_MUZO_API_KEY,
     )
 
     /**
@@ -3499,16 +3572,17 @@ object AppSettings {
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
-    private const val KEY_TOGETHER_DISPLAY_NAME = "together_display_name"
-    private const val KEY_TOGETHER_CLIENT_ID = "together_client_id"
-    private const val KEY_TOGETHER_DEFAULT_PORT = "together_default_port"
-    private const val KEY_TOGETHER_ALLOW_GUESTS_ADD_TRACKS = "together_allow_guests_add_tracks"
-    private const val KEY_TOGETHER_ALLOW_GUESTS_CONTROL_PLAYBACK = "together_allow_guests_control_playback"
-    private const val KEY_TOGETHER_REQUIRE_HOST_APPROVAL = "together_require_host_approval"
-    private const val KEY_TOGETHER_LAST_JOIN_LINK = "together_last_join_link"
-    private const val KEY_TOGETHER_WELCOME_SHOWN = "together_welcome_shown"
-    private const val KEY_TOGETHER_ONLINE_ENDPOINT = "together_online_endpoint"
-    private const val KEY_TOGETHER_ONLINE_ENDPOINT_CHECKED_AT = "together_online_endpoint_checked_at"
+    private const val KEY_LISTEN_TOGETHER_USERNAME = "listen_together_username"
+    private const val KEY_LISTEN_TOGETHER_SERVER_URL = "listen_together_server_url"
+    private const val KEY_LISTEN_TOGETHER_AVATAR_INDEX = "listen_together_avatar_index"
+    private const val KEY_LISTEN_TOGETHER_AUTO_APPROVAL = "listen_together_auto_approval"
+    private const val KEY_LISTEN_TOGETHER_SUGGESTION_AUTO_APPROVE = "listen_together_suggestion_auto_approve"
+    private const val KEY_LISTEN_TOGETHER_CHAT_NOTIFICATIONS = "listen_together_chat_notifications"
+    private const val KEY_LISTEN_TOGETHER_IN_APP_NOTIFICATIONS = "listen_together_in_app_notifications"
+    private const val KEY_LISTEN_TOGETHER_SYNC_HOST_VOLUME = "listen_together_sync_host_volume"
+    private const val KEY_LISTEN_TOGETHER_SMART_RESYNC = "listen_together_smart_resync"
+    private const val KEY_LISTEN_TOGETHER_BLOCKED_USERS = "listen_together_blocked_users"
+    private const val KEY_LISTEN_TOGETHER_CHAT_HISTORY = "listen_together_chat_history"
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
@@ -3567,7 +3641,6 @@ object AppSettings {
     private const val KEY_HIDE_SLIDE_BAR = "hide_slide_bar"
     private const val KEY_MINIMAL_HOME_MODE = "minimal_home_mode"
     private const val KEY_DEFAULT_OPEN_TAB = "default_open_tab"
-    private const val KEY_BACK_ANIMATION_STYLE = "back_animation_style"
     private const val KEY_NAV_BAR_SHOW_LABELS = "nav_bar_show_labels"
     private const val KEY_HIDE_SIGN_IN_BANNER = "hide_sign_in_banner"
     private const val KEY_HIDE_LIBRARY_REPLAY_CARD = "hide_library_replay_card"
@@ -3639,6 +3712,7 @@ object AppSettings {
     private const val KEY_LYRICS_SOURCE_ORDER = "lyrics_source_order"
     private const val KEY_PRIORITIZE_SYLLABLE_SYNC = "prioritize_syllable_sync"
     private const val KEY_PAXSENIX_API_KEY = "paxsenix_api_key"
+    private const val KEY_MUZO_API_KEY = "muzo_api_key"
     private const val KEY_REPLAY_GENRES = "replay_genres"
     private const val KEY_FILTER_NON_MUSIC_AUDIO = "filter_non_music_audio"
     private const val KEY_SHOW_CACHE_FOLDER = "show_cache_folder"

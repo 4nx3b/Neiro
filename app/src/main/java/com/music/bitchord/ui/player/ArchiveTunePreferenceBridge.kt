@@ -4,7 +4,6 @@ import android.content.Context
 import com.music.bitchord.data.settings.AppFont
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.AutomixPerformanceMode
-import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
 import com.music.bitchord.data.settings.LiquidGlassIntensity
 import com.music.bitchord.data.settings.PlayerDesignStyle
@@ -35,7 +34,6 @@ import moe.rukamori.archivetune.constants.LyricsLineBlurKey
 import moe.rukamori.archivetune.constants.LyricsSyncOffsetKey
 import moe.rukamori.archivetune.constants.TikTokMainLyricsEnabledKey
 import moe.rukamori.archivetune.constants.AutomixPerformanceModeKey
-import moe.rukamori.archivetune.constants.BackAnimationStyleKey
 import moe.rukamori.archivetune.constants.CrossfadeDurationKey
 import moe.rukamori.archivetune.constants.CrossfadeEnabledKey
 import moe.rukamori.archivetune.constants.CustomFontNameKey
@@ -58,7 +56,6 @@ import moe.rukamori.archivetune.utils.mirrorBridgedPreferences
 import moe.rukamori.archivetune.constants.AppFontPreference as AtFont
 import moe.rukamori.archivetune.constants.AutomixPerformanceMode as AtAutomix
 import moe.rukamori.archivetune.constants.LiquidGlassIntensity as AtGlassIntensity
-import moe.rukamori.archivetune.constants.BackAnimationStyle as AtBackAnimation
 import moe.rukamori.archivetune.constants.PlayerDesignStyle as AtStyle
 
 /**
@@ -84,7 +81,6 @@ object ArchiveTunePreferenceBridge {
         enumKey<PlayerDesignStyle, AtStyle>(PlayerDesignStyleKey, AppSettings.playerDesignStyle, { toAt(it) }) { AppSettings.setPlayerDesignStyle(fromAt(it)) }
         enumKey<ThemeMode, DarkMode>(DarkModeKey, AppSettings.themeMode, { toAt(it) }) { AppSettings.setThemeMode(fromAt(it)) }
         enumKey<AppFont, AtFont>(FontPreferenceKey, AppSettings.appFont, { toAt(it) }) { AppSettings.setAppFont(fromAt(it)) }
-        enumKey<BackAnimationStyle, AtBackAnimation>(BackAnimationStyleKey, AppSettings.backAnimationStyle, { toAt(it) }) { AppSettings.setBackAnimationStyle(fromAt(it)) }
         enumKey<AutomixPerformanceMode, AtAutomix>(AutomixPerformanceModeKey, AppSettings.automixPerformanceMode, { toAt(it) }) {
             AppSettings.setAutomixPerformanceMode(fromAt(it))
         }
@@ -316,20 +312,6 @@ object ArchiveTunePreferenceBridge {
     /** Separate so the JVM test never reaches AppSettings. */
     @Volatile
     internal var fontIsLegacy: () -> Boolean = { AppSettings.appFont.value == AppFont.LEGACY }
-
-    // ---- Back gesture animation: same names.
-
-    fun toAt(style: BackAnimationStyle): AtBackAnimation =
-        when (style) {
-            BackAnimationStyle.DEFAULT -> AtBackAnimation.DEFAULT
-            BackAnimationStyle.PREDICTIVE -> AtBackAnimation.PREDICTIVE
-        }
-
-    fun fromAt(style: AtBackAnimation): BackAnimationStyle =
-        when (style) {
-            AtBackAnimation.DEFAULT -> BackAnimationStyle.DEFAULT
-            AtBackAnimation.PREDICTIVE -> BackAnimationStyle.PREDICTIVE
-        }
 
     // ---- AutoMix analysis budget: same names.
 

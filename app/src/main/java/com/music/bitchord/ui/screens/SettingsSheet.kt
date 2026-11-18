@@ -173,7 +173,6 @@ import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.lyrics.LyricsTranslation
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
 import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.OutputPcmMode
@@ -310,11 +309,8 @@ fun SettingsScreen(
     // The Appearance page's ported rows, collected once here for every section
     // they appear in below.
     val customFontName by AppSettings.customFontName.collectAsStateWithLifecycle()
-    val movingBlur by AppSettings.movingBlur.collectAsStateWithLifecycle()
-    val hideSlideBar by AppSettings.hideSlideBar.collectAsStateWithLifecycle()
     val minimalHomeMode by AppSettings.minimalHomeMode.collectAsStateWithLifecycle()
     val defaultOpenTab by AppSettings.defaultOpenTab.collectAsStateWithLifecycle()
-    val backAnimationStyle by AppSettings.backAnimationStyle.collectAsStateWithLifecycle()
     val sessionId by AppSettings.audioSessionId.collectAsStateWithLifecycle()
     val outputPcmMode by AppSettings.outputPcmMode.collectAsStateWithLifecycle()
     val preferUsbDac by AppSettings.preferUsbDac.collectAsStateWithLifecycle()
@@ -1688,45 +1684,6 @@ fun SettingsScreen(
             }
         }
 
-        // ---- The ported Player group, as ArchiveTune's Appearance page has it ----
-        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.player)) {
-            // Ported from ArchiveTune's moving blur: the blurred cover behind
-            // the player drifts on its own, screen-saver slow.
-            val movingBlurTitle = stringResource(R.string.moving_blur)
-            row(movingBlurTitle, "blur", "drift", "backdrop", "player") {
-                SettingsRow(
-                    icon = SfIcons.Waves,
-                    title = movingBlurTitle,
-                    subtitle = stringResource(R.string.moving_blur_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = movingBlur,
-                            onCheckedChange = AppSettings::setMovingBlur,
-                            enabled = !reduceDynamicBlur,
-                        )
-                    },
-                    enabled = !reduceDynamicBlur,
-                    onClick = { AppSettings.setMovingBlur(!movingBlur) },
-                )
-            }
-            // Ported from ArchiveTune: the seek bar goes, leaving the transport.
-            val hideSlideBarTitle = stringResource(R.string.hide_slide_bar)
-            row(hideSlideBarTitle, "seek", "slider", "progress", "player") {
-                SettingsRow(
-                    icon = SfIcons.Tune,
-                    title = hideSlideBarTitle,
-                    subtitle = stringResource(R.string.hide_slide_bar_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = hideSlideBar,
-                            onCheckedChange = AppSettings::setHideSlideBar,
-                        )
-                    },
-                    onClick = { AppSettings.setHideSlideBar(!hideSlideBar) },
-                )
-            }
-        }
-
         // ---- The ported AOD group ----
         if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.aod_group_title)) {
             val aodTitle = stringResource(R.string.aod_customize_title)
@@ -1784,17 +1741,6 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.navigation_bar_settings_subtitle),
                     trailing = { Chevron() },
                     onClick = { onOpenChoice(SettingsChoiceKind.NAVIGATION_BAR) },
-                )
-            }
-            // Ported from ArchiveTune's back animation style.
-            val backAnimationTitle = stringResource(R.string.back_animation_style)
-            row(backAnimationTitle, "back", "gesture", "animation", "predictive") {
-                SettingsRow(icon = SfIcons.ArrowBack, title = backAnimationTitle)
-                SegmentedControl(
-                    options = BackAnimationStyle.entries.map { it.localizedLabel() },
-                    selectedIndex = BackAnimationStyle.entries.indexOf(backAnimationStyle),
-                    onSelect = { AppSettings.setBackAnimationStyle(BackAnimationStyle.entries[it]) },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
                 )
             }
         }
@@ -3429,14 +3375,6 @@ private fun DefaultOpenTab.localizedLabel(): String = stringResource(
         DefaultOpenTab.HOME -> R.string.home
         DefaultOpenTab.SEARCH -> R.string.search
         DefaultOpenTab.LIBRARY -> R.string.library
-    },
-)
-
-@Composable
-private fun BackAnimationStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        BackAnimationStyle.DEFAULT -> R.string.back_animation_style_default
-        BackAnimationStyle.PREDICTIVE -> R.string.back_animation_style_predictive
     },
 )
 
