@@ -1882,3 +1882,46 @@ Stage Summary:
   - Braces and parentheses balance in every touched file.
 - Still not compiled: no SDK, no approved push. CI on a PR into dev is the
   next gate.
+
+---
+
+Task ID: 1 (this window)
+Agent: Super Z (main agent, session web-4388e63e)
+
+Task: Fix the main-branch CI failure (Android Release APK, run 44340611121)
+without removing anything vendored — and fix the "app doesn't even open"
+release crash the previous fix's APK shipped.
+
+Work Log:
+- Pulled the failing run's logs: :glasmio:ui:compileReleaseKotlin died on
+  `LayerOutsets` / `GraphicsLayerScope.outsets`, which exist only from
+  Compose ui 1.12. The vendored sources are written against upstream
+  Glasmio's line (BOM 2026.09.00, ui 1.12), while Neiro's modules pinned
+  the 1.11-beta line (BOM 2024.12.01 + foundation 1.11.0-beta02).
+- The previous fix (489006fe) deleted the outsets from the vendored file to
+  make it compile — breaking the byte-for-byte vendoring contract in
+  AGENTS.md and clipping the navigation glass's exterior shadow. Reverted:
+  GlasmioSidebarMorphSurface.kt is byte-for-byte upstream again (diff -r
+  against the pinned commit prints nothing).
+- Diagnosed the launch crash from the actual signed APK of the successful
+  run and the resolved dependency graph: the phone's runtime classpath was
+  ui 1.12.0 (elevated transitively by the JetBrains Compose 1.12.2 plugin
+  sharedUi rides) riding foundation 1.11.1 and material3 1.5.0-alpha18
+  (both compiled against the 1.11-beta line) — a split runtime whose mixed
+  bytecode dies on the first frame. The removal "fix" made the build green
+  and shipped exactly that mix.
+- The fix is the move the glasmio README already sanctioned: "If CI shows
+  these sources need 1.12 APIs, move the whole app line in one commit and
+  record why in AGENTS.md." One commit moves every Android module to the
+  1.12 line: compose-bom 2026.09.00 (ui/foundation 1.12.1 through it),
+  material3 1.5.0-rc01 (the 1.5.0 line's pairing with ui 1.12 — alpha18 was
+  the 1.11-beta pairing), activity-compose 1.13.0, sharedUi's cmp to 1.12.0.
+  Nothing vendored is edited; only Neiro's own build files move.
+- Verified the resolved prodRelease runtime graph is now single-line
+  (ui 1.12.1, foundation 1.12.1, material3 1.5.0-rc01, no -> arrows left)
+  and that :glasmio:ui:compileReleaseKotlin is green with the restored
+  outsets on the new line. The rest is CI's to check, per the owner's rule.
+
+Stage Summary:
+- Vendored glasmio restored byte-for-byte, app-wide Compose on one 1.12
+  line, launch-crash root cause (split runtime) removed at the source.

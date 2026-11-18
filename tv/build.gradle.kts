@@ -319,25 +319,15 @@ dependencies {
     implementation(project(":glasmio:ui"))
 
     // ---- Compose (Material 3) ----
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    // The 1.12 line, whole — see app/build.gradle.kts for why the whole line
+    // moved (the split runtime the old pins resolved crashed the release
+    // build on launch, and Glasmio's vendored sources need ui 1.12).
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
-    // Pinned above the BOM's 1.7.6: [IosOverscroll] uses OverscrollFactory,
-    // which that version doesn't have. Newer foundation alongside the BOM's
-    // older ui/material3 is a combination Compose supports deliberately —
-    // foundation depends on ui, not the reverse — and this exact pairing was
-    // already in effect (foundation was reaching 1.10.0 transitively through
-    // the liquid-glass library before that dependency was removed).
-    // 1.11.0-beta02 / material3 1.5.0-alpha18: the line the vendored
-    // ArchiveTune player stack (:archivetuneplayer) rides — its expressive
-    // widgets exist only in the 1.5 alphas, and those pull this foundation.
-    // The app shares the module's classpath, so it declares the same line
-    // outright rather than resolving it behind its back. The one flag the
-    // app read that this line retired (ComposeUiFlags.isAdaptiveRefreshRateEnabled) is now set through reflection in BitChordApplication.
-    implementation("androidx.compose.foundation:foundation:1.11.0-beta02")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha18")
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     // The bridge preferences the ported player's settings adapters carry in
     // their signatures (Preferences.Key), which the app's sources construct
     // and read.
@@ -347,7 +337,7 @@ dependencies {
     // Same coordinate :archivetuneplayer uses.
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")

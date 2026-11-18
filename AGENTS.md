@@ -146,6 +146,17 @@ its own source system. Porting rules:
   common data), `:sharedUi` (Compose Multiplatform screens), `:web`, `:backend`
   (Go Listen-Together server). Android modules are only included when an SDK is
   present (`settings.gradle.kts`).
+- **The Compose line is the 1.12 era, whole** (`compose-bom:2026.09.00`, so
+  ui/foundation 1.12.1; material3 pinned app-wide at 1.5.0-rc01 for the ported
+  player styles' expressive widgets; activity-compose 1.13.0). It moved off the
+  old split line (BOM 2024.12.01 with foundation 1.11.0-beta02 and material3
+  1.5.0-alpha18) in one commit because that graph resolved a split runtime: the
+  JetBrains Compose plugin sharedUi rides (1.12.x) elevated androidx ui to
+  1.12.0 in the merged graph while those pins held foundation and material3
+  back on the 1.11-beta-compiled line, and the mixed APK crashed the release
+  build on launch (first-frame NoSuchMethodError-class failures). The same
+  move is what the vendored Glasmio sources need (`LayerOutsets` arrived with
+  ui 1.12) — do not pin modules to a different line than the app resolves.
 - **Glasmio** (`glasmio/`, NEORUAA/Glasmio @ 905919bc, Apache-2.0) is the
   app's liquid-glass renderer and control/motion library. Kyant's backdrop is
   gone: there is no vendored copy, and no `io.github.kyant0:backdrop`.

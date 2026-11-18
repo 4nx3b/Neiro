@@ -4,14 +4,16 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
  * The Compose UI both applications draw from — the player first.
  *
  * Library versions are pinned to the Compose Multiplatform release whose
- * Android artifacts are the androidx ones the phone app already runs (CMP
- * 1.10.x -> androidx 1.10.x, material3 1.7.3 -> androidx material3 1.3.1), so
- * depending on this module never moves the phone's Compose underneath it. The
- * desktop resolves its own newer versions over these at the top of its graph.
+ * Android artifacts are the androidx ones the phone app runs (CMP 1.12.0 ->
+ * androidx 1.12.x — the app-wide 1.12 line the phone moved to whole; see
+ * app/build.gradle.kts). The old pin (1.10.3) rode a runtime the merged graph
+ * had already elevated to 1.12 through the JetBrains Compose plugin applied
+ * at the root, and bytecode compiled against the older line is what a
+ * first-frame NoSuchMethodError on the phone was traced to.
  *
- * The pin is the *Android* anchor only. On the JVM it is a floor, not a
- * ceiling — and there it matters which version compiles this module, because
- * the desktop resolves ui-desktop 1.12.0 / skiko 0.150.x at runtime. Skia's
+ * The pin is the *Android* anchor. On the JVM it is a floor, not a ceiling —
+ * and there it matters which version compiles this module, because the
+ * desktop resolves ui-desktop 1.12.0 / skiko 0.150.x at runtime. Skia's
  * Matrix33 became an inline float[9] between skiko 0.9 and 0.15
  * (`makeTranslate` went from returning a Matrix33 to a name-mangled float[]
  * overload), so bytecode compiled against 0.9 linked its object call and
@@ -19,14 +21,16 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
  * grew. Compiling the module against the version the desktop actually
  * resolves keeps the compile-time link and the runtime link the same.
  */
-val cmp = "1.10.3"
+val cmp = "1.12.0"
 
 /** What the desktop graph resolves; see the comment above. */
 val CMP_DESKTOP =
     // Haze 1.7.x, which the Windows build uses, was compiled
     // against a ShaderBrush.createShader that returns skia's Shader; 1.12 changed that return
-    // type, so on 1.12 every blur dies with NoSuchMethodError. Windows stays on the plugin's
-    // own 1.10.3 / skiko 0.9; only Linux moves to 1.12.
+    // type, so on 1.12 every blur dies with NoSuchMethodError. Windows stays on a
+    // 1.10-era desktop runtime of its own; only Linux moves to 1.12. A Windows
+    // desktop build against the 1.12-compiled commonMain is a known local-only
+    // mismatch — nothing in CI builds it, and the phone does not run it.
     if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "1.10.3" else "1.12.0"
 
 plugins {
@@ -94,7 +98,7 @@ kotlin {
         }
         androidMain.dependencies {
             // The phone's own versions, so nothing here moves them.
-            implementation("androidx.activity:activity-compose:1.9.3")
+            implementation("androidx.activity:activity-compose:1.13.0")
             implementation("androidx.core:core-ktx:1.15.0")
             implementation("androidx.appcompat:appcompat:1.7.0")
             implementation("androidx.palette:palette-ktx:1.0.0")

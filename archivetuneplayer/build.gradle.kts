@@ -22,8 +22,8 @@
  * colorControls/lens through bridge/GlasmioEffects.kt. Only import lines and
  * one fully qualified Backdrop type changed; the glass parameters did not.
  *
- * Library versions follow the app's own pins (Compose BOM 2024.12.01 with
- * foundation 1.10.0, material3 1.3.1, haze 1.3.1, coil 3.0.4, media3 1.11.0)
+ * Library versions follow the app's own pins (Compose BOM 2026.09.00 with
+ * foundation 1.12.1, material3 1.5.0-rc01, haze 1.3.1, coil 3.0.4, media3 1.11.0)
  * so adding this module never moves the versions the rest of the app
  * compiled against. Where ArchiveTune's stack needs a library this app
  * doesn't use (lottie, reorderable, squigglyslider,
@@ -111,9 +111,11 @@ dependencies {
     implementation(project(":archivetune:spotifycore"))
 
     // ---- Compose ----
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    // The app-wide 1.12 line (BOM 2026.09.00) — the module used to pin the
+    // old split line (BOM 2024.12.01 + foundation 1.11.0-beta02) whose merged
+    // runtime crashed the release build on launch; see app/build.gradle.kts.
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
-    implementation("androidx.compose.foundation:foundation:1.11.0-beta02")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-util")
@@ -121,10 +123,10 @@ dependencies {
     // widgets (LoadingIndicator, the wavy progress indicators, ToggleButton
     // and ButtonGroup with customItem, MaterialShapes, MotionScheme, the
     // floating toolbar, the emphasized text roles), public only from the 1.5
-    // alphas on. alpha18 is the newest one whose Compose requirement
-    // (1.11.0-beta02) still accepts this app's AGP — the 1.12-alphas the
-    // later ones pull demand AGP 9.1.
-    implementation("androidx.compose.material3:material3:1.5.0-alpha18")
+    // alphas on. rc01 is that line's pairing with the app's ui 1.12 — the
+    // alpha the stack rode before (alpha18) was compiled against the old
+    // 1.11-beta02 line and ran against the elevated 1.12.
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.animation:animation-graphics")
     implementation("androidx.compose.runtime:runtime")
@@ -136,7 +138,7 @@ dependencies {
     implementation("androidx.compose.material3.adaptive:adaptive:1.2.0")
 
     // ---- AndroidX the player stack leans on ----
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
