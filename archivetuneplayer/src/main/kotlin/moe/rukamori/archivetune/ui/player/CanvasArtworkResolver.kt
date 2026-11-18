@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.canvas.AppleMusicProvider
+import moe.rukamori.archivetune.canvas.MuzoCanvasProvider
 import moe.rukamori.archivetune.canvas.SpotifyCanvasProvider
 import moe.rukamori.archivetune.canvas.models.CanvasArtwork
 import moe.rukamori.archivetune.canvas.models.looselyMatchesSongIdentity
@@ -153,6 +154,18 @@ internal suspend fun resolveCanvasArtworkForPlayback(
                 }
             }
 
+            // PORT-NOTE (BitChord): the last rung before giving up — Muzo Data,
+            // keyed on the video id so it can never answer with another song's
+            // loop, and keyless, so it asks nothing of the listener. Tried only
+            // here, after the listener's configured providers had their turn,
+            // rather than as a configurable preference: see [muzoCanvasFallback].
+            if (strictIdentity) {
+                val muzoCanvas = muzoCanvasFallback(mediaId, songTitleRaw, artistNameRaw, requireVertical)
+                if (muzoCanvas != null) {
+                    return@withContext CanvasArtworkPlaybackCache.put(mediaId, muzoCanvas).also { CanvasResolutionMissCache.clear(mediaId) }
+                }
+            }
+
             Timber.tag(CanvasArtworkLogTag).d("No playable canvas resolved for %s", mediaId)
             CanvasResolutionMissCache.markMissed(mediaId, requireVertical)
             return@withContext null
@@ -188,6 +201,15 @@ internal suspend fun resolveCanvasArtworkForPlayback(
             )
 
         if (fetched == null) {
+            // PORT-NOTE (BitChord): same last rung in this order — after Spotify
+            // and the Apple provider have both had their turn. See
+            // [muzoCanvasFallback] for why it is last rather than configurable.
+            if (strictIdentity) {
+                val muzoCanvas = muzoCanvasFallback(mediaId, songTitleRaw, artistNameRaw, requireVertical)
+                if (muzoCanvas != null) {
+                    return@withContext CanvasArtworkPlaybackCache.put(mediaId, muzoCanvas).also { CanvasResolutionMissCache.clear(mediaId) }
+                }
+            }
             Timber.tag(CanvasArtworkLogTag).d("No playable canvas resolved for %s", mediaId)
             CanvasResolutionMissCache.markMissed(mediaId, requireVertical)
             return@withContext null
@@ -231,6 +253,36 @@ internal suspend fun fetchCanvasArtworkForPlayback(
                     artwork.hasRequiredCanvasVariant(requireVertical)
             }
     }
+}
+
+/**
+ * PORT-NOTE (BitChord): Muzo Data's canvas rung — one keyless GET on the
+ * video id, played by the same video artwork players the Spotify canvas
+ * uses. Safe as the last rung before giving up precisely because it is keyed
+ * on the id: there is no name match to be wrong about, and the probe confirms
+ * the loop exists before the URL is committed to the cache.
+ */
+private suspend fun muzoCanvasFallback(
+    mediaId: String,
+    songTitleRaw: String,
+    artistNameRaw: String,
+    requireVertical: Boolean,
+): CanvasArtwork? {
+    val muzo =
+        runCatching {
+            MuzoCanvasProvider.getByVideoId(
+                videoId = mediaId,
+                songTitle = songTitleRaw,
+                artistName = artistNameRaw,
+            )
+        }.onFailure { throwable ->
+            Timber.tag(CanvasArtworkLogTag).w(throwable, "Muzo canvas lookup failed for %s", mediaId)
+        }.getOrNull()
+    if (muzo != null && muzo.hasRequiredCanvasVariant(requireVertical)) {
+        Timber.tag(CanvasArtworkLogTag).d("Muzo canvas resolved for %s", mediaId)
+        return muzo
+    }
+    return null
 }
 
 internal suspend fun hasAnyCanvasSource(

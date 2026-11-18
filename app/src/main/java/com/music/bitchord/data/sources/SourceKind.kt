@@ -197,6 +197,35 @@ enum class SourceKind(
     ),
 
     /**
+     * Muzo Data — one API key, three answers, all keyed on the video id.
+     *
+     * The one source here that resolves by the *id* rather than by a name: ask
+     * it for a video id and it answers lossless FLAC, syllable-timed lyrics
+     * and a looping canvas video for that exact recording, so the wrong-edit
+     * match every name-matched source above risks is structurally absent
+     * here. Same tier as the account sources for the same reasons — it
+     * answers in one round trip, and when it holds the recording its FLAC
+     * beats every lossy rendition ranked below it.
+     *
+     * Streams and search need the listener's own API key (free, 200 requests
+     * a day) set on the Sources screen; the canvas rung needs none, because
+     * the server injects its own auth on that path. A key that is absent or
+     * refused leaves the source inert rather than broken: search answers
+     * nothing, [stream][MusicSource.stream] is a miss, and the resolver moves
+     * on — the same shape as a signed-out Tidal, an opt-in by the credential
+     * itself rather than by the row's switch.
+     */
+    MUZO(
+        label = "Muzo Data",
+        detail = "One video id resolves lossless FLAC, syllable lyrics and canvas loops from Muzo Data.",
+        labels = listOf("FLAC", "Lossless", "Lyrics", "Canvas"),
+        needsServer = false,
+        canServeLossless = true,
+        worthPrefetching = true,
+        rank = 2,
+    ),
+
+    /**
      * SoundCloud's own catalogue, searched anonymously through the web app's
      * scraped client id.
      *

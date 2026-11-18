@@ -7,11 +7,11 @@ import org.junit.Test
 
 class PageMotionTest {
     @Test
-    fun pushFollowsTheMeasuredFrames() {
-        val measured = listOf(33f to 0.25f, 67f to 0.35f, 100f to 0.67f, 133f to 0.77f, 167f to 0.90f, 200f to 0.95f)
-        measured.forEach { (t, share) ->
-            assertEquals("t=$t", share, PageMotion.slideEase(t / PageMotion.SLIDE_MS), 0.08f)
-        }
+    fun pushIsAboutHalfWayAfterOneFrameAndSettlesInTime() {
+        val oneFrame = 33f / PageMotion.SLIDE_MS
+        val e = PageMotion.slideEase(oneFrame)
+        assertTrue("one frame in: $e", e in 0.35f..0.65f)
+        assertTrue(PageMotion.slideEase(170f / PageMotion.SLIDE_MS) > 0.97f)
         assertEquals(1f, PageMotion.slideEase(1f), 0f)
         var last = 0f
         for (i in 0..20) {

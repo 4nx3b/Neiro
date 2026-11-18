@@ -988,6 +988,19 @@
     <string name="qobuz_app_secret_apply">Dùng app secret này</string>
     <string name="qobuz_credentials_invalid">Qobuz không chấp nhận thông tin xác thực đó</string>
     <string name="qobuz_login_success">Đã đăng nhập vào Qobuz</string>
+    <string name="muzo_data">Muzo Data</string>
+    <string name="muzo_data_footer">Một id video lấy từ Muzo Data luồng FLAC không hao chất, lời bài hát đồng bộ theo âm tiết và video canvas lặp vòng. Luồng và lời cần khóa API; vòng lặp canvas được phục vụ mà không cần khóa.</string>
+    <string name="muzo_api_key">Khóa API</string>
+    <string name="muzo_api_key_subtitle">Cần cho luồng FLAC và lời bài hát; vòng lặp canvas chạy không cần</string>
+    <string name="muzo_api_key_set">Đã đặt khóa API · dán khóa mới để thay thế</string>
+    <string name="muzo_api_key_hint">Dán khóa API Muzo Data của bạn</string>
+    <string name="muzo_check_api">Kiểm tra API</string>
+    <string name="muzo_check_api_subtitle">Hỏi Muzo Data về hạn mức hôm nay</string>
+    <string name="muzo_api_key_required">Cần khóa API</string>
+    <string name="muzo_api_ok">%1$d/%2$d yêu cầu hôm nay · %3$s</string>
+    <string name="muzo_streaming_unlimited">phát không giới hạn</string>
+    <string name="muzo_api_rejected">Khóa bị từ chối · %1$s</string>
+    <string name="muzo_api_checking">Đang kiểm tra…</string>
     <string name="enable_jiosaavn">Bật JioSaavn?</string>
     <string name="enable_anyway">Vẫn bật</string>
 
@@ -1081,123 +1094,46 @@
 
     <string name="listen_together_in_party">In a party · %1$s</string>
 
-    <string name="listen_together_sign_in_footer">Listening together needs an account, so everyone in the party can see who else is in it.</string>
 
-    <string name="listen_together_server">Party server</string>
 
-    <string name="listen_together_server_online">Online · %1$d ms</string>
 
-    <string name="listen_together_server_offline">Can’t be reached right now</string>
 
-    <string name="listen_together_server_checking">Checking…</string>
 
-    <string name="listen_together_server_unknown">Tap to check</string>
 
     <string name="listen_together_custom_server">Use your own server</string>
 
-    <string name="listen_together_custom_server_footer">Để trống mục này để sử dụng máy chủ mặc định. Nếu bạn chạy bản sao riêng, mọi người trong nhóm phải trỏ đến cùng một máy chủ.</string>
 
-    <string name="listen_together_using_default">Đang sử dụng máy chủ mặc định</string>
-    <string name="listen_together_remove_server">Xóa máy chủ</string>
-    <string name="listen_together_switched_to_default">Đã chuyển sang máy chủ mặc định</string>
-    <string name="listen_together_custom_server_saved">Đã lưu máy chủ tùy chỉnh</string>
 
-    <string name="listen_together_create">Create a party</string>
 
-    <string name="listen_together_create_subtitle">Get a code to share with friends</string>
 
-    <string name="listen_together_create_footer">Bạn sẽ nhận được mã gồm sáu ký tự. Ai có mã đều có thể tham gia, tối đa %1$d thiết bị kể cả của bạn.</string>
 
-    <string name="listen_together_join">Join a party</string>
 
-    <string name="listen_together_join_action">Join</string>
 
-    <string name="listen_together_code_hint">Six letters or digits</string>
 
-    <string name="listen_together_code">Party code</string>
 
-    <string name="listen_together_code_footer">Read it out or send it. O and I aren’t used, so an “oh” is always a zero.</string>
 
     <string name="copy_code">Copy code</string>
 
-    <string name="listen_together_share_text">Listen with me on BitChord — party code %1$s</string>
 
-    <string name="listen_together_now_playing">Now playing</string>
 
-    <string name="listen_together_nothing_playing">Nothing playing yet</string>
 
-    <string name="listen_together_listening">Listening · %1$d of %2$d</string>
 
-    <string name="listen_together_members_footer">A party holds %1$d devices. Anyone in it can control the music.</string>
 
-    <string name="listen_together_you">You</string>
 
-    <string name="listen_together_host">Host</string>
 
-    <string name="listen_together_away">Away — their slot is held</string>
 
-    <string name="listen_together_create_action">Tạo bữa tiệc</string>
-    <string name="listen_together_create_sheet_subtitle">Chọn cách bạn xuất hiện và số người có thể tham gia.</string>
-    <string name="listen_together_creating">Đang tạo…</string>
-    <string name="listen_together_full">Bữa tiệc đã đầy</string>
-    <string name="listen_together_invite">Mời</string>
-    <string name="listen_together_invite_title">Mời bạn bè vào bữa tiệc</string>
-    <string name="listen_together_join_existing">Tham gia bữa tiệc có sẵn</string>
-    <string name="listen_together_join_question">Tham gia bữa tiệc của %1$s?</string>
-    <string name="listen_together_join_question_unnamed">Tham gia bữa tiệc này?</string>
-    <string name="listen_together_joining">Đang tham gia…</string>
-    <string name="listen_together_landing_subtitle">Vì âm nhạc hay hơn khi nghe cùng nhau. Mời bạn bè cùng nghe và thêm bài hát theo thời gian thực, dù họ ở đâu.</string>
-    <string name="listen_together_landing_title">Bắt đầu một bữa tiệc</string>
-    <string name="listen_together_not_now">Để sau</string>
-    <string name="listen_together_preview_footer">Mọi người trong bữa tiệc sẽ thấy tên và ảnh đại diện của bạn.</string>
-    <string name="listen_together_scan_qr">Quét mã QR</string>
-    <string name="listen_together_scan_qr_subtitle">Để bạn bè quét mã này và tham gia.</string>
-    <string name="listen_together_share_link">Chia sẻ liên kết</string>
-    <string name="listen_together_host_only">Chỉ tôi điều khiển nhạc</string>
-    <string name="listen_together_host_only_subtitle">Những người khác cùng nghe và có thể tạm dừng trên thiết bị của họ</string>
     <string name="listen_together_host_only_notice">Chỉ chủ phòng mới có thể điều khiển nhạc</string>
 
-    <string name="listen_together_leave">Leave the party</string>
 
-    <string name="listen_together_leave_subtitle">The others carry on listening</string>
 
     <string name="listen_together_reconnecting">Reconnecting…</string>
 
-    <string name="listen_together_syncing_clock">Measuring the clock…</string>
 
-    <string name="listen_together_in_sync">In sync · %1$d ms round trip</string>
 
 
 
 
     <string name="party_queue_full">Queue is full (maximum %d songs in party)</string>
-    <string name="listen_together_profile">Your party profile</string>
-    <string name="listen_together_nickname_hint">Nickname for this party</string>
-    <string name="listen_together_party_size">Party size</string>
-    <string name="listen_together_party_size_subtitle">Choose 2–10 listeners</string>
-    <string name="listen_together_host_controls">Only you can change capacity or remove listeners</string>
-    <string name="listen_together_remove">Remove</string>
-    <string name="listen_together_activity">Recent activity</string>
-    <string name="listen_together_activity_footer">This session only · latest first · up to 100 actions</string>
-    <string name="listen_together_activity_played">Started playback</string>
-    <string name="listen_together_activity_paused">Paused playback</string>
-    <string name="listen_together_activity_seeked">Sought in the track</string>
-    <string name="listen_together_activity_skipped">Skipped ahead</string>
-    <string name="listen_together_activity_went_back">Went back</string>
-    <string name="listen_together_activity_added">Added to the queue</string>
-    <string name="listen_together_activity_removed_track">Removed a queued track</string>
-    <string name="listen_together_activity_cleared">Cleared upcoming tracks</string>
-    <string name="listen_together_activity_reordered">Reordered the queue</string>
-    <string name="listen_together_activity_removed_member">Removed a listener</string>
-    <string name="listen_together_activity_changed_size">Changed party size</string>
-    <string name="listen_together_activity_updated">Updated the party</string>
-    <string name="listen_together_custom_server_dialog_title">Join party on custom server?</string>
-    <string name="listen_together_custom_server_dialog_message">This party is hosted on an external server:\n\n%1$s\n\nDo you want to switch your party server and join party %2$s?</string>
-    <string name="listen_together_custom_server_switch_and_join">Switch &amp; Join</string>
-    <string name="listen_together_official_server_dialog_title">Switch to official server?</string>
-    <string name="listen_together_official_server_dialog_message">This party is hosted on the official BitChord server.\n\nDo you want to switch back to the official server and join party %1$s?</string>
-    <string name="listen_together_switch_failed_stayed_in_party">Couldn’t join party: %1$s. Remaining in party %2$s.</string>
-    <string name="listen_together_switch_failed">Couldn’t join party: %1$s.</string>
     <string name="cast_dialog_title">Cast</string>
     <string name="cast_dialog_subtitle">Play on a Chromecast or Google Cast speaker</string>
     <string name="cast_searching">Looking for devices…</string>
@@ -1216,22 +1152,6 @@
     <plurals name="added_to_playlists_notice">
         <item quantity="other">Đã thêm vào %1$d danh sách phát</item>
     </plurals>
-    <string name="listen_together_server_online_fallback">Trực tuyến (dự phòng mặc định) · %1$d ms</string>
-    <string name="listen_together_ping">%1$d ms</string>
-    <string name="listen_together_server_offline_dash">—</string>
-    <string name="listen_together_invalid_server_url">URL máy chủ không hợp lệ. Vui lòng nhập địa chỉ hợp lệ (ví dụ: https://your-server.com)</string>
-    <string name="listen_together_err_whitespace">URL máy chủ không được chứa khoảng trắng</string>
-    <string name="listen_together_err_invalid_path">Đường dẫn URL máy chủ không hợp lệ</string>
-    <string name="listen_together_err_no_path">URL máy chủ không được bao gồm đường dẫn</string>
-    <string name="listen_together_err_no_query">URL máy chủ không được bao gồm tham số truy vấn</string>
-    <string name="listen_together_err_no_fragment">URL máy chủ không được bao gồm phân đoạn (fragment)</string>
-    <string name="listen_together_err_invalid_port">Cổng máy chủ phải nằm trong khoảng từ 1 đến 65535</string>
-    <string name="listen_together_custom_server_connected">Đã kết nối với máy chủ tùy chỉnh</string>
-    <string name="listen_together_custom_server_unreachable_fallback">Không thể kết nối máy chủ tùy chỉnh. Đang sử dụng máy chủ mặc định dự phòng.</string>
-    <string name="listen_together_status_custom_online">Đã kết nối với máy chủ tùy chỉnh · %1$d ms</string>
-    <string name="listen_together_status_custom_fallback">Máy chủ tùy chỉnh không thể kết nối · Đang dùng mặc định dự phòng (%1$d ms)</string>
-    <string name="listen_together_status_all_offline">Cả máy chủ tùy chỉnh và máy chủ mặc định đều ngoại tuyến</string>
-    <string name="listen_together_top_bar_fallback">Dự phòng · %1$s</string>
     <string name="spotify_canvas_auto_hide">Tự động ẩn điều khiển trình phát</string>
     <string name="spotify_canvas_auto_hide_subtitle">Thu gọn nửa trình phát sau 5 giây khi Spotify Canvas đang phát</string>
     <string name="prioritize_spotify_canvas">Ưu tiên Spotify Canvas</string>
@@ -1458,9 +1378,6 @@
     <string name="aod_show_time_labels">Time labels</string>
     <string name="aod_touch_lock">Touch lock</string>
     <string name="aod_touch_lock_subtitle">Taps land nowhere; the power key still exits</string>
-    <string name="back_animation_style">Back animation style</string>
-    <string name="back_animation_style_default">Default</string>
-    <string name="back_animation_style_predictive">Predictive back gesture</string>
     <string name="behavior">Behavior</string>
     <string name="behavior_performance_footer">Each switch gives up some of the app\'s richer drawing to win back speed on a slower device.</string>
     <string name="behavior_performance_subtitle">Animation, dynamic blur and blend effect reductions</string>
@@ -1493,8 +1410,6 @@
     <string name="hide_library_replay_card_subtitle">The Replay cards at the top of the Library tab</string>
     <string name="hide_sign_in_banner">Hide sign-in banner</string>
     <string name="hide_sign_in_banner_subtitle">The banner at the top of Home, while signed out</string>
-    <string name="hide_slide_bar">Hide slide bar</string>
-    <string name="hide_slide_bar_subtitle">Takes the seek bar away, leaving the transport</string>
     <string name="hide_status_bar">Hide status bar</string>
     <string name="hide_status_bar_subtitle">Hides the status bar everywhere, not just in the player. Swipe down from the top to reveal it.</string>
     <string name="liquid_glass_adaptive_luminance">Adaptive luminance</string>
@@ -1535,8 +1450,6 @@
     <string name="minimal_home_mode">Minimal mode</string>
     <string name="minimal_home_mode_subtitle">Home keeps only its continue-listening shelf</string>
     <string name="misc">Misc</string>
-    <string name="moving_blur">Moving blur</string>
-    <string name="moving_blur_subtitle">The blurred cover drifts behind the player</string>
     <string name="navigation_bar_compact_adaptive">Adaptive</string>
     <string name="navigation_bar_compact_always_compact">Always compact</string>
     <string name="navigation_bar_compact_always_expanded">Always expanded</string>
@@ -1808,98 +1721,128 @@
     <string name="spotify_canvas">Spotify Canvas</string>
     <string name="spotify_canvas_subtitle">Đồng thời tra cứu các đoạn qua phiên Spotify đã kết nối</string>
     <string name="start_session">Bắt đầu phiên</string>
-    <string name="together_activity_error">Lỗi: %1$s</string>
-    <string name="together_activity_host_transferred">Đã chuyển quyền tổ chức cho %1$s</string>
-    <string name="together_activity_join_requested">%1$s đã yêu cầu tham gia</string>
-    <string name="together_activity_joining_session">Đang tham gia phiên</string>
-    <string name="together_activity_log">Nhật ký hoạt động</string>
-    <string name="together_activity_log_empty">Chưa có hoạt động</string>
-    <string name="together_activity_log_empty_body">Các sự kiện phiên sẽ xuất hiện tại đây khi chúng diễn ra.</string>
-    <string name="together_activity_log_subtitle">Sự kiện phiên và phát lại</string>
-    <string name="together_activity_playback_paused">%1$s đã tạm dừng phát</string>
-    <string name="together_activity_playback_resumed">%1$s đã tiếp tục phát</string>
-    <string name="together_activity_playback_state_changed">%1$s đã thay đổi trạng thái phát</string>
-    <string name="together_activity_queue_updated">%1$s đã thay đổi hàng đợi</string>
-    <string name="together_activity_session_started">Phiên đã bắt đầu</string>
-    <string name="together_activity_song_changed">%1$s đã đổi bài hát thành %2$s</string>
-    <string name="together_activity_song_skipped">%1$s đã bỏ qua tới %2$s</string>
-    <string name="together_allow_guests_add">Khách có thể thêm bài hát</string>
-    <string name="together_allow_guests_control">Khách có thể điều khiển phát nhạc</string>
-    <string name="together_approve">Phê duyệt</string>
-    <string name="together_ban">Cấm</string>
-    <string name="together_ban_confirm">Cấm %1$s?</string>
-    <string name="together_chat">Trò chuyện</string>
-    <string name="together_chat_empty">Chưa có tin nhắn</string>
-    <string name="together_chat_empty_body">Tin nhắn gửi trong phiên này sẽ xuất hiện ở đây.</string>
-    <string name="together_chat_input_hint">Gửi tin nhắn đến phòng</string>
-    <string name="together_chat_send">Gửi</string>
-    <string name="together_connected">Đã kết nối</string>
-    <string name="together_connected_count">%1$d đã kết nối</string>
-    <string name="together_connection_timed_out">Kết nối đã hết thời gian chờ</string>
-    <string name="together_current_playback">Phát hiện tại</string>
-    <string name="together_display_name">Tên hiển thị</string>
-    <string name="together_display_name_placeholder">Tên của bạn</string>
-    <string name="together_dont_show_again">Không hiển thị lại nữa</string>
-    <string name="together_error_state">Lỗi</string>
-    <string name="together_host_left_session">Chủ phòng đã rời phiên</string>
-    <string name="together_host_section">Tổ chức</string>
-    <string name="together_hosting">Đang tổ chức phiên</string>
-    <string name="together_idle">Không trong phiên</string>
-    <string name="together_invalid_ws_url">URL WebSocket của máy chủ không hợp lệ</string>
-    <string name="together_join_code">Mã</string>
-    <string name="together_join_code_hint">Nhập mã phiên</string>
-    <string name="together_join_link">Liên kết</string>
-    <string name="together_join_link_hint">Dán liên kết hoặc mã tham gia</string>
-    <string name="together_join_section">Tham gia</string>
-    <string name="together_joining">Đang tham gia phiên</string>
-    <string name="together_kick">Đuổi</string>
-    <string name="together_kick_confirm">Đuổi %1$s?</string>
-    <string name="together_lan">Mạng LAN</string>
-    <string name="together_online">Trực tuyến</string>
-    <string name="together_online_not_configured">Phiên trực tuyến chưa được định cấu hình</string>
-    <string name="together_participant_joined_notification">%1$s đã tham gia phòng</string>
-    <string name="together_participant_left_notification">%1$s đã rời phòng</string>
-    <string name="together_participants">Người tham gia</string>
-    <string name="together_participants_empty">Chưa có người tham gia</string>
-    <string name="together_participants_empty_body">Những người tham gia phiên này sẽ xuất hiện ở đây.</string>
-    <string name="together_pending_approval">Chờ phê duyệt</string>
-    <string name="together_playback_empty">Không có gì đang phát</string>
-    <string name="together_playback_paused">Đã tạm dừng</string>
-    <string name="together_playback_playing">Đang phát</string>
-    <string name="together_port">Cổng phiên</string>
-    <string name="together_queue_count">%1$d trong hàng đợi</string>
-    <string name="together_queue_position">%1$d/%2$d</string>
-    <string name="together_reject">Từ chối</string>
-    <string name="together_repeat_mode">Lặp lại %1$d</string>
-    <string name="together_require_approval">Yêu cầu phê duyệt</string>
-    <string name="together_role_guest">Khách</string>
-    <string name="together_role_host">Người tổ chức</string>
-    <string name="together_room_closed_inactivity_notification">Phòng bị đóng vì không có ai tham gia trong 10 phút</string>
-    <string name="together_room_events_channel_description">Người tham gia và rời khỏi phiên của bạn</string>
-    <string name="together_room_events_channel_name">Music Together</string>
-    <string name="together_server_error">Lỗi máy chủ, vui lòng thử lại sau</string>
-    <string name="together_server_unreachable">Không thể kết nối máy chủ</string>
-    <string name="together_session_not_found">Không tìm thấy phiên</string>
-    <string name="together_shuffle_off">Tắt xáo trộn</string>
-    <string name="together_shuffle_on">Bật xáo trộn</string>
-    <string name="together_song_change_failed">Yêu cầu thay đổi bài hát không được áp dụng. Vui lòng thử lại.</string>
-    <string name="together_status">Trạng thái</string>
-    <string name="together_token_missing">Phiên bản này không hỗ trợ phát nhạc trực tuyến</string>
-    <string name="together_transfer_host">Chuyển quyền tổ chức</string>
-    <string name="together_transfer_host_confirm">Chuyển quyền tổ chức cho %1$s?</string>
-    <string name="together_unknown_participant">Ai đó</string>
-    <string name="together_waiting_approval">Đang chờ phê duyệt</string>
-    <string name="together_welcome_body">Music Together cho phép nhiều thiết bị chia sẻ một phiên trực tiếp với hàng đợi và phát nhạc đồng bộ.</string>
-    <string name="together_welcome_host_body">Nhấn Bắt đầu phiên, sau đó chia sẻ liên kết phiên. Giữ Neiro mở trong nền trong khi tổ chức.</string>
-    <string name="together_welcome_host_title">Tổ chức một phiên</string>
-    <string name="together_welcome_join_body">Mở liên kết được chia sẻ, hoặc nhập mã và nhấn Tham gia. Hàng đợi và phát nhạc của bạn sẽ theo người tổ chức.</string>
-    <string name="together_welcome_join_title">Tham gia từ thiết bị khác</string>
-    <string name="together_welcome_permissions_body">Người tổ chức có thể quyết định liệu khách có thể thêm bài hát, điều khiển phát nhạc, hoặc yêu cầu phê duyệt để tham gia hay không.</string>
-    <string name="together_welcome_permissions_title">Quyền và an toàn</string>
-    <string name="together_welcome_title">Chào mừng đến với Neiro Music Together</string>
     <string name="use_tidal_artwork">Dùng ảnh bìa Tidal</string>
     <string name="use_tidal_artwork_subtitle">Dùng ảnh bìa Tidal khi một bài hát không tìm được ảnh bìa nào</string>
     <plurals name="backup_playlist_song_count">
         <item quantity="other">%1$d bài hát</item>
     </plurals>
+
+    <!-- Listen Together: the ported room screens, chat page and settings
+         (strings from ArchiveTune's Listen Together; English where a
+         catalogue has no translation of its own). -->
+    <string name="approve">Approve</string>
+    <string name="comments">Chat</string>
+    <string name="connect">Connect</string>
+    <string name="connected_users">Connected users</string>
+    <string name="copied_to_clipboard">Đã sao chép nhật ký vào clipboard</string>
+    <string name="copy">Sao chép</string>
+    <string name="create_room">Create</string>
+    <string name="creating_room">Creating room…</string>
+    <string name="edit">Chỉnh sửa</string>
+    <string name="enter_username">Enter username</string>
+    <string name="error_username_empty">Username is required.</string>
+    <string name="host_label">Host</string>
+    <string name="join_room">Join</string>
+    <string name="joining_room">Joining room %s…</string>
+    <string name="kick_user">Kick</string>
+    <string name="kick_user_desc">Remove this person from the session</string>
+    <string name="leave_room">Leave room</string>
+    <string name="listen_together_auto_approval">Auto-approve join requests</string>
+    <string name="listen_together_auto_approval_desc">Automatically approve join requests instead of reviewing them manually</string>
+    <string name="listen_together_background_disconnect_note">Note: You may get disconnected if you create a room while no music is playing and then switch to another app, or if you connect to the server but remain idle without joining a room for 15 minutes.</string>
+    <string name="listen_together_blocked_users">Blocked Users</string>
+    <string name="listen_together_blocked_users_count">%d user(s) blocked</string>
+    <string name="listen_together_cannot_edit_username_in_room">Cannot edit username while in a room</string>
+    <string name="listen_together_chat_all_emojis">All emojis</string>
+    <string name="listen_together_chat_copy">Copy</string>
+    <string name="listen_together_chat_delete_for_everyone">Delete for everyone</string>
+    <string name="listen_together_chat_edit_message">Edit message</string>
+    <string name="listen_together_chat_edited">edited</string>
+    <string name="listen_together_chat_empty">No messages yet</string>
+    <string name="listen_together_chat_empty_body">Messages sent in this room appear here.</string>
+    <string name="listen_together_chat_message_copied">Message copied</string>
+    <string name="listen_together_chat_message_deleted">This message was deleted</string>
+    <string name="listen_together_chat_nothing_playing">Nothing is playing right now</string>
+    <string name="listen_together_chat_notifications">Chat message notifications</string>
+    <string name="listen_together_chat_notifications_desc">Show a notification with a direct reply action whenever someone chats in the room</string>
+    <string name="listen_together_chat_now_playing">Now playing</string>
+    <string name="listen_together_chat_older_messages">Older messages</string>
+    <string name="listen_together_chat_pick_song_hint">Search songs to share</string>
+    <string name="listen_together_chat_pick_song_no_results">No results found</string>
+    <string name="listen_together_chat_pick_song_title">Share a song</string>
+    <string name="listen_together_chat_pin">Pin</string>
+    <string name="listen_together_chat_pinned_position">%1$d of %2$d</string>
+    <string name="listen_together_chat_play_song">Play song in the room</string>
+    <string name="listen_together_chat_reply_failed">Reply not delivered — open the app to reconnect</string>
+    <string name="listen_together_chat_reply_label">Reply</string>
+    <string name="listen_together_chat_typing">typing…</string>
+    <string name="listen_together_chat_unpin">Unpin</string>
+    <string name="listen_together_chat_unsupported_server">Chat is not supported by this server</string>
+    <string name="listen_together_chat_you">You</string>
+    <string name="listen_together_choose_server">Choose server</string>
+    <string name="listen_together_connected">Connected</string>
+    <string name="listen_together_connecting">Connecting…</string>
+    <string name="listen_together_connection_timeout">The Listen Together server did not connect in time. Try again or choose another server in settings.</string>
+    <string name="listen_together_custom_avatar">Custom profile picture</string>
+    <string name="listen_together_custom_avatar_desc">Pick any photo from your gallery as your Listen Together avatar; everyone in the room sees it</string>
+    <string name="listen_together_custom_avatar_failed">Could not save that picture</string>
+    <string name="listen_together_description">Listen to music with your friends in real-time. Create a room to be the host or join an existing room with a code.</string>
+    <string name="listen_together_disconnected">Offline</string>
+    <string name="listen_together_error">Connection error</string>
+    <string name="listen_together_host_not_allowed">This server does not allow this client to host a room. Choose another server to create a room.</string>
+    <string name="listen_together_in_app_notifications">In-app notifications</string>
+    <string name="listen_together_in_app_notifications_desc">Show the newest chat message as a popup while the app is open and the chat page is closed</string>
+    <string name="listen_together_invalid_room_response">The server returned an invalid room response. Try reconnecting or choose another server.</string>
+    <string name="listen_together_join_request_notification">%1$s wants to join the room</string>
+    <string name="listen_together_join_requests">Join requests</string>
+    <string name="listen_together_logs">Connection logs</string>
+    <string name="listen_together_no_blocked_users">No blocked users</string>
+    <string name="listen_together_no_logs">No logs yet</string>
+    <string name="listen_together_not_configured">Listen Together is not configured. Please set up the server URL in Settings → Integrations → Listen Together.</string>
+    <string name="listen_together_notification_channel_desc">Notifications for Listen Together events</string>
+    <string name="listen_together_notification_channel_name">Listen Together</string>
+    <string name="listen_together_queue_empty">The room queue is empty</string>
+    <string name="listen_together_queue_more">…and %d more</string>
+    <string name="listen_together_reconnect">Reconnect</string>
+    <string name="listen_together_room_created">Room created: %s</string>
+    <string name="listen_together_room_queue">Room queue</string>
+    <string name="listen_together_room_request_timeout">The room request timed out. Check the room code and host, then try again.</string>
+    <string name="listen_together_server_url">Server URL</string>
+    <string name="listen_together_settings_desc">Configure server, username, and more</string>
+    <string name="listen_together_settings_diagnostics_header">Diagnostics</string>
+    <string name="listen_together_settings_notifications_header">Notifications</string>
+    <string name="listen_together_settings_playback_header">Playback</string>
+    <string name="listen_together_settings_rooms_header">Rooms</string>
+    <string name="listen_together_smart_resync">Smart Network Resync</string>
+    <string name="listen_together_smart_resync_desc">Automatically catch up with the host after a connection drop</string>
+    <string name="listen_together_suggest_song">Suggest a song</string>
+    <string name="listen_together_suggest_song_desc">Search and send a track to the host</string>
+    <string name="listen_together_suggestion_auto_approve">Auto-approve song suggestions</string>
+    <string name="listen_together_suggestion_auto_approve_desc">Guest song changes and suggestions play for everyone immediately; turn off to review each one</string>
+    <string name="listen_together_suggestion_received">%1$s requested %2$s</string>
+    <string name="listen_together_suggestion_sent">Suggestion sent to host!</string>
+    <string name="listen_together_suggestion_toast">%1$s suggested %2$s</string>
+    <string name="listen_together_sync_volume">Sync host volume</string>
+    <string name="listen_together_sync_volume_desc">Guests follow the host volume level</string>
+    <string name="listen_together_use_custom_server">Use custom server</string>
+    <string name="listen_together_username">Username</string>
+    <string name="listen_together_view_logs">View logs</string>
+    <string name="listen_together_view_logs_desc">Debug connection and messages</string>
+    <string name="manage_user">Manage User</string>
+    <string name="no_results_found">Không tìm thấy kết quả</string>
+    <string name="not_set">Not set</string>
+    <string name="pending_suggestions">Pending suggestions</string>
+    <string name="permanently_kick_user">Permanently Block</string>
+    <string name="permanently_kick_user_desc">Block this person\'s join requests and hide their suggestions</string>
+    <string name="reject">Reject</string>
+    <string name="reset">Đặt lại</string>
+    <string name="room_code">Room code</string>
+    <string name="send">Send</string>
+    <string name="transfer_ownership">Transfer Ownership</string>
+    <string name="transfer_ownership_desc">Make this person the host of the room</string>
+    <string name="type_message">Type a message…</string>
+    <string name="unblock">Unblock</string>
+    <string name="user_blocked_by_host">User blocked by host</string>
+    <string name="waiting_for_approval">Waiting for approval from host</string>
+    <string name="you_label">You</string>
 </resources>

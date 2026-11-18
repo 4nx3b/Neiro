@@ -597,6 +597,7 @@ object SourceRegistry {
         SourceKind.TIDAL -> TidalSource(config)
         SourceKind.DEEZER -> DeezerSource(config)
         SourceKind.QOBUZ -> QobuzSource(config)
+        SourceKind.MUZO -> MuzoSource(config)
         SourceKind.SOUNDCLOUD -> SoundCloudSource(config)
         SourceKind.JIOSAAVN -> JioSaavnSource(config)
         SourceKind.YOUTUBE -> YouTubeSource(config)
@@ -647,6 +648,7 @@ object SourceRegistry {
         SourceKind.TIDAL,
         SourceKind.DEEZER,
         SourceKind.QOBUZ,
+        SourceKind.MUZO,
         SourceKind.SOUNDCLOUD,
         SourceKind.JIOSAAVN,
         SourceKind.YOUTUBE,

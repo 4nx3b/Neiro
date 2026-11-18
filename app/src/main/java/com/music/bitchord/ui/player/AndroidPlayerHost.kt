@@ -29,9 +29,9 @@ import com.music.bitchord.playback.AudioRouting
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.playback.audio.bitperfect.DacVolume
 import com.music.bitchord.playback.cast.CastController
-import com.music.bitchord.ui.components.backdrop.backdrops.SnapshotBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.rememberSnapshotBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.snapshotBackdropSource
+import com.music.bitchord.ui.components.SnapshotBackdrop
+import com.music.bitchord.ui.components.rememberSnapshotBackdrop
+import com.music.bitchord.ui.components.snapshotBackdropSource
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.menuBackdropFrost
 import dev.chrisbanes.haze.HazeState

@@ -86,6 +86,18 @@ enum class LyricsSource(
         wordSynced = true,
         hidden = true,
     ),
+    // The one video-id-keyed source that is *offered*: Muzo's syllable runs
+    // are the same shape SimpMusic's rich sync is, so the karaoke sweep lights
+    // mid-word rather than mid-line — and it is keyed on the video, so it
+    // carries the same never-the-wrong-edit guarantee without the geoblocking
+    // caveat. Behind the Apple hosts because it wants the Muzo Data key, and
+    // behind LyricsPlus because a keyless listener gets a fast miss here
+    // rather than a document.
+    MUZO(
+        label = "Muzo Data",
+        detail = "Syllable by syllable, matched on the video",
+        wordSynced = true,
+    ),
     UNISON(
         label = "Unison",
         detail = "Contributed by listeners, so it has what nobody licensed",

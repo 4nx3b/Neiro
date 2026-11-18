@@ -72,13 +72,6 @@ enum class PlayerTheme {
 /** Which tab the app opens on. Ported from ArchiveTune's NavigationTab. */
 enum class DefaultOpenTab { HOME, SEARCH, LIBRARY }
 
-/**
- * How the app's own back navigations animate. Ported from ArchiveTune's
- * BackAnimationStyle: DEFAULT is the instant pop; PREDICTIVE follows the
- * system's predictive back gesture, scaling the page away under the finger.
- */
-enum class BackAnimationStyle { DEFAULT, PREDICTIVE }
-
 /** The surface that was last open inside the expanded player. */
 enum class LastPlayerScreen {
     MAIN,

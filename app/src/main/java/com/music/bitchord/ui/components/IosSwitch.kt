@@ -29,10 +29,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
+import io.github.neoruaa.glasmio.ui.GlasmioSwitch
 
 /**
  * The iOS 26 switch: a wide green capsule and a white pill of a thumb, which
@@ -67,6 +70,10 @@ fun IosSwitch(
     enabled: Boolean = true,
     @Suppress("UNUSED_PARAMETER") colors: SwitchColors? = null,
 ) {
+    if (glasmioAvailable) {
+        GlasmioIosSwitch(checked, onCheckedChange, modifier, enabled)
+        return
+    }
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -143,3 +150,32 @@ private val TrackHeight = 28.dp
 private val ThumbWidth = 40.dp
 private val ThumbHeight = 24.dp
 private val ThumbPadding = 2.dp
+
+@Composable
+private fun GlasmioIosSwitch(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    modifier: Modifier,
+    enabled: Boolean,
+) {
+    val haptics = rememberHaptics()
+    var settled by remember { mutableStateOf(false) }
+    LaunchedEffect(checked) {
+        if (settled) haptics.play(if (checked) Haptic.ToggleOn else Haptic.ToggleOff)
+        settled = true
+    }
+    if (onCheckedChange != null) {
+        Box(modifier.minimumInteractiveComponentSize(), contentAlignment = Alignment.Center) {
+            GlasmioSwitch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
+        }
+        return
+    }
+    Box(modifier.clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+        GlasmioSwitch(checked = checked, onCheckedChange = {}, enabled = enabled)
+        Box(
+            Modifier
+                .matchParentSize()
+                .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
+        )
+    }
+}

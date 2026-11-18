@@ -4,10 +4,10 @@ import android.provider.Settings
 import com.music.bitchord.ui.player.PlayerBackHandler
 import com.music.bitchord.ui.player.additiveChrome
 import com.music.bitchord.ui.utils.containSheetGestures
-import com.music.bitchord.ui.components.backdrop.Backdrop
-import com.music.bitchord.ui.components.backdrop.drawBackdrop
-import com.music.bitchord.ui.components.backdrop.effects.blur
-import com.music.bitchord.ui.components.backdrop.effects.colorControls
+import io.github.neoruaa.glasmio.glass.render.Backdrop
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import com.music.bitchord.ui.components.colorControls
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -76,7 +76,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.ui.components.backdrop.backdrops.SnapshotBackdrop
+import com.music.bitchord.ui.components.SnapshotBackdrop
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -227,7 +227,7 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
     onDrawSurface = { drawRect(fill) },
     // Sampled small: the blur hides the upscale, and the effect then runs over
     // a fraction of the pixels.
-    backdropScale = MENU_BACKDROP_SCALE,
+    samplingScale = { _, _ -> MENU_BACKDROP_SCALE },
 )
 
 private val MENU_BLUR = 24.dp
@@ -453,9 +453,29 @@ fun <T : Any> IosMenuPopover(
         }.getOrDefault(false)
     }
     val reduceMotion = appReduceAnimation || systemAnimationsOff
+    val driver = remember { GlasmioMorphDriver() }
+    val liquid = glasmioAvailable && !reduceMotion && !driver.fallback
 
     val progress = remember { Animatable(0f) }
     LaunchedEffect(open) {
+        if (glasmioAvailable && !reduceMotion) {
+            if (open) {
+                withFrameNanos { }
+                (backdrop as? SnapshotBackdrop)?.takeIf { !AppSettings.reduceDynamicBlur.value }?.let { still ->
+                    withTimeoutOrNull(STILL_WAIT_MS) { snapshotFlow { still.hasStill }.first { it } }
+                }
+                if (driver.prepare()) {
+                    progress.snapTo(1f)
+                    driver.expand()
+                    return@LaunchedEffect
+                }
+            } else if (!driver.fallback) {
+                driver.close()
+                progress.snapTo(0f)
+                last = null
+                return@LaunchedEffect
+            }
+        }
         if (open) {
             // The opening frame is the heaviest the menu has: every row
             // composed and measured, the player pausing its canvas, and the
@@ -514,7 +534,9 @@ fun <T : Any> IosMenuPopover(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = progress.value.coerceIn(0f, 1f) }
+                    .graphicsLayer {
+                        alpha = if (liquid) driver.contentProgress else progress.value.coerceIn(0f, 1f)
+                    }
                     .background(scrim)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -558,7 +580,9 @@ fun <T : Any> IosMenuPopover(
                         // The rows come in once the glass has mostly grown:
                         // oversized, blurred and faint, settling sharp at their
                         // own size; they leave first on the way back.
-                        .morphContent(progress::value, reduceMotion)
+                        .then(
+                            if (liquid) Modifier.glasmioMorphContent(driver) else Modifier.morphContent(progress::value, reduceMotion),
+                        )
                         .then(
                             if (dark && !plain) {
                                 Modifier.additiveChrome(true)
@@ -600,9 +624,16 @@ fun <T : Any> IosMenuPopover(
         val panelBox = MorphBox(panelX.toFloat(), panelY.toFloat(), panel.width.toFloat(), panel.height.toFloat())
         val fromBox = anchorBounds?.let { MorphBox(it.left, it.top, it.width, it.height) }
             ?: centreSource(MorphBox(0f, 0f, width.toFloat(), height.toFloat()), 48.dp.toPx())
+        val panelRect = Rect(panelBox.left, panelBox.top, panelBox.right, panelBox.bottom)
+        driver.source = Rect(fromBox.left, fromBox.top, fromBox.right, fromBox.bottom)
+        driver.target = panelRect
+        driver.radius = 30.dp.toPx()
+        driver.density = density
         val growth: GraphicsLayerScope.() -> Unit = {
             val p = progress.value
-            if (reduceMotion) {
+            if (liquid) {
+                applyGlasmioPanel(driver, panelRect)
+            } else if (reduceMotion) {
                 alpha = p.coerceIn(0f, 1f)
             } else {
                 val frame = morphFrame(p, fromBox, panelBox)

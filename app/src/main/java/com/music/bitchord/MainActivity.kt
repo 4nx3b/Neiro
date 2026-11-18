@@ -15,7 +15,6 @@ import android.view.KeyEvent
 import android.view.View
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -147,8 +146,8 @@ import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.listentogether.ListenTogether
+import com.music.bitchord.data.listentogether.ListenTogetherInvite
 import com.music.bitchord.data.listentogether.partyQueueIndexOf
-import com.music.bitchord.data.together.TogetherDeepLink
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.innertube.InnertubeParser
@@ -166,7 +165,6 @@ import com.music.bitchord.data.model.withoutVideos
 import com.music.bitchord.data.model.UserPlaylist
 import com.music.bitchord.data.model.EntityType
 import com.music.bitchord.data.model.SearchHistoryEntity
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.music.bitchord.data.model.durationMillis
@@ -175,7 +173,6 @@ import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.ui.player.ArchiveTuneBridgeImpl
 import moe.rukamori.archivetune.bridge.ArchiveTunePlayerHost
-import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
 import com.music.bitchord.data.settings.MiniPlayerBarBehavior
 import com.music.bitchord.data.settings.BitPerfectMode
@@ -212,8 +209,12 @@ import com.music.bitchord.ui.screens.libraryDeviceItems
 import com.music.bitchord.ui.screens.SPOTIFY_BROWSE_ID
 import com.music.bitchord.ui.screens.libraryLinks
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
-import com.music.bitchord.ui.screens.MusicTogetherScreen
+import com.music.bitchord.ui.screens.ListenTogetherChatPopup
+import com.music.bitchord.ui.screens.ListenTogetherChatScreen
+import com.music.bitchord.ui.screens.ListenTogetherScreen
+import com.music.bitchord.ui.screens.ListenTogetherSettingsScreen
 import com.music.bitchord.ui.screens.SignatureApiEditor
+import com.music.bitchord.ui.screens.MuzoApiKeyEditor
 import com.music.bitchord.ui.screens.SettingsScreen
 import com.music.bitchord.ui.screens.SourceEditorAlert
 import com.music.bitchord.ui.screens.SourcesScreen
@@ -293,12 +294,13 @@ import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScr
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
+import com.music.bitchord.ui.components.rememberGlasmioLocals
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
-import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.rememberLayerBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.rememberSnapshotBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.snapshotBackdropSource
+import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
+import io.github.neoruaa.glasmio.glass.render.backdrops.layerBackdrop
+import io.github.neoruaa.glasmio.glass.render.backdrops.rememberLayerBackdrop
+import com.music.bitchord.ui.components.rememberSnapshotBackdrop
+import com.music.bitchord.ui.components.snapshotBackdropSource
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceKind
@@ -435,7 +437,7 @@ class MainActivity : AppCompatActivity() {
         // Before the composition, so a cold launch from a widget's artwork has
         // the request already standing by the time BitChordApp first reads it.
         PlayerDeepLink.consume(intent)
-        TogetherDeepLink.consume(intent)
+        ListenTogetherInvite.consume(intent)
         // Likewise for a link tapped or shared from another app — see [MusicLink].
         MusicLink.consume(intent)
         // A crash last time left a report (see CrashReporter): say once where
@@ -540,11 +542,13 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
+                val glasmioLocals = rememberGlasmioLocals(appBackdrop, liquidGlassEnabled)
                 CompositionLocalProvider(
                     LocalOverscrollFactory provides iosOverscrollFactory,
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
                     LocalDensity provides scaledDensity,
+                    *glasmioLocals,
                 ) {
                 // The window's width, measured rather than asked for.
                 //
@@ -612,7 +616,7 @@ class MainActivity : AppCompatActivity() {
         // one that just arrived and not the one the task was started with.
         setIntent(intent)
         PlayerDeepLink.consume(intent)
-        TogetherDeepLink.consume(intent)
+        ListenTogetherInvite.consume(intent)
         MusicLink.consume(intent)
     }
 }
@@ -864,6 +868,10 @@ private fun BitChordApp(
         mutableStateOf<Pair<String, SourceRegistry.DownloadExclusion>?>(null)
     }
     var editingSignatureApi by remember { mutableStateOf(false) }
+    // The Muzo Data key editor, raised for the same reason as
+    // [editingSignatureApi]: the frosted card samples a layer the settings
+    // subtree is itself part of, so it cannot be drawn from inside it.
+    var editingMuzoKey by remember { mutableStateOf(false) }
     var librarySortMenuOpen by remember { mutableStateOf(false) }
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
@@ -1118,18 +1126,30 @@ private fun BitChordApp(
         override = AppSettings.streamCeilingOverride.collectAsStateWithLifecycle().value,
     )
     val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
-    val pendingTogetherJoin by TogetherDeepLink.pending.collectAsStateWithLifecycle()
+    val pendingListenInvite by ListenTogetherInvite.pending.collectAsStateWithLifecycle()
+    val pendingOpenChat by ListenTogetherInvite.openChat.collectAsStateWithLifecycle()
 
-    // A together link is navigation and an action: reveal the session page now,
-    // and let that page join on its own once it is on screen — the join needs
-    // no account, just the display name it already has.
-    LaunchedEffect(pendingTogetherJoin) {
-        if (pendingTogetherJoin != null) {
+    // A Listen Together invite link is navigation and an action: reveal the
+    // session page now, and let that page join on its own once it is on screen —
+    // the join needs no account, just the display name it already has.
+    LaunchedEffect(pendingListenInvite) {
+        if (pendingListenInvite != null) {
             dismissPlayer()
             replayStory = null
             showReplayShare = false
             webSession = null
             navigator.reset(AppRoute.Settings, AppRoute.ListenTogether)
+        }
+    }
+    // A chat notification's shade tap asked for the chat page by name: open
+    // it over whatever the listener was on, once.
+    LaunchedEffect(pendingOpenChat) {
+        if (pendingOpenChat && ListenTogether.manager?.isInRoom == true) {
+            dismissPlayer()
+            navigator.pushAll(AppRoute.Settings, AppRoute.ListenTogether, AppRoute.ListenTogetherChat)
+            ListenTogetherInvite.chatHandled()
+        } else if (pendingOpenChat) {
+            ListenTogetherInvite.chatHandled()
         }
     }
     val account by viewModel.account.collectAsStateWithLifecycle()
@@ -3052,27 +3072,11 @@ private fun BitChordApp(
         // drawn over a page, then the alerts drawn over everything. Each sheet
         // and dialog further down registers its own handler as it opens, and
         // so outranks all of these while it is up.
-        // Back, in the style the Appearance page asked for — ported from
-        // ArchiveTune's back animation style. Default pops at once, as the app
-        // always has; Predictive hands the system's own gesture the same
-        // goBack, so the page scales away under the finger as the system draws
-        // it, and a cancel simply snaps everything back. (The manifest's
-        // enableOnBackInvokedCallback is what lets the gesture reach us at all.)
-        val backAnimationStyle by AppSettings.backAnimationStyle.collectAsStateWithLifecycle()
-        if (backAnimationStyle == BackAnimationStyle.PREDICTIVE) {
-            PredictiveBackHandler(enabled = canGoBack) { progress ->
-                try {
-                    // The flow ends when the gesture commits; letting it go
-                    // partway cancels this coroutine instead, and the system
-                    // has already returned the page to full size by then.
-                    progress.collect { }
-                    goBack()
-                } catch (_: CancellationException) {
-                }
-            }
-        } else {
-            BackHandler(enabled = canGoBack, onBack = goBack)
-        }
+        //
+        // Back pops at once, as the app always has — the ported
+        // ArchiveTune-style animation chooser is gone with the style's own
+        // code, and the page stack leaves on the press that lands.
+        BackHandler(enabled = canGoBack, onBack = goBack)
         // Replay's stories and its share sheet are drawn over everything, and
         // unwind in the order they were opened. Only while there is a summary
         // to draw them from — otherwise back would spend a step closing
@@ -3125,6 +3129,7 @@ private fun BitChordApp(
                     lastPageKey[0] = pageTarget.key
                 }
                 val reducePageMotion by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+                val pageDensity = LocalDensity.current.density
                 AnimatedContent(
                     targetState = pageTarget,
                     // A route's entry is copied when the release pages under it
@@ -3162,7 +3167,7 @@ private fun BitChordApp(
                             EnterTransition.None togetherWith ExitTransition.None
                         } else {
                             // The iOS push / pop slide, or the album zoom.
-                            iosPageTransform(pageMotion, reducePageMotion)
+                            iosPageTransform(pageMotion, reducePageMotion, pageDensity)
                         }
                     },
                     modifier = Modifier
@@ -3340,6 +3345,7 @@ private fun BitChordApp(
                                 onExplainOutdatedAddon = { explainingOutdatedAddon = it },
                                 onEditWebDav = { showWebDavEditor = true },
                                 onEditSmb = { showSmbEditor = true },
+                                onEditMuzoKey = { editingMuzoKey = true },
                                 onConfirmJioSaavn = { confirmJioSaavn = true },
                                 onSignInTidal = { showTidalLogin = true },
                                 onSignOutTidal = { confirmTidalSignOut = true },
@@ -3397,7 +3403,34 @@ private fun BitChordApp(
                         } else if (pageRoute == AppRoute.WearOs) {
                             WearOsScreen(contentPadding = listPadding)
                         } else if (pageRoute == AppRoute.ListenTogether) {
-                            MusicTogetherScreen(contentPadding = listPadding)
+                            // The ported Listen Together room page: connection,
+                            // join/create, members, suggestions and queue — its
+                            // own chat and settings pages hang off these two
+                            // callbacks so each stays navigable in its own right.
+                            ListenTogetherScreen(
+                                onOpenChat = { navigator.push(AppRoute.ListenTogetherChat) },
+                                onOpenSettings = { navigator.push(AppRoute.ListenTogetherSettings) },
+                                contentPadding = listPadding,
+                            )
+                        } else if (pageRoute == AppRoute.ListenTogetherSettings) {
+                            ListenTogetherSettingsScreen(
+                                onBack = { navigator.pop() },
+                                contentPadding = listPadding,
+                            )
+                        } else if (pageRoute == AppRoute.ListenTogetherChat) {
+                            // The chat is its own full-screen page with its own
+                            // back — it keeps the keyboard and the message list
+                            // in the whole window rather than under the settings
+                            // padding, clearing only the floating bars.
+                            ListenTogetherChatScreen(
+                                onBack = { navigator.pop() },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(
+                                        top = topBarContentPadding(),
+                                        bottom = listPadding.calculateBottomPadding(),
+                                    ),
+                            )
                         } else if (pageRoute == AppRoute.Equalizer) {
                             EqualizerScreen(
                                 contentPadding = listPadding,
@@ -4131,6 +4164,8 @@ private fun BitChordApp(
                         AppRoute.Lyrics -> stringResource(R.string.lyrics)
                         AppRoute.Canvas -> stringResource(R.string.canvas)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
+                        AppRoute.ListenTogetherChat -> stringResource(R.string.comments)
+                        AppRoute.ListenTogetherSettings -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)
                         AppRoute.Settings -> stringResource(R.string.settings)
@@ -5819,6 +5854,19 @@ private fun BitChordApp(
                 DiwaliGreetingScreen(onDismiss = dismissDiwali)
             }
 
+            // ---- The Listen Together in-app chat popup ----
+            // The newest room message over a quick-reply box while the app is
+            // up and the chat page is closed (the chat page itself keeps the
+            // unread count clear, which drops this on its own). Gated by the
+            // in-app-notifications preference the settings page owns.
+            ListenTogetherChatPopup(
+                onOpenChat = {
+                    dismissPlayer()
+                    navigator.pushAll(AppRoute.Settings, AppRoute.ListenTogether, AppRoute.ListenTogetherChat)
+                },
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+
             // ---- Update available (once per launch; held until the welcome and Diwali greeting are done) ----
             if (showUpdateDialog && onboardingComplete && !showDiwali) {
                 updateNotice?.let { update ->
@@ -6227,6 +6275,15 @@ private fun BitChordApp(
                 SignatureApiEditor(
                     hazeState = hazeState,
                     onDismiss = { editingSignatureApi = false },
+                )
+            }
+
+            // The Muzo Data key: same frosted editor, same reasons for living
+            // here rather than on the Sources page.
+            if (editingMuzoKey) {
+                MuzoApiKeyEditor(
+                    hazeState = hazeState,
+                    onDismiss = { editingMuzoKey = false },
                 )
             }
 

@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-sdk tools:overrideLibrary="io.github.neoruaa.glasmio.core,io.github.neoruaa.glasmio.glass,io.github.neoruaa.glasmio.icons,io.github.neoruaa.glasmio.ui" />
+
+
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Tells Wi-Fi from mobile data, so the matching quality ceiling applies. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -217,17 +220,29 @@
                 <data android:host="youtu.be" />
             </intent-filter>
 
-            <!-- Music Together session invites on the app's own scheme: the
-                 host's link is bitchord://together?host=…&port=…&sid=…&key=…,
-                 carrying the LAN address and the session's key, so a tap on
-                 any device in reach opens straight onto the join flow. -->
+            <!-- Listen Together invite links: the share URL handed out by the
+                 room screen (https://<server host>/listen?code=…) and the direct
+                 custom scheme (bitchord://listen?code=…) — a tap on either
+                 opens straight onto the join flow with the code. The hosts
+                 mirror ListenTogetherServers.inviteHosts: the JSON servers that
+                 serve a web client at /listen, so a link opened in a browser
+                 can still fall through to the app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="devilmi-vivi-music-listen-together.hf.space" />
+                <data android:host="vivimusic-listen-together.onrender.com" />
+                <data android:pathPrefix="/listen" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="bitchord"
-                    android:host="together" />
+                    android:host="listen" />
             </intent-filter>
 
             <!--
@@ -660,6 +675,15 @@
         <!-- The tap on a "new songs in this playlist" notification. See PlaylistSync. -->
         <receiver
             android:name=".download.PlaylistSyncApproval"
+            android:exported="false" />
+
+        <!--
+          Receiver for Listen Together notification actions (Approve / Reject /
+          chat quick reply) — its PendingIntents are this app's own, so it never
+          needs to answer another app.
+        -->
+        <receiver
+            android:name=".data.listentogether.ListenTogetherActionReceiver"
             android:exported="false" />
 
         <!--

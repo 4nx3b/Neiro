@@ -57,6 +57,10 @@ if (androidSdk != null && file(androidSdk).isDirectory) {
     include(":archivetune:jiosaavn")
     include(":archivetune:lastfm")
     include(":archivetune:spotifycore")
+    include(":glasmio:core")
+    include(":glasmio:glass")
+    include(":glasmio:icons")
+    include(":glasmio:ui")
 } else {
     logger.lifecycle("No Android SDK found — building the desktop targets only.")
 }
