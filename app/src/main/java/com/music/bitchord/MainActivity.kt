@@ -1,5 +1,8 @@
 package com.music.bitchord
 
+import com.music.bitchord.ui.motion.IosPageFrame
+import com.music.bitchord.ui.motion.PageMotionState
+import com.music.bitchord.ui.motion.iosPageTransform
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -3102,13 +3105,28 @@ private fun BitChordApp(
                 .snapshotBackdropSource(pageBackdrop, floor = MaterialTheme.colorScheme.background),
         ) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
+                // Whatever is on top of the back stack — see [AppNavigator].
+                val pageTarget = when {
+                    visibleEntry != null -> AppDestination.Route(visibleEntry)
+                    detail != null -> AppDestination.Release(detail.browseId)
+                    else -> AppDestination.Tab(selectedTab)
+                }
+                // Push or pop, and whether a release zooms out of its cover —
+                // the iOS 26 Apple Music page motion (ui/motion/PageMotion).
+                val pageMotion = remember { PageMotionState() }
+                val lastPageKey = remember { arrayOfNulls<String>(1) }
+                remember(pageTarget.key) {
+                    pageMotion.onDestination(
+                        key = pageTarget.key,
+                        depth = if (pageTarget is AppDestination.Tab) 0 else navigator.entries.size + detailStack.size,
+                        releaseBrowseId = (pageTarget as? AppDestination.Release)?.browseId,
+                        previousKey = lastPageKey[0],
+                    )
+                    lastPageKey[0] = pageTarget.key
+                }
+                val reducePageMotion by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
                 AnimatedContent(
-                    // Whatever is on top of the back stack — see [AppNavigator].
-                    targetState = when {
-                        visibleEntry != null -> AppDestination.Route(visibleEntry)
-                        detail != null -> AppDestination.Release(detail.browseId)
-                        else -> AppDestination.Tab(selectedTab)
-                    },
+                    targetState = pageTarget,
                     // A route's entry is copied when the release pages under it
                     // change, which is not a different page.
                     contentKey = { it.key },
@@ -3143,7 +3161,8 @@ private fun BitChordApp(
                         if (tabSwap || libraryShowAllSwap) {
                             EnterTransition.None togetherWith ExitTransition.None
                         } else {
-                            fadeIn(tween(180)) togetherWith fadeOut(tween(180))
+                            // The iOS push / pop slide, or the album zoom.
+                            iosPageTransform(pageMotion, reducePageMotion)
                         }
                     },
                     modifier = Modifier
@@ -4015,11 +4034,18 @@ private fun BitChordApp(
                     // them redraws the page under the glass, for nobody.
                     val barsMotion = artworkMotion && transition.targetState == EnterExitState.Visible
                     CompositionLocalProvider(LocalPlayingBarsMotion provides barsMotion) {
-                        if (destination is AppDestination.Tab) {
-                            pageContent()
-                        } else {
-                            pageKeysSeen += key
-                            pageStates.SaveableStateProvider(key, pageContent)
+                        IosPageFrame(
+                            key = key,
+                            isTab = destination is AppDestination.Tab,
+                            motion = pageMotion,
+                            reduceMotion = reducePageMotion,
+                        ) {
+                            if (destination is AppDestination.Tab) {
+                                pageContent()
+                            } else {
+                                pageKeysSeen += key
+                                pageStates.SaveableStateProvider(key, pageContent)
+                            }
                         }
                     }
                 }
