@@ -177,16 +177,24 @@ fun StyledPlaybackSlider(
         }
 
         SliderStyle.Simple -> {
+            val sliderState =
+                remember(valueRange.start, valueRange.endInclusive) {
+                    SliderState(
+                        value = value,
+                        steps = 0,
+                        trackRange = valueRange,
+                    )
+                }
+            sliderState.value = value
             Slider(
-                value = value,
-                valueRange = valueRange,
+                state = sliderState,
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
                 colors = PlayerSliderColors.simpleSliderColors(activeColor),
                 thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-                track = { sliderState ->
+                track = { state ->
                     PlayerSliderTrack(
-                        sliderState = sliderState,
+                        sliderState = state,
                         colors = PlayerSliderColors.simpleSliderColors(activeColor),
                         trackHeight = 3.dp,
                     )
