@@ -207,7 +207,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import io.github.neoruaa.glasmio.ui.GlasmioSlider
+import com.music.bitchord.ui.components.liquid.LiquidGlassSlider
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -4060,15 +4060,15 @@ internal fun SliderRow(
             )
         }
         if (LocalLiquidGlassEnabled.current && isGlassSupported()) {
-            // The glass slider, ported from Glasmio: the 40dp capsule track
-            // with the accent fill and the 37×24 thumb as a real glass lens
-            // that lifts and enlarges under the finger. The discrete rows
-            // keep their M3 snapping — the drag is quantised to the same
-            // steps + 1 intervals M3's own slider used, so every writer of
-            // these settings sees the values it always did.
+            // The glass slider, on the vendored AndroidLiquidGlass renderer:
+            // the 6dp capsule track with the accent fill and the 40×24 thumb
+            // as a real glass lens that lifts and enlarges under the finger.
+            // The discrete rows keep their M3 snapping — the drag is quantised
+            // to the same steps + 1 intervals M3's own slider used, so every
+            // writer of these settings sees the values it always did.
             val span = valueRange.endInclusive - valueRange.start
             val step = if (steps > 0 && span > 0f) span / (steps + 1) else 0f
-            GlasmioSlider(
+            LiquidGlassSlider(
                 value = sliderValue.coerceIn(valueRange),
                 onValueChange = { raw ->
                     if (step > 0f) {

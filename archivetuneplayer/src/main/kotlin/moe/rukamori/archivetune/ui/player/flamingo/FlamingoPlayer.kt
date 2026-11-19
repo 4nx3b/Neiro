@@ -245,9 +245,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.clip
-import io.github.neoruaa.glasmio.glass.render.drawBackdrop
-import io.github.neoruaa.glasmio.glass.render.effects.blur
-import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -1937,7 +1937,7 @@ private fun FlamingoPopupPanel(
                 Modifier.drawBackdrop(
                     backdrop = backdrop,
                     effects = {
-                        vibrancy(saturation = glassTuning.saturation)
+                        colorControls(saturation = glassTuning.saturation)
                         blur((20f * glassTuning.blurFactor).dp.toPx())
                     },
                     onDrawBackdrop = { drawBackdrop ->

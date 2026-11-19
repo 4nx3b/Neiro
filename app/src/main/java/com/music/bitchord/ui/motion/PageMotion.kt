@@ -5,12 +5,12 @@ import kotlin.math.max
 /*
  * The album-opening card geometry — the zoom out of the cover the row shows
  * — is the app's own (ui/motion/PageMotion) and stays; the slide between
- * pages now runs Glasmio's navigation motion (IosNavigationMotion.kt),
+ * pages now runs the ported navigation motion (IosNavigationMotion.kt),
  * including the under-page dim the fork prescribes.
  */
 object PageMotion {
 
-    /* Glasmio's native ten-percent dimming of the covered page. */
+    /* iOS's native ten-percent dimming of the covered page. */
     const val UNDER_DIM = 0.10f
 
     const val OPEN_MS = 260

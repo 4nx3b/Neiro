@@ -88,7 +88,7 @@ fun AnimatedContentTransitionScope<*>.iosPageTransform(
         return fadeIn(tween(150, easing = LinearEasing)) togetherWith fadeOut(tween(150, easing = LinearEasing))
     }
     val zooming = motion.zoomingKey != null
-    // Glasmio's slide, ported: the foreground travels the full width on the
+    // The ported slide: the foreground travels the full width on the
     // fork's unnormalised critical spring, the underlay the parallax
     // remainder UIKit prescribes — thirty percent of the width, pixel-exact
     // — and RTL travels the mirrored way, as the fork's own spec does.
@@ -115,7 +115,7 @@ fun AnimatedContentTransitionScope<*>.iosPageTransform(
 }
 
 /**
- * Glasmio's root tab fade, verbatim — the fork's sample swaps its top-level
+ * The root tab fade, verbatim — iOS swaps its top-level
  * destinations on `fadeIn() togetherWith fadeOut()`, and this is that exact
  * transform for the app's tab swaps.
  */
@@ -139,7 +139,7 @@ fun AnimatedVisibilityScope.IosPageFrame(
             } else if (zoomBrowseId != null) {
                 tween(PageMotion.OPEN_MS, easing = ZoomEasing)
             } else {
-                // Glasmio's own easing and window: the spring's position over
+                // The ported easing and window: the spring's position over
                 // the 350 ms coordinator duration.
                 tween(IosNavigationDurationMillis, easing = IosNavigationEasing)
             }

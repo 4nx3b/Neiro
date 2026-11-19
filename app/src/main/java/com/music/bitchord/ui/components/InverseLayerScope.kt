@@ -1,10 +1,10 @@
 /*
  * An app-local inverse of a GraphicsLayerScope block, kept from the days the
- * app vendored Kyant0/backdrop (Apache-2.0) — that package is gone now that
- * the app renders glass through Glasmio's own backdrop (the fork's
- * io.github.neoruaa.glasmio.glass.render), but SnapshotBackdrop still needs
- * to undo a panel's press-scale while sampling, so the two small files moved
- * here. No dependency on either glass library: this is plain Compose.
+ * app vendored Kyant0/backdrop (Apache-2.0) directly in the app's own
+ * sources — the backdrop module under com.kyant.backdrop now carries the
+ * renderer, but SnapshotBackdrop still needs to undo a panel's press-scale
+ * while sampling, so the two small files stay here. No dependency on any
+ * glass library: this is plain Compose.
  */
 package com.music.bitchord.ui.components
 

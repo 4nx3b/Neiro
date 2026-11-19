@@ -297,18 +297,12 @@ import com.music.bitchord.ui.components.rememberFloatingTabBarScrollConnection
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
-import com.music.bitchord.ui.components.GlasmioThinSlider
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
-import com.music.bitchord.ui.components.BitChordGlasmioIconResolver
+import com.music.bitchord.ui.components.ThinGlassSlider
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.music.bitchord.ui.components.rememberSnapshotBackdrop
 import com.music.bitchord.ui.components.snapshotBackdropSource
-import io.github.neoruaa.glasmio.core.GlasmioTheme
-import io.github.neoruaa.glasmio.core.defaultGlassColors
-import io.github.neoruaa.glasmio.glass.GlasmioBackdropProvider
-import io.github.neoruaa.glasmio.icons.GlasmioIconProvider
-import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
-import io.github.neoruaa.glasmio.glass.render.backdrops.layerBackdrop
-import io.github.neoruaa.glasmio.glass.render.backdrops.rememberLayerBackdrop
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceKind
@@ -519,7 +513,6 @@ class MainActivity : AppCompatActivity() {
             }
             val highPerformance by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
             val liquidGlassEnabled by AppSettings.liquidGlass.collectAsStateWithLifecycle()
-            val glassPerformance by AppSettings.glassPerformance.collectAsStateWithLifecycle()
             val iosOverscrollFactory = rememberIosOverscrollFactory()
             val performanceRefreshRate by AppSettings.performanceRefreshRate.collectAsStateWithLifecycle()
             // Ported from ArchiveTune's UI scale: the font scale is multiplied so
@@ -530,21 +523,6 @@ class MainActivity : AppCompatActivity() {
             val composeView = LocalView.current
             LaunchedEffect(highPerformance, performanceRefreshRate, composeView) {
                 applyPerformanceMode(highPerformance, performanceRefreshRate, composeView)
-            }
-            // The frost switch following the app's own glass into the fork's
-            // tier: the bar and the other Glasmio controls read their optics
-            // off GlasmioPerformance, so a toggle mid-session re-renders every
-            // glass surface frosted rather than only the app's own — the same
-            // install BitChordApplication performs before the first composition.
-            LaunchedEffect(glassPerformance) {
-                runCatching {
-                    io.github.neoruaa.glasmio.core.GlasmioPerformance.configure(
-                        context,
-                        io.github.neoruaa.glasmio.core.GlasmioPerformanceConfig(
-                            refraction = !glassPerformance,
-                        ),
-                    )
-                }
             }
             val darkTheme = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -560,25 +538,6 @@ class MainActivity : AppCompatActivity() {
                 font = appFont,
                 customFontFamily = customFontFamily,
             ) {
-                // The app's icon resolver for Glasmio's SF Symbol names — the
-                // navigation bar's tab glyphs resolve to BitChord's own icons,
-                // everything else falls through to the fork's stock Material
-                // mapping. No SF Symbols font is shipped, so the vectors are
-                // the glyphs.
-                GlasmioIconProvider(resolver = BitChordGlasmioIconResolver) {
-                // Glasmio's theme, nested inside BitChord's: the app keeps its own
-                // Material colour scheme and typography (Glasmio re-provides the
-                // MaterialTheme around its glass tokens, so the app's palette and
-                // fonts are passed straight through), while every Glasmio glass
-                // control below reads its colors, appearance and dimensions off
-                // the locals this installs — GlasmioSwitch, GlasmioSlider, the
-                // Glasmio navigation bar and the liquid-morph menus.
-                GlasmioTheme(
-                    isDark = darkTheme,
-                    colorScheme = MaterialTheme.colorScheme,
-                    typography = MaterialTheme.typography,
-                    colors = defaultGlassColors(darkTheme, MaterialTheme.colorScheme.primary),
-                ) {
                 // The app-wide status-bar hiding, ported from ArchiveTune's
                 // Appearance setting. Composed beside the player's own so both
                 // can ask at once — see HideStatusBar's reference counting.
@@ -600,24 +559,22 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
-                // What every Glasmio glass control samples: LocalGlassBackdrop for
-                // the controls and LocalBlurBackdrop for modal surfaces, both the
-                // app backdrop the pages are recorded into — the nav bar, the
-                // popovers and the player's panels sit outside the recording, so
-                // they sample the page exactly as the vendored glass did, and the
-                // glass switches and sliders the fork ships sit inside the pages
-                // and refract the recorded page beneath them.
-                GlasmioBackdropProvider(backdrop = appBackdrop) {
+                // What every glass surface samples: the app backdrop the pages
+                // are recorded into — the nav bar, the popovers and the player's
+                // panels sit outside the recording, so they sample the page
+                // exactly as the glass always did, and the glass switches and
+                // sliders the vendored renderer draws sit inside the pages and
+                // refract the recorded page beneath them.
                 CompositionLocalProvider(
                     LocalOverscrollFactory provides iosOverscrollFactory,
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
                     LocalDensity provides scaledDensity,
                     // The sharedUi thin slider's glass ride — the player's
-                    // seek bar renders Glasmio's slider wherever the glass is
-                    // on and supported, and the M3 capsule everywhere else
-                    // (see GlasmioSupport's GlassSlider for the fallback).
-                    LocalGlassSlider provides GlasmioThinSlider,
+                    // seek bar renders the liquid-glass slider wherever the
+                    // glass is on and supported, and the M3 capsule everywhere
+                    // else (see GlassControls' GlassSlider for the fallback).
+                    LocalGlassSlider provides ThinGlassSlider,
                 ) {
                 // The window's width, measured rather than asked for.
                 //
@@ -637,9 +594,6 @@ class MainActivity : AppCompatActivity() {
                         windowHeight = maxHeight,
                         appBackdrop = appBackdrop,
                     )
-                }
-                }
-                }
                 }
                 }
             }
@@ -3202,7 +3156,7 @@ private fun BitChordApp(
                 }
                 val reducePageMotion by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
                 // Captured for the transitionSpec lambda, which is not a
-                // composable scope: Glasmio's slide needs the layout
+                // composable scope: the ported slide needs the layout
                 // direction for its mirrored travel and the density for the
                 // pixel-exact parallax offset.
                 val pageLayoutDirection = LocalLayoutDirection.current
@@ -3212,14 +3166,14 @@ private fun BitChordApp(
                     // A route's entry is copied when the release pages under it
                     // change, which is not a different page.
                     contentKey = { it.key },
-                    // Tabs swap on Glasmio's root fade; everything else
-                    // slides on the fork's navigation motion — or the album
+                    // Tabs swap on the root fade; everything else
+                    // slides on the ported navigation motion — or the album
                     // zoom, when the page is a release opened from its cover.
                     //
                     // A tab is not a place you travel to — the bar is the
-                    // whole navigation — and Glasmio's own sample answers that
-                    // with a straight crossfade between top-level routes:
-                    // `fadeIn() togetherWith fadeOut()`, the fork's root-tab
+                    // whole navigation — and a straight crossfade between
+                    // top-level routes answers that:
+                    // `fadeIn() togetherWith fadeOut()`, the root-tab
                     // transition, ported verbatim as [rootTabFade].
                     //
                     // "Show all" swapping with the Library tab underneath it is
@@ -3240,7 +3194,7 @@ private fun BitChordApp(
                         } else if (tabSwap) {
                             rootTabFade()
                         } else {
-                            // The iOS push / pop slide on Glasmio's motion, or the
+                            // The iOS push / pop slide on the ported motion, or the
                             // album zoom out of its cover.
                             iosPageTransform(
                                 pageMotion,

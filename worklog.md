@@ -2266,3 +2266,60 @@ Work Log:
 Stage Summary:
 - Pushed with the frost wiring's head; the next Launch Smoke round is the
   evidence. Check, TV and the Release APK stayed green throughout.
+
+## Task: the Glasmio exodus — every liquid glass, slider, toggle and bar onto AndroidLiquidGlass
+
+The Glasmio fork is gone entirely: no JitPack coordinates, no
+io.github.neoruaa imports, no manifest overrides, no version guard, no
+sample-smoke workflow, no crash patches, no crash doc. Every glass
+surface now draws through the vendored AndroidLiquidGlass backdrop
+module instead.
+
+- The renderer is `:backdrop` — guozhiqiang123/AndroidLiquidGlass's
+  backdrop module (Kyant's fork) vendored at 0ed8b08, commonMain + the
+  Android actuals with the expect/actual pairs collapsed. One
+  deliberate change: drawBackdrop/drawPlainBackdrop take a per-surface
+  `samplingScale` multiplied with the global BackdropRendering.scale
+  (the fork exposes the scale only globally; the app's surfaces are
+  tuned per call site — a third, a quarter under frost). The fork is
+  published nowhere its Gradle can be consumed from (no Maven Central,
+  no JitPack build — AGP 9.3.2/KMP/publishToMavenCentral), which is
+  why it's vendored and compiled by this repo's own toolchain; its one
+  Maven dependency, io.github.kyant0:shapes, resolves normally.
+- The liquid controls are the fork's own catalog, ported into
+  app/…/ui/components/liquid with BitChord's theme, backdrop and
+  tuning: LiquidGlassSlider (6dp track, 40×24 lens thumb, damped drag,
+  press blur-out, velocity squish), LiquidGlassSwitch (64×28 capsule,
+  40×24 lens thumb, drag-to-commit), LiquidGlassTabBar (the capsule
+  platter with the selection indicator as a control lens over an
+  accent-tinted recorded copy, damped drag-to-switch, the tracking
+  highlight, BitChord's split-search trailing circle and the fold
+  morph), plus the DampedDragAnimation / DragGestureInspector /
+  InteractiveHighlight utils they ride. IosSwitch, GlassNavBar,
+  GlassControls' GlassSlider, the SettingsSheet's sliders and
+  sharedUi's LocalGlassSlider slot all render these now.
+- The render-level glue swapped namespaces: app LiquidGlass.kt,
+  SnapshotBackdrop, IosMenu's menuBackdropFrost and the eight
+  archivetuneplayer files import com.kyant.backdrop.* (vibrancy(x) →
+  colorControls(saturation = x); the fork's vibrancy() is fixed at
+  1.5). GlasmioMotion.kt → LiquidMorphMotion.kt, the constants the
+  menus morph on renamed with it. The motions the app had ported
+  (IosNavigationMotion, IosPageTransitions, GlassMorph) are untouched
+  code — only their Glasmio mentions were reworded.
+- MainActivity lost the fork wrappers (GlasmioTheme, the icon
+  provider, the backdrop provider, the performance-tier effect);
+  BitChordApplication lost both GlasmioPerformance installs. The
+  frost switch (glassPerformance) is honoured per surface instead —
+  the lens goes, the blur doubles, the sampling drops to a quarter —
+  the same trade Modifier.liquidGlass always made.
+- The three manifests lost their tools:overrideLibrary (the vendored
+  module minSdks 21, below the app's 26). check.yml's Android job,
+  android.yml and the launch smoke are the CI that has to carry it.
+
+Stage Summary:
+- GlasmioVersionGuardTest deleted (its coordinate scan has nothing to
+  guard); GlassMorphTest and PageMotionTest untouched in substance —
+  the pure math they pin didn't change. AGENTS.md's library section
+  rewritten around :backdrop. Nothing else moved: the motions, the
+  tuning, the settings pages and every call site's glass parameters
+  are the values they were under the fork.

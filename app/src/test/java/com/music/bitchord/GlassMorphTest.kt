@@ -50,7 +50,7 @@ class GlassMorphTest {
 
     @Test
     fun rowsFadeInThroughTheGrowthsMiddleStretch() {
-        // Glasmio's content curve — ((progress − 0.12) / 0.64) — starts early,
+        // The content curve — ((progress − 0.12) / 0.64) — starts early,
         // inside the growth's own first stretch, and is sharp by 0.76.
         assertEquals(0f, morphFrame(0.1f, button, menu).contentAlpha, 0f)
         assertEquals(MORPH_CONTENT_BLUR_DP, morphFrame(0.1f, button, menu).contentBlurDp, 0f)

@@ -34,7 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
-import io.github.neoruaa.glasmio.glass.render.Backdrop
+import com.kyant.backdrop.Backdrop
 
 val NavigationBarGlassGlowKey = booleanPreferencesKey("navigationBarGlassGlow")
 

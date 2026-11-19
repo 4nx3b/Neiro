@@ -14,7 +14,7 @@ import kotlin.math.exp
 import kotlin.math.roundToInt
 
 /*
- * Ported from Glasmio's IosNavigationMotion (the myself-tsuki fork, JitPack)
+ * The iOS navigation motion, ported
  * — the fork's own iOS navigation motion, verbatim where the code is physics
  * and adapted only where it was typed against navigation3's Scene, which this
  * app's hand-rolled dual-stack navigator has no counterpart of. This is the
@@ -29,7 +29,7 @@ internal const val IosNavigationDurationMillis = 350
 private val IosNavigationOmega = 2.0 * PI / 0.3
 internal val IosNavigationStiffness = (IosNavigationOmega * IosNavigationOmega).toFloat()
 
-/** Glasmio's easing: the spring's own position over the 350 ms coordinator window. */
+/** The easing: the spring's own position over the 350 ms coordinator window. */
 val IosNavigationEasing = Easing { iosNavigationPosition(it, 350_000_000L) }
 
 /** Stock FloatSpringSpec rounds time to milliseconds, which breaks inverse seeking mid-push. */

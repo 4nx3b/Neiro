@@ -1,15 +1,13 @@
 /*
- * The glass navigation bar, ported onto Glasmio's tab bar (the myself-tsuki
- * fork from JitPack): the iOS 27 split-search tab bar — the capsule platter
- * with the trailing Search circle fused into it through the fork's
- * BottomNavigationContact CASDF union, the selection indicator as a native
- * control lens sampling the material backplate, and the platter's own morph
- * into the selected tab's circle on the fold. The now-playing accessory
- * rides above it as its own glass capsule rather than docking into the pill,
- * as the fork's sample lays its floating controls out. The bar's structure
- * and the fold behaviour are BitChord's own, first drawn after
- * EchoMusicApp/Echo-Music's AppFloatingNavBar (GPL-3.0); the shell under
- * them is Glasmio's now.
+ * The glass navigation bar, ported onto the vendored AndroidLiquidGlass
+ * catalog's liquid tabs (see ui/components/liquid/LiquidGlassTabBar.kt): the
+ * capsule platter with the trailing Search circle as its own glass lens — the
+ * app's iOS 27 split-search layout — and the selection indicator as a native
+ * control lens sampling the material backplate, which records an
+ * accent-tinted copy of the bar beneath it. The now-playing accessory rides
+ * above it as its own glass capsule. The bar's structure and the fold
+ * behaviour are BitChord's own, first drawn after EchoMusicApp/Echo-Music's
+ * AppFloatingNavBar (GPL-3.0); the glass under them is AndroidLiquidGlass's.
  */
 package com.music.bitchord.ui.components
 
@@ -65,31 +63,31 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.text.font.FontWeight
-import io.github.neoruaa.glasmio.icons.SfSymbol
-import io.github.neoruaa.glasmio.scaffold.GlasmioNavigationBarWithTrailingItem
-import io.github.neoruaa.glasmio.ui.GlasmioTabItem
+import com.music.bitchord.ui.components.liquid.LiquidGlassTabBar
 
 /**
- * The liquid glass navigation bar, ported from Glasmio.
+ * The liquid glass navigation bar, on the vendored AndroidLiquidGlass renderer.
  *
- * The tab platter is the fork's own [GlasmioNavigationBarWithTrailingItem]:
- * the Home/Explore/Library capsule with the Search circle as its trailing
- * control, the two fused through the fork's contact-field union shape, the
- * selection lens a native control lens over the material. Scrolling down
- * collapses the platter into the selected tab's circle — Glasmio's compact
- * morph, driven here by [scrollConnection] the page's scroll is dispatched
- * into, so the fold behaves as it always has (see MainActivity's
- * `nestedScroll`). Tapping the collapsed circle expands the bar again.
+ * The tab platter is [LiquidGlassTabBar]: the Home/Explore/Library capsule with
+ * the Search circle as its trailing control, the selection indicator a native
+ * control lens over the material — the bar records an accent-tinted copy of
+ * itself that the lens refracts — and the damped drag carrying the indicator
+ * between tabs. Scrolling down collapses the platter into the selected tab's
+ * circle — the app's own compact morph, driven here by [scrollConnection] the
+ * page's scroll is dispatched into, so the fold behaves as it always has (see
+ * MainActivity's `nestedScroll`). Tapping the collapsed circle expands the
+ * bar again.
  *
- * The now-playing accessory is the fork's sample's layout: its own glass
- * capsule above the platter while the bar is expanded, fading away with the
- * fold, rather than iOS 26's one-component dock. [song] null means nothing
- * is playing and the platter and Search stand alone.
+ * The now-playing accessory is laid out above the platter while the bar is
+ * expanded, fading away with the fold, rather than iOS 26's one-component
+ * dock. [song] null means nothing is playing and the platter and Search stand
+ * alone.
  *
- * Every surface here samples the app backdrop — the platter through Glasmio's
- * own GlassSurface, the accessory through [Modifier.liquidGlass] — so this is
- * only ever used where that is supported and switched on; off either,
- * MainActivity draws [MiniPlayer] and [FloatingBottomBar] instead.
+ * Every surface here samples the app backdrop — the platter through the
+ * vendored renderer's own drawBackdrop, the accessory through
+ * [Modifier.liquidGlass] — so this is only ever used where that is supported
+ * and switched on; off either, MainActivity draws [MiniPlayer] and
+ * [FloatingBottomBar] instead.
  */
 @Composable
 fun GlassNavBar(
@@ -113,9 +111,9 @@ fun GlassNavBar(
     pull: MiniPlayerPull? = null,
     modifier: Modifier = Modifier,
 ) {
-    // The fold: Glasmio's compact morph running on the fork's own
-    // navigation endpoint spring — critically damped, 0.3 s response, the
-    // stiffness (2π/0.3)² the fork's navigation motion uses throughout.
+    // The fold: the app's compact morph — the same critically damped
+    // navigation endpoint spring the page motion uses throughout,
+    // (2π/0.3)² for the native 0.3 s response.
     val compactProgressState: State<Float> = animateFloatAsState(
         targetValue = if (scrollConnection.isInline) 1f else 0f,
         animationSpec = spring(
@@ -126,29 +124,9 @@ fun GlassNavBar(
     )
     val compact = compactProgressState.value
 
-    // Search is the trailing control in the fork's split-search layout — the
-    // circle of its own beside the platter — which is the last tab in
-    // BitChord's order anyway.
-    val navItems = remember(tabs) {
-        tabs.dropLast(1).mapIndexed { index, tab ->
-            GlasmioTabItem(
-                key = index,
-                label = tab.label,
-                symbol = when (index) {
-                    0 -> SfSymbol.House
-                    1 -> SfSymbol.Safari
-                    else -> SfSymbol.MusicNoteList
-                },
-            )
-        }
-    }
-    val trailingItem = remember(tabs) {
-        GlasmioTabItem(
-            key = tabs.lastIndex,
-            label = tabs.last().label,
-            symbol = SfSymbol.Search,
-        )
-    }
+    // Search is the trailing control in the split-search layout — the circle
+    // of its own beside the platter — which is the last tab in BitChord's
+    // order anyway.
 
     Column(
         modifier
@@ -161,7 +139,7 @@ fun GlassNavBar(
         song?.let { current ->
             // The now-playing capsule, its own glass surface above the
             // platter, gone with the fold: the compact circle is the whole
-            // bar by then, as the fork's sample lays it out.
+            // bar by then.
             GlassNowPlaying(
                 song = current,
                 isInline = false,
@@ -188,13 +166,13 @@ fun GlassNavBar(
             Spacer(Modifier.height(8.dp))
         }
 
-        GlasmioNavigationBarWithTrailingItem(
-            items = navItems,
-            trailingItem = trailingItem,
+        LiquidGlassTabBar(
+            tabs = remember(tabs) { tabs.dropLast(1) },
+            trailingTab = remember(tabs) { tabs.last() },
             selectedKey = selectedIndex,
             onSelected = onTabSelected,
-            onExpand = { scrollConnection.expand() },
             compactProgress = compactProgressState,
+            onExpand = { scrollConnection.expand() },
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -203,7 +181,7 @@ fun GlassNavBar(
 /** The now-playing capsule's silhouette — the accessory it always was. */
 private val GlassNowPlayingShape = RoundedCornerShape(percent = 50)
 
-/** Glasmio's navigation motion spring: (2π/0.3)², the 0.3 s native response. */
+/** The navigation motion spring: (2π/0.3)², the 0.3 s native response. */
 private const val GLASS_NAV_COMPACT_STIFFNESS = 438.64908f
 
 /**

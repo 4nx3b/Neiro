@@ -318,8 +318,7 @@ dependencies {
     // ---- Compose (Material 3) ----
     // The 1.12 line, whole — see app/build.gradle.kts for why the whole line
     // moved (the split runtime the old pins resolved crashed the release
-    // build on launch; the Glasmio fork's transitive foundation pin rides
-    // above the BOM, which Compose supports deliberately).
+    // build on launch).
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
@@ -403,18 +402,19 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.3.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
 
-    // ---- Glasmio: iOS 27 Liquid Glass components and motion ----
+    // ---- Liquid Glass: the vendored AndroidLiquidGlass renderer ----
     // Mirrored from app/build.gradle.kts, which this module's sources are
-    // shared with — the app's MainActivity wires GlasmioTheme, the backdrop
-    // provider and the icon resolver, GlassNavBar rides the fork's tab bar,
-    // and the settings' switches and sliders are the fork's controls, so the
-    // TV app compiling those sources needs the fork's artifacts on its own
+    // shared with — the app's MainActivity wires the app backdrop,
+    // GlassNavBar rides the vendored liquid tab bar, and the settings'
+    // switches and sliders are the vendored liquid controls, so the TV app
+    // compiling those sources needs the renderer module on its own
     // classpath just as the phone app does. The TV UI itself draws none of
-    // the glass (TvGlass is a colour palette, not a backdrop); the manifest's
-    // tools:overrideLibrary accepts the fork's minSdk 31 against this
-    // module's 26 for exactly that reason.
-    implementation("com.github.myself-tsuki.Glasmio:glasmio-ui:v0.2.1")
-    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1")
+    // the glass (TvGlass is a colour palette, not a backdrop); the vendored
+    // module minSdks 21, below this module's own 26, so the manifest merge
+    // needs no override for it. The shapes the ported liquid controls lay
+    // out with ride with the sources the same way.
+    implementation(project(":backdrop"))
+    implementation("io.github.kyant0:shapes:1.2.1")
 
     // ---- QR encoding, for the party invite ----
     // `core` only: the `android-core`/`zxing-android-embedded` artifacts bring
