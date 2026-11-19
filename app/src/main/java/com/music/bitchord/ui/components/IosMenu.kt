@@ -4,10 +4,10 @@ import android.provider.Settings
 import com.music.bitchord.ui.player.PlayerBackHandler
 import com.music.bitchord.ui.player.additiveChrome
 import com.music.bitchord.ui.utils.containSheetGestures
-import com.music.bitchord.ui.components.backdrop.Backdrop
-import com.music.bitchord.ui.components.backdrop.drawBackdrop
-import com.music.bitchord.ui.components.backdrop.effects.blur
-import com.music.bitchord.ui.components.backdrop.effects.colorControls
+import io.github.neoruaa.glasmio.glass.render.Backdrop
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -76,7 +76,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.ui.components.backdrop.backdrops.SnapshotBackdrop
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -219,7 +218,7 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
     effects = {
         // iOS menus carry the page's hue through more strongly than the page
         // has it.
-        colorControls(saturation = 1.8f)
+        vibrancy(1.8f)
         blur(MENU_BLUR.toPx() * MENU_BACKDROP_SCALE)
     },
     highlight = null,
@@ -227,7 +226,7 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
     onDrawSurface = { drawRect(fill) },
     // Sampled small: the blur hides the upscale, and the effect then runs over
     // a fraction of the pixels.
-    backdropScale = MENU_BACKDROP_SCALE,
+    samplingScale = { _, _ -> MENU_BACKDROP_SCALE },
 )
 
 private val MENU_BLUR = 24.dp

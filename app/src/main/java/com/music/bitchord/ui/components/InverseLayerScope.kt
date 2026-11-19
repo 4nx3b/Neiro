@@ -1,13 +1,12 @@
 /*
- * Vendored from Kyant0/backdrop v2.0.0 (io.github.kyant0:backdrop)
- * https://github.com/Kyant0/backdrop — Copyright 2025 Kyant0, Apache License 2.0
- *
- * Vendored so the library ships as source with this app (binary AARs compiled
- * against older Compose broke at runtime) and to add a backdrop resolution
- * scale for cheaper effect rendering. KMP expect/actual declarations were
- * merged into this single Android source set. Package renamed accordingly.
+ * An app-local inverse of a GraphicsLayerScope block, kept from the days the
+ * app vendored Kyant0/backdrop (Apache-2.0) — that package is gone now that
+ * the app renders glass through Glasmio's own backdrop (the fork's
+ * io.github.neoruaa.glasmio.glass.render), but SnapshotBackdrop still needs
+ * to undo a panel's press-scale while sampling, so the two small files moved
+ * here. No dependency on either glass library: this is plain Compose.
  */
-package com.music.bitchord.ui.components.backdrop.internal
+package com.music.bitchord.ui.components
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -115,7 +114,6 @@ internal class InverseLayerScope : GraphicsLayerScope {
         }
 
         val matrix = matrix ?: Matrix().also { matrix = it }
-        if (matrix.values.size < 16) return
 
         val rz = rotationZ * (PI / 180.0)
         val rsz = sin(rz).toFloat()

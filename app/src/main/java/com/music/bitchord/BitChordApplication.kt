@@ -115,6 +115,12 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // ArchiveTunePlayerHost starts the store itself before its stack
         // composes; this just gives the read a head start.
         PreferenceStore.start(this)
+        // Glasmio (the JitPack fork behind the app's glass controls and motion)
+        // picks its rendering tier from the device's SoC and RAM; detecting it
+        // here rather than at first glass composition avoids the tier's first
+        // frame landing mid-animation. Idempotent and cheap, and the config it
+        // installs is snapshot-observed, so later changes re-render glass.
+        runCatching { io.github.neoruaa.glasmio.core.GlasmioPerformance.configure(this) }
         // Compose re-votes the window's frame rate from dispatchDraw on every
         // frame (API 35+), and Samsung's View logs each vote together with a
         // stack walk of its caller: measured on an S22, 8,000 lines in two

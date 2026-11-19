@@ -7,11 +7,14 @@ import kotlin.math.sin
 /**
  * The geometry of a popup morphing out of the control that opened it, after
  * iOS 26 Apple Music's Liquid Glass (docs/bottom-stack-reference.md, clips
- * 15-57-35 and 02-46-29): the pressed glass control itself swells into the
- * panel — its rect travels from the control's bounds to the panel's,
- * stretching a little along the way it travels — and the rows come in only
- * once the glass has mostly grown, blurred and slightly oversized, settling
- * sharp at their own size. Closing runs the same path back, the rows leading.
+ * 15-57-35 and 02-46-29) and now carrying Glasmio's iOS 27 liquid-morph
+ * motion (the myself-tsuki fork's IosMenus DropdownMorphSpring): the pressed
+ * glass control itself swells into the panel — its rect travels from the
+ * control's bounds to the panel's, stretching a little along the way it
+ * travels — and the rows fade in through the growth's own middle stretch
+ * (((progress − 0.12) / 0.64), the AnimationKit liquidMorph content curve),
+ * blurred and slightly oversized, settling sharp at their own size. Closing
+ * runs the same path back, the rows leading.
  *
  * Pure, so it is tested on the JVM (GlassMorphTest). Plain floats rather than
  * Compose geometry: the caller maps its Rects in and the frame back out.
@@ -40,8 +43,11 @@ data class MenuFrame(
     val contentScale: Float,
 )
 
-/** Where the rows start to come in, as a share of the morph. */
-const val MORPH_CONTENT_START = 0.35f
+/** Where the rows start to come in, as a share of the morph — Glasmio's gate. */
+const val MORPH_CONTENT_START = 0.12f
+
+/** The span of the rows' fade-in, as a share of the morph — Glasmio's window. */
+const val MORPH_CONTENT_SPAN = 0.64f
 
 /** The rows' blur at the start of their fade-in, dp. */
 const val MORPH_CONTENT_BLUR_DP = 8f
@@ -52,16 +58,22 @@ const val MORPH_CONTENT_SCALE = 1.12f
 /** How far the glass stretches along its travel at mid-flight. */
 const val MORPH_STRETCH = 0.06f
 
-/** The spring fitted to the clips: ≈300 ms with a small settle, never a bounce. */
-const val MORPH_DAMPING = 0.82f
-const val MORPH_STIFFNESS = 300f
+/*
+ * Glasmio's DropdownMorphSpring, verbatim — the spring UIKitCore/AnimationKit's
+ * MorphAnimationSettings.liquidMorph copies to width, height, position and
+ * transform on iOS 27: stiffness (2π/response)² for the native 0.3 s response
+ * and unit mass, damping 0.8 (a light settle), visible from 0.1% of travel.
+ * Never a bounce. The values are what the fork's own menus open on.
+ */
+const val MORPH_DAMPING = 0.8f
+const val MORPH_STIFFNESS = 438.64908f
 
-/** The close, ≈250 ms. */
-const val MORPH_CLOSE_MS = 250
+/** The close, Glasmio's liquid-morph collapse: ≈300 ms. */
+const val MORPH_CLOSE_MS = 300
 
-/** The rows' progress (0..1) for a morph [progress]. */
+/** The rows' progress (0..1) for a morph [progress] — Glasmio's content curve. */
 fun morphContentFraction(progress: Float): Float =
-    ((progress - MORPH_CONTENT_START) / (1f - MORPH_CONTENT_START)).coerceIn(0f, 1f)
+    ((progress - MORPH_CONTENT_START) / MORPH_CONTENT_SPAN).coerceIn(0f, 1f)
 
 /**
  * The frame at [progress] (0 = the control, 1 = the panel; a spring may carry

@@ -173,8 +173,13 @@ dependencies {
     // ---- Libraries ArchiveTune's stack needs that the app doesn't use ----
     // The wavy seek bar.
     implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
-    // Liquid-glass effects behind the ported components.
-    implementation("io.github.kyant0:backdrop:2.0.0")
+    // Liquid-glass rendering behind the ported components — Glasmio's own
+    // backdrop (io.github.neoruaa.glasmio.glass.render) replaces the Kyant
+    // Backdrop artifact this stack used to import: the fork's glass module
+    // owns backdrop recording and the effect pipeline, so the module's
+    // liquidGlass glue (colorControls → vibrancy, blur, lens, Shadow) reads
+    // the same shapes of API out of Glasmio's namespace instead.
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-glass:v0.2.1")
     implementation("com.valentinilk.shimmer:compose-shimmer:1.5.0")
     // Reorderable queues and lists.
     implementation("sh.calvin.reorderable:reorderable:3.1.0")

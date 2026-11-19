@@ -402,6 +402,20 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.3.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
 
+    // ---- Glasmio: iOS 27 Liquid Glass components and motion ----
+    // The myself-tsuki fork of NEORUAA/Glasmio, served from JitPack (the fork
+    // is not on Maven Central — the upstream io.github.neoruaa.glasmio
+    // coordinates only resolve for the original project). Brings the glass
+    // sliders, glass toggles, liquid-morph popups, the navigation bar and the
+    // iOS page-switch motion, and replaces the vendored Kyant0/backdrop
+    // sources: glasmio-glass owns backdrop recording and material rendering
+    // under io.github.neoruaa.glasmio.glass.render, so no separate Kyant
+    // Backdrop dependency is required. Its transitive Compose pins
+    // (foundation 1.12.1) resolve above ours, which Compose supports
+    // deliberately — foundation depends on ui, not the reverse.
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-ui:v0.2.1")
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1")
+
     // ---- QR encoding, for the party invite ----
     // `core` only: the `android-core`/`zxing-android-embedded` artifacts bring
     // a camera scanner and an Activity with it, and nothing here reads a code —

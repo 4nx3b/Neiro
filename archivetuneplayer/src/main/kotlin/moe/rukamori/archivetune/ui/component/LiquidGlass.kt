@@ -65,15 +65,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toIntSize
 import androidx.compose.ui.util.lerp
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop as kyantLayerBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.colorControls
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.shadow.Shadow
+import io.github.neoruaa.glasmio.glass.render.Backdrop
+import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
+import io.github.neoruaa.glasmio.glass.render.backdrops.layerBackdrop as glasmioLayerBackdrop
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
+import io.github.neoruaa.glasmio.glass.render.effects.lens
+import io.github.neoruaa.glasmio.glass.render.shadow.Shadow
 import moe.rukamori.archivetune.constants.LIQUID_GLASS_ADAPTIVE_LUMINANCE_DEFAULT
 import moe.rukamori.archivetune.constants.LIQUID_GLASS_BACKDROP_VIBRANCY_DEFAULT
 import moe.rukamori.archivetune.constants.LIQUID_GLASS_BLUR_RADIUS_DEFAULT
@@ -135,7 +134,7 @@ fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier =
     when (backdrop) {
         is ThrottledLayerBackdrop -> throttledLayerBackdrop(backdrop)
 
-        is LayerBackdrop -> this.kyantLayerBackdrop(backdrop)
+        is LayerBackdrop -> this.glasmioLayerBackdrop(backdrop)
         else -> this
     }
 
@@ -446,7 +445,7 @@ fun Modifier.liquidGlass(
             effects = {
                 val l = 0f
 
-                colorControls(saturation = tuning.saturation)
+                vibrancy(saturation = tuning.saturation)
                 blur(
                     if (l > 0f) {
                         lerp(blurRadius.toPx() * 2f, blurRadius.toPx() * 4f, l)

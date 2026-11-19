@@ -2,6 +2,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      Glasmio (the JitPack fork) ships with minSdk 31 — its glass rendering is
+      built for Android 12 and newer, falling back to simpler materials on 12
+      itself. This app keeps minSdk 26, so the manifest merge is told to accept
+      the library anyway: every Glasmio surface is additionally gated at
+      runtime on isGlassSupported() (API 31+), the same gate the previous
+      vendored glass stack sat behind, so the library's API-31+ surface is never
+      reached on Android 8-11 where the Haze and plain fallbacks apply.
+    -->
+    <uses-sdk
+        tools:overrideLibrary="io.github.neoruaa.glasmio.core,io.github.neoruaa.glasmio.icons,io.github.neoruaa.glasmio.glass,io.github.neoruaa.glasmio.ui,io.github.neoruaa.glasmio.scaffold" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Tells Wi-Fi from mobile data, so the matching quality ceiling applies. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

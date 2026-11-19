@@ -38,9 +38,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-
-val IosSlideEasing = Easing { PageMotion.slideEase(it) }
 
 private val ZoomEasing = Easing { PageMotion.zoomEase(it) }
 
@@ -82,11 +81,18 @@ class PageMotionState {
 fun AnimatedContentTransitionScope<*>.iosPageTransform(
     motion: PageMotionState,
     reduceMotion: Boolean,
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
+    density: Float = 1f,
 ): ContentTransform {
     if (reduceMotion) {
         return fadeIn(tween(150, easing = LinearEasing)) togetherWith fadeOut(tween(150, easing = LinearEasing))
     }
     val zooming = motion.zoomingKey != null
+    // Glasmio's slide, ported: the foreground travels the full width on the
+    // fork's unnormalised critical spring, the underlay the parallax
+    // remainder UIKit prescribes — thirty percent of the width, pixel-exact
+    // — and RTL travels the mirrored way, as the fork's own spec does.
+    val sign = if (layoutDirection == LayoutDirection.Ltr) 1 else -1
     return when {
         zooming && motion.push ->
             (EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished)
@@ -94,19 +100,26 @@ fun AnimatedContentTransitionScope<*>.iosPageTransform(
             (EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished)
                 .apply { targetContentZIndex = -1f }
         motion.push ->
-            slideInHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) { it } togetherWith
-                slideOutHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) {
-                    -(it * PageMotion.UNDER_SHIFT).toInt()
+            slideInHorizontally(IosNavigationSlideSpring) { it * sign } togetherWith
+                slideOutHorizontally(IosNavigationSlideSpring) {
+                    -iosNavigationParallaxOffset(it, density) * sign
                 }
         else ->
             (
-                slideInHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) {
-                    -(it * PageMotion.UNDER_SHIFT).toInt()
+                slideInHorizontally(IosNavigationSlideSpring) {
+                    -iosNavigationParallaxOffset(it, density) * sign
                 } togetherWith
-                    slideOutHorizontally(tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)) { it }
+                    slideOutHorizontally(IosNavigationSlideSpring) { it * sign }
                 ).apply { targetContentZIndex = -1f }
     }
 }
+
+/**
+ * Glasmio's root tab fade, verbatim — the fork's sample swaps its top-level
+ * destinations on `fadeIn() togetherWith fadeOut()`, and this is that exact
+ * transform for the app's tab swaps.
+ */
+fun rootTabFade(): ContentTransform = fadeIn() togetherWith fadeOut()
 
 @Composable
 fun AnimatedVisibilityScope.IosPageFrame(
@@ -126,7 +139,9 @@ fun AnimatedVisibilityScope.IosPageFrame(
             } else if (zoomBrowseId != null) {
                 tween(PageMotion.OPEN_MS, easing = ZoomEasing)
             } else {
-                tween(PageMotion.SLIDE_MS, easing = IosSlideEasing)
+                // Glasmio's own easing and window: the spring's position over
+                // the 350 ms coordinator duration.
+                tween(IosNavigationDurationMillis, easing = IosNavigationEasing)
             }
         },
         label = "page",
