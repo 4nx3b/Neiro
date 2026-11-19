@@ -222,6 +222,27 @@ its own source system. Porting rules:
 - JDK 17, Android SDK (compileSdk 37, targetSdk 36), flavors dev/prod.
 - CI (`check.yml`): `./gradlew testDevDebugUnitTest` + `assembleDevDebug` + Go
   backend build/vet/test. Push to `dev` or open a PR to run it.
+- **main is the active line** (since 2026-11-18: the Glasmio port and the
+  Compose 1.12 / material3 1.5.0-rc01 move landed there; dev is behind).
+  Branch from `origin/main` and PR into main.
+- **Launch smoke** (`launch-smoke.yml`, on every PR and by hand). It builds
+  `:app:assembleDevDebug` and `:app:assembleProdRelease` (R8) for x86_64
+  once and prints the resolved Compose line. An unsigned release is signed
+  with the debug key. It then installs and launches each APK on an API 30
+  (below the Glasmio gate) and an API 34 emulator, using
+  `.github/scripts/launch-smoke.sh`.
+  - The packages are `com.dev.bitchord` (dev) and `com.music.bitchord`
+    (prod).
+  - A leg fails if the process is dead 25 s after launch, or on a
+    `FATAL EXCEPTION`, native crash or ANR. The 60 lines after each fatal
+    exception are printed into the job log.
+  - The logcats and screenshots are the `launch-smoke-api<N>` artifacts.
+  - This is the only launch evidence there is (no SDK or device in the
+    agent sandbox). Read it before guessing at a crash.
+- material3 1.5.0-rc01 removed `thumb`/`track` from the value-based `Slider`.
+  A custom track needs the `SliderState` overload: a state keyed on the
+  range, with the external value synced each recomposition. See SliderRow
+  and archivetuneplayer's PlayerComponents.
 - Fork contract tests live in `app/src/test/java/com/music/bitchord/` — add one
   per ported feature where the logic is JVM-testable (manifest parsing, tier
   mapping, URL shaping).

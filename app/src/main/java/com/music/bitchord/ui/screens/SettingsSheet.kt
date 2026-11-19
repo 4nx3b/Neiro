@@ -99,6 +99,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.rememberDatePickerState
 import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
@@ -4065,25 +4066,33 @@ internal fun SliderRow(
             valueRange = valueRange,
             steps = steps,
             modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
-        ) else Slider(
-            value = sliderValue,
-            onValueChange = onSliderValue,
-            enabled = enabled,
-            valueRange = valueRange,
-            steps = steps,
-            colors = colors,
-            // Bare track: the step ticks and the end-stop dot are noise when the
-            // value is already spelled out on the line above.
-            track = { state ->
-                SliderDefaults.Track(
-                    sliderState = state,
-                    colors = colors,
-                    drawStopIndicator = null,
-                    drawTick = { _, _ -> },
+        ) else {
+            val sliderState = remember(valueRange.start, valueRange.endInclusive, steps) {
+                SliderState(
+                    value = sliderValue,
+                    steps = steps,
+                    trackRange = valueRange,
                 )
-            },
-            modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
-        )
+            }
+            sliderState.value = sliderValue
+            Slider(
+                state = sliderState,
+                onValueChange = onSliderValue,
+                enabled = enabled,
+                colors = colors,
+                // Bare track: the step ticks and the end-stop dot are noise when the
+                // value is already spelled out on the line above.
+                track = { state ->
+                    SliderDefaults.Track(
+                        sliderState = state,
+                        colors = colors,
+                        drawStopIndicator = null,
+                        drawTick = { _, _ -> },
+                    )
+                },
+                modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
+            )
+        }
     }
 }
 
