@@ -98,6 +98,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -4033,8 +4035,17 @@ private fun FlamingoPlayerControl(
                         animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
                         label = "flamingoSeekEngage",
                     )
+                    val seekSliderState =
+                        remember(playingDuration.longValue) {
+                            SliderState(
+                                value = sliderPosition.floatValue,
+                                steps = 0,
+                                trackRange = 0f..playingDuration.longValue.toFloat().coerceAtLeast(0f),
+                            )
+                        }
+                    seekSliderState.value = sliderPosition.floatValue
                     Slider(
-                        value = sliderPosition.floatValue,
+                        state = seekSliderState,
                         onValueChange = { newValue ->
                             isSliding.value = true
 
@@ -4055,7 +4066,6 @@ private fun FlamingoPlayerControl(
                             onSliderValueChangeFinished()
                             isSliding.value = false
                         },
-                        valueRange = 0f..playingDuration.longValue.toFloat().coerceAtLeast(0f),
                         colors = SliderDefaults.colors(
                             activeTrackColor = Color.White,
                             inactiveTrackColor = Color(0x0DFFFFFF),
@@ -4375,15 +4385,21 @@ private fun FlamingoVolumeSlider(
                 label = "flamingoVolumeEngage",
             )
 
+            val volumeSliderState =
+                rememberSliderState(
+                    value = animatedProgress.value,
+                    trackRange = 0f..1f,
+                )
+            volumeSliderState.value = animatedProgress.value
+
             Slider(
-                value = animatedProgress.value,
+                state = volumeSliderState,
                 onValueChange = { newValue ->
                     sliding.value = true
                     sliderPosition.floatValue = newValue
                     onVolumeChange(newValue)
                     onSlider()
                 },
-                valueRange = 0f..1f,
                 colors = SliderDefaults.colors(
                     activeTrackColor = Color.White,
                     inactiveTrackColor = Color(0x0DFFFFFF),

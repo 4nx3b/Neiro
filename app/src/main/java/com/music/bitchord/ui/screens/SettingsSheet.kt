@@ -97,6 +97,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.rememberDatePickerState
 import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
@@ -4085,12 +4086,23 @@ internal fun SliderRow(
                 enabled = enabled,
             )
         } else {
+            // rc01's value-based Slider lost its track slot, so the bare-track
+            // fallback rides the state-based overload: the state keyed on the
+            // range and steps, the external value synced onto it each
+            // recomposition — the same shape every other rc01 conversion
+            // took (see fe81f589).
+            val sliderState = remember(valueRange.start, valueRange.endInclusive, steps) {
+                SliderState(
+                    value = sliderValue,
+                    steps = steps,
+                    trackRange = valueRange,
+                )
+            }
+            sliderState.value = sliderValue
             Slider(
-                value = sliderValue,
-                onValueChange = onSliderValue,
+                state = sliderState,
+                onValueChange = { onSliderValue(it) },
                 enabled = enabled,
-                valueRange = valueRange,
-                steps = steps,
                 colors = colors,
                 // Bare track: the step ticks and the end-stop dot are noise when the
                 // value is already spelled out on the line above.

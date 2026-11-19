@@ -289,17 +289,17 @@ fun CurrentSongHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val uncheckedColors =
-                ToggleButtonDefaults.toggleButtonColors(
+                ToggleButtonDefaults.colors(
                     containerColor = onBackgroundColor.copy(alpha = 0.12f),
                     contentColor = onBackgroundColor,
                 )
             val checkedColors =
-                ToggleButtonDefaults.toggleButtonColors(
+                ToggleButtonDefaults.colors(
                     checkedContainerColor = onBackgroundColor.copy(alpha = 0.22f),
                     checkedContentColor = onBackgroundColor,
                 )
             val infiniteCheckedColors =
-                ToggleButtonDefaults.toggleButtonColors(
+                ToggleButtonDefaults.colors(
                     checkedContainerColor = MaterialTheme.colorScheme.primary,
                     checkedContentColor = MaterialTheme.colorScheme.onPrimary,
                     containerColor = onBackgroundColor.copy(alpha = 0.12f),

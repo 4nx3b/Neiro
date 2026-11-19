@@ -1,0 +1,178 @@
+From 6538d25eab52ae4cdb8cd3748b209cd4830e1f16 Mon Sep 17 00:00:00 2001
+From: Neiro fix <engineer@curialy.local>
+Date: Thu, 19 Nov 2026 14:11:35 +0000
+Subject: [PATCH 1/2] fix(glass): capped glass renders live unless the host
+ opts in to the off-screen renderer
+
+A 120 Hz Android 16 / Mali phone (realme RMX3563, Dimensity 8100) is
+auto-classified Balanced, cap 60, so every glass surface ran through
+GlassFrameCache's second HardwareRenderer. The sample then died four times
+in 25 s with SIGSEGV on RenderThread (fault addresses 0x38, 0x3f800038 and
+float/ASCII data: a use-after-free) when a page scrolled or a control was
+tapped. Rendering capped glass off screen is now opt-in
+(GlasmioPerformanceConfig.cachedGlass, GlasmioPerformance.cachedGlass);
+without it frameRateCap gates the glass clocks only, as in 0.2.1.
+GlassFrameCacheOptInTest, GlasmioPerformanceTest.cachedGlassIsOptIn.
+---
+ CHANGELOG.md                                  |  1 +
+ docs/performance-tiers.md                     |  3 +-
+ .../glasmio/core/GlasmioPerformance.kt        | 10 +++++++
+ .../glasmio/core/GlasmioPerformanceTest.kt    |  9 ++++++
+ .../glasmio/glass/render/GlassFrameCache.kt   | 23 +++++++++++----
+ .../glass/render/GlassFrameCacheOptInTest.kt  | 29 +++++++++++++++++++
+ 6 files changed, 69 insertions(+), 6 deletions(-)
+ create mode 100644 glasmio-glass/src/test/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCacheOptInTest.kt
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 364056c..2e83dcc 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -2,6 +2,7 @@
+ 
+ ## Unreleased
+ 
++- Fix RenderThread crashing (SIGSEGV with a garbage fault address, four times in 25 s in the sample) on a 120 Hz Android 16 / Mali phone when a page scrolled or a control was tapped. The device was auto-classified as Balanced, so its 60 Hz cap sent every glass surface through `GlassFrameCache`, where the glass layer's render node is reachable from the window and from a second `HardwareRenderer`; HWUI then used freed native state. Rendering capped glass off screen is now opt-in (`GlasmioPerformanceConfig(cachedGlass = true)`, `GlasmioPerformance.cachedGlass`). By default `frameRateCap` gates the glass clocks only, as in 0.2.1, so tier detection alone never enables the second renderer.
+ - Fix an "Input dispatching timed out" ANR with `frameRateCap` set, typically when a menu opens. The capped-glass renderer draws into a 4-buffer queue, and buffers were only taken off that queue on the main thread. The RenderThread waited for a free buffer while drawing glass, the main thread waited for the RenderThread, and neither could continue. Finished glass images are now taken off the queue on their own thread (`GlasmioGlassFrames`). The main thread only swaps in the newest image, so the RenderThread never waits on it.
+ - Fix the app crashing when a menu opens with `frameRateCap` set (0.2.2/0.2.3), and the backdrop going stale or blank with the cap on. While the window shows the cached glass image, the off-screen renderer is the only parent of the glass layer's render node. The cache destroyed that renderer on every size change (a menu resizes several times while it opens) and right after handing the layer back to the window. That dropped the node's last parent, and Android's renderer then deleted the glass layer's display lists while Compose still used them. Each cache now keeps one renderer for its whole life, a resize only swaps its output surface, and the renderer is destroyed only after the window has committed a frame that draws the glass layer itself.
+ 
+diff --git a/docs/performance-tiers.md b/docs/performance-tiers.md
+index 5247874..2ad7d22 100644
+--- a/docs/performance-tiers.md
++++ b/docs/performance-tiers.md
+@@ -39,7 +39,8 @@ The weaker of the SoC and RAM verdicts wins. Detection reads `Build.SOC_MANUFACT
+ 
+ - **Backdrop downscale (`samplingScale`)** multiplies each surface's own effect-texture scale (floor 0.25×). Surfaces that already sample at 0.25–0.5× (buttons, tab bars, toolbars) are unaffected at the floor; full-resolution surfaces (navigation bar, pills, contact/toolbar/union shapes, menus, sheets, sidebars, backdrop blur) get cheaper. Shape fields (contact, toolbar, union) are evaluated in full-size pixels and mapped into the reduced effect space (`NativeGlassFilterField.atSamplingScale`), and the optical center is scaled with them, so downscaled glass keeps its size and position. Text, shape clips, highlights and shadows stay at device resolution. Where the control field plane needs unit scale, the renderer uses its analytic path, as it already did for any scale other than 1.
+ - **Frame-rate cap (`frameRateCap`)** applies to the glass only; the window keeps drawing at the panel rate.
+-  - **Glass rendering:** each backdrop surface renders its capture and filter chain (blur, lens, refraction) off screen (`GlassFrameCache`: its own `HardwareRenderer` into a hardware-buffer `ImageReader`) at most `frameRateCap` times a second. Every window frame in between composites the last image as a plain bitmap, so scrolling, text and the rest of the app stay at 120 Hz while the expensive glass work runs at 30 Hz. All capped surfaces in the process share one clock (`GlassFrameClock`): while any window with glass or a backdrop source draws an app frame, every surface re-renders at the cap, so the backdrop never freezes on an old frame. Glass also refreshes in popups over content that scrolls in another window. After the last app frame the clock runs 250 ms longer, then stops, so an idle screen does no glass work. Surfaces that export a backdrop, luminance-only probes, software-drawn views, wide-gamut (color-managed) windows and HDR headroom skip the cache and render live. A cap at or above the panel rate also renders live.
++  - **Off-screen rendering is opt-in (`cachedGlass = true`).** Without it the cap gates the glass clocks only and glass renders live, as in 0.2.1: the off-screen path below made RenderThread crash on a 120 Hz Mali phone.
++  - **Glass rendering (with `cachedGlass = true`):** each backdrop surface renders its capture and filter chain (blur, lens, refraction) off screen (`GlassFrameCache`: its own `HardwareRenderer` into a hardware-buffer `ImageReader`) at most `frameRateCap` times a second. Every window frame in between composites the last image as a plain bitmap, so scrolling, text and the rest of the app stay at 120 Hz while the expensive glass work runs at 30 Hz. All capped surfaces in the process share one clock (`GlassFrameClock`): while any window with glass or a backdrop source draws an app frame, every surface re-renders at the cap, so the backdrop never freezes on an old frame. Glass also refreshes in popups over content that scrolls in another window. After the last app frame the clock runs 250 ms longer, then stops, so an idle screen does no glass work. Surfaces that export a backdrop, luminance-only probes, software-drawn views, wide-gamut (color-managed) windows and HDR headroom skip the cache and render live. A cap at or above the panel rate also renders live.
+   - **Glass animation clocks:** Glasmio's own animation clocks (navigation scaffold, adaptive navigation/sidebar, menu morph, loupe follow/spring, reaction bar) skip frames too. They integrate real elapsed time, so motion speed is unchanged.
+   - Prefer divisors of the panel rate (30/40/60 on 120 Hz, 30 on 60 Hz).
+ - **Field grid step** coarsens the CPU/FP16 liquid-menu field (4× fewer texels at 2×), which shrinks the per-update Bitmap allocation, native build and GPU upload. It takes effect at the next geometry update.
+diff --git a/glasmio-core/src/main/java/io/github/neoruaa/glasmio/core/GlasmioPerformance.kt b/glasmio-core/src/main/java/io/github/neoruaa/glasmio/core/GlasmioPerformance.kt
+index be126b2..eaa4da6 100644
+--- a/glasmio-core/src/main/java/io/github/neoruaa/glasmio/core/GlasmioPerformance.kt
++++ b/glasmio-core/src/main/java/io/github/neoruaa/glasmio/core/GlasmioPerformance.kt
+@@ -43,6 +43,11 @@ enum class GlasmioPerformanceTier(
+  *
+  * @property frameRateCap glass update rate in Hz (0 = every display frame). The display itself keeps its refresh rate.
+  * @property samplingScale explicit backdrop downscale multiplier in 0.25..1, replacing the tier's value.
++ * @property cachedGlass opt in to rendering capped glass off screen in a second renderer and compositing the last
++ *   image ([frameRateCap] below the panel rate). Off by default: that path made the glass layer's render node
++ *   reachable from two renderers, and RenderThread crashed (SIGSEGV, use-after-free) on Android 16 / Mali at
++ *   120 Hz when a page scrolled or a control was tapped. With it off, [frameRateCap] gates the glass clocks only,
++ *   as in 0.2.1.
+  */
+ data class GlasmioPerformanceConfig(
+     val tier: GlasmioPerformanceTier? = null,
+@@ -54,6 +59,8 @@ data class GlasmioPerformanceConfig(
+     val backdrop: Boolean? = null,
+     /** Force the simple scale+fade menu animation on/off; null follows the tier. */
+     val simpleMenus: Boolean? = null,
++    /** Opt in to the off-screen capped-glass renderer; null or false keeps glass live. */
++    val cachedGlass: Boolean? = null,
+ )
+ 
+ /**
+@@ -108,6 +115,9 @@ object GlasmioPerformance {
+         )
+     }
+ 
++    /** Whether capped glass may render off screen and composite its last image. Off unless the host opts in. */
++    val cachedGlass: Boolean get() = state.cachedGlass ?: false
++
+     /** Whether menus use the plain scale+fade opening instead of the liquid morph. Snapshot-observed. */
+     val simpleMenus: Boolean get() = state.simpleMenus ?: tier.simpleMenus
+ 
+diff --git a/glasmio-core/src/test/java/io/github/neoruaa/glasmio/core/GlasmioPerformanceTest.kt b/glasmio-core/src/test/java/io/github/neoruaa/glasmio/core/GlasmioPerformanceTest.kt
+index e965d90..b0f8b11 100644
+--- a/glasmio-core/src/test/java/io/github/neoruaa/glasmio/core/GlasmioPerformanceTest.kt
++++ b/glasmio-core/src/test/java/io/github/neoruaa/glasmio/core/GlasmioPerformanceTest.kt
+@@ -79,4 +79,13 @@ class GlasmioPerformanceTest {
+         assertTrue((0 until 10).all { open.accept(it * 8_333_333L) })
+         assertFalse(GlasmioFrameGate().also { GlasmioPerformance.config = GlasmioPerformanceConfig(frameRateCap = 30) }.run { accept(0); accept(1_000_000) })
+     }
++
++    @Test fun cachedGlassIsOptIn() {
++        GlasmioPerformance.config = GlasmioPerformanceConfig(GlasmioPerformanceTier.Balanced)
++        assertEquals(60, GlasmioPerformance.frameRateCap)
++        assertFalse(GlasmioPerformance.cachedGlass)
++        GlasmioPerformance.config = GlasmioPerformanceConfig(GlasmioPerformanceTier.Balanced, cachedGlass = true)
++        assertTrue(GlasmioPerformance.cachedGlass)
++        GlasmioPerformance.config = GlasmioPerformanceConfig()
++    }
+ }
+diff --git a/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt b/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt
+index 546008f..9f92a31 100644
+--- a/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt
++++ b/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt
+@@ -410,13 +410,26 @@ internal class GlassFrameCache(
+         private const val MaxImages = 4
+ 
+         /**
+-         * Whether a surface in [view] should render through the cache: a positive cap below the panel's refresh
+-         * rate, hardware drawing, and plain sRGB output (wide-gamut and HDR windows keep live rendering).
++         * Whether a surface in [view] should render through the cache: the host opted in
++         * ([GlasmioPerformance.cachedGlass]), a positive cap below the panel's refresh rate, hardware drawing, and
++         * plain sRGB output (wide-gamut and HDR windows keep live rendering).
+          */
+-        fun applies(view: View, hardware: Boolean, colorManaged: Boolean, headroom: Float): Boolean {
+-            val cap = GlasmioPerformance.frameRateCap
++        fun applies(view: View, hardware: Boolean, colorManaged: Boolean, headroom: Float): Boolean =
++            applies(GlasmioPerformance.cachedGlass, GlasmioPerformance.frameRateCap, hardware, colorManaged, headroom,
++                view.display?.refreshRate)
++
++        /** Pure so it can be unit tested. The off-screen path is opt-in ([GlasmioPerformance.cachedGlass]). */
++        internal fun applies(
++            cachedGlass: Boolean,
++            cap: Int,
++            hardware: Boolean,
++            colorManaged: Boolean,
++            headroom: Float,
++            refresh: Float?,
++        ): Boolean {
++            if (!cachedGlass) return false
+             if (cap <= 0 || !hardware || colorManaged || headroom != 1f) return false
+-            val refresh = view.display?.refreshRate ?: return false
++            refresh ?: return false
+             return cap < refresh - 1f
+         }
+     }
+diff --git a/glasmio-glass/src/test/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCacheOptInTest.kt b/glasmio-glass/src/test/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCacheOptInTest.kt
+new file mode 100644
+index 0000000..6ce3a72
+--- /dev/null
++++ b/glasmio-glass/src/test/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCacheOptInTest.kt
+@@ -0,0 +1,29 @@
++package io.github.neoruaa.glasmio.glass.render
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++/**
++ * Regression test for the capped-glass RenderThread crash (SIGSEGV on Android 16 / Mali, 120 Hz, Balanced tier
++ * cap 60): the off-screen renderer must not run unless the host opts in.
++ */
++class GlassFrameCacheOptInTest {
++    @Test fun tierCapAloneNeverEnablesTheCache() {
++        assertFalse(GlassFrameCache.applies(false, 60, true, false, 1f, 120f))
++        assertFalse(GlassFrameCache.applies(false, 30, true, false, 1f, 60f))
++    }
++
++    @Test fun optInWithACapBelowThePanelRateCaches() {
++        assertTrue(GlassFrameCache.applies(true, 60, true, false, 1f, 120f))
++    }
++
++    @Test fun optInStillRendersLiveWhereTheCacheNeverApplied() {
++        assertFalse(GlassFrameCache.applies(true, 0, true, false, 1f, 120f))
++        assertFalse(GlassFrameCache.applies(true, 120, true, false, 1f, 120f))
++        assertFalse(GlassFrameCache.applies(true, 60, false, false, 1f, 120f))
++        assertFalse(GlassFrameCache.applies(true, 60, true, true, 1f, 120f))
++        assertFalse(GlassFrameCache.applies(true, 60, true, false, 2f, 120f))
++        assertFalse(GlassFrameCache.applies(true, 60, true, false, 1f, null))
++    }
++}
+-- 
+2.39.5
+

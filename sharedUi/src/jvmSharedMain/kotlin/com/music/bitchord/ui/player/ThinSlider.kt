@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -49,6 +50,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
+
+val LocalGlassSlider = staticCompositionLocalOf<(@Composable (Float, (Float) -> Unit, (() -> Unit)?, Modifier) -> Unit)?> { null }
 
 /**
  * Apple Music's scrubber: a hairline capsule with no thumb knob, which
@@ -101,6 +104,11 @@ fun ThinSlider(
     /** Halfway between the two track colours: visible against unplayed, invisible under played. */
     markerColor: Color = Color.White.copy(alpha = 0.5f),
 ) {
+    val glassSlider = LocalGlassSlider.current
+    if (glassSlider != null && value.isFinite() && !loading && !mixing && mixPulse == null && transitionWindow == null) {
+        glassSlider(value.coerceIn(0f, 1f), onValueChange, onValueChangeFinished, modifier)
+        return
+    }
     var dragging by remember { mutableStateOf(false) }
     val height by animateDpAsState(
         targetValue = if (dragging) activeHeight else idleHeight,

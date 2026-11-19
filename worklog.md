@@ -1694,6 +1694,280 @@ Stage Summary:
 - Debug builds and Check never run R8; only the prod release needed
   the rule. The next push re-runs all three.
 
+## Task 9: Glasmio port, stage 1: library vendored as source modules
+
+Task ID: 9
+Agent: Curialy Engineer
+
+Task: Port NEORUAA/Glasmio's glass switches, sliders, popup morph, navigation
+bar, page and album transitions into Neiro, and replace Kyant backdrop with
+Glasmio's renderer. This entry covers the first stage: the vendored modules.
+
+Work Log:
+- Branch curialy/glasmio-port, made from origin/dev @ 346c631. Glasmio is
+  checked out at 905919bc2a289ce7e873fa3185e59c064c89b95d.
+- glasmio/{core,glass,icons,ui}: each src/main is copied unchanged; diff -r
+  against upstream prints nothing. Upstream's LICENSE, THIRD_PARTY_NOTICES.md
+  and licenses/Apache-2.0.txt are under glasmio/. The build files are Neiro's:
+  JVM 17, AGP 9.1.1 + kotlin.android, the app's Compose line, the default NDK,
+  and minSdk 33. Every change from upstream is in glasmio/README.md.
+  settings.gradle.kts includes the four modules inside the Android-SDK block.
+  The repository order is unchanged.
+- Not vendored: glasmio-scaffold. Its navigation motion (IosNavigationMotion,
+  IosSwipeBack) is `internal` and typed on navigation3 Scene. To use it with
+  Neiro's AppRoute router, copy it into ui/motion with its Apache header.
+- Inventory of the files the later stages change:
+  - Kyant callers in the app: MainActivity, ui/components/LiquidGlass,
+    IosMenu, floatingtabbar/FloatingTabBar, floatingtabbar/GlassSelectionPill,
+    player/AndroidPlayerHost.
+  - Kyant callers in archivetuneplayer: BottomSheetMenu,
+    CompactBottomControls, FloatingNavigationToolbar, FrostedHeaderPill,
+    LiquidGlass, LyricsMenu, flamingo/FlamingoPlayer.
+  - IosSwitch callers: ListenTogetherSettings, Equalizer, CanvasSettings,
+    SettingsSheet, Sources, SpotifyCanvasAuth, LyricsSettings, Internet,
+    Integration, Discord.
+  - Sliders: SettingsSheet's Slider, and sharedUi ThinSlider (PlayerControls,
+    LyricsOffsetSheet, AudioOutputSheet, SongActionsMenu).
+  - Motion: GlassMorph/GlassDialog/IosMenu/HeldContextMenu,
+    GlassNavBar/FloatingBottomBar, motion/PageMotion + IosPageTransitions.
+  - Tests that guard them: GlassMorphTest, PageMotionTest,
+    ReleaseOriginCoverageTest.
+- API gaps found that make the swap more than an import change:
+  - Glasmio's render package has no colorControls. It has vibrancy(saturation)
+    and colorFilter.
+  - It has no SnapshotBackdrop. That class is Neiro's own file inside the
+    vendored package and has to move into Neiro code on Glasmio's Backdrop
+    interface.
+  - Neiro's backdropScale parameter maps to samplingScale.
+  - GlasmioTheme replaces MaterialTheme, so the app should provide
+    LocalGlassColors/LocalGlassAppearance/LocalGlassBackdrop itself rather
+    than wrap the root in it.
+  - archivetuneplayer needs a small BRIDGE colorControls shim, so its edits
+    can stay import-only.
+
+Stage Summary:
+- The modules were vendored here and wired in Task 9-b.
+
+## Task 9-b: Glasmio port, stage 2: wiring, Kyant removal, controls, popups, tab bar, motion
+
+Task ID: 9-b
+Agent: Curialy Engineer
+
+Task: Reviewer round 1 on the Glasmio port. Implement plan steps 3-7 and
+the docs part of step 8.
+
+Work Log:
+- Wiring:
+  - app and tv depend on :glasmio:ui, and archivetuneplayer on
+    :glasmio:glass.
+  - The three manifests carry tools:overrideLibrary for the four namespaces.
+  - GlasmioSupport.kt holds glasmioAvailable (API 33),
+    rememberGlasmioLocals (backdrop, colours from Neiro's colorScheme,
+    appearance from Liquid Glass and Reduce dynamic blur), colorControls and
+    GlassSlider/snapToSteps. MainActivity spreads the locals into its root
+    provider.
+- Kyant removal:
+  - ui/components/backdrop (28 files) is deleted.
+  - SnapshotBackdrop moved to ui/components on Glasmio's Backdrop. Its
+    layerBlock inverse is dropped: no caller passes one.
+  - Six app files import io.github.neoruaa.glasmio.glass.render.
+    backdropScale became samplingScale.
+  - The glass rim draws Highlight.Default via drawBackdrop(emptyBackdrop()),
+    because Glasmio's HighlightElement and ShapeProvider are internal.
+  - isGlassSupported is now API 33.
+  - archivetuneplayer: kyant0:backdrop was replaced by :glasmio:glass. The
+    seven files changed import lines only (plus LyricsMenu's one fully
+    qualified Backdrop?). colorControls and an API-33-guarded lens come from
+    bridge/GlasmioEffects.kt.
+- Toggles: IosSwitch renders GlasmioSwitch on API 33+, with the same
+  signature and the same haptics. A read-out switch keeps the row's tap
+  through a non-consuming overlay and has no semantics of its own.
+- Sliders: the settings SliderRow renders GlassSlider on API 33+, with steps
+  snapped to Material's stops. The player scrubbers and volume bars (sharedUi
+  ThinSlider) are unchanged. They are multiplatform and draw loading,
+  Automix-window and marker states Glasmio's slider has no equivalent for.
+- Popups: IosMenuPopover, GlassAlertDialog and HeldContextMenu's menu run
+  LiquidMenuMorphMotion via GlasmioMorphDriver:
+  - the panel follows frame.bounds, with alpha from sourceOpacity;
+  - the rows follow contentProgress, contentZoom and contentBlur;
+  - the scrim follows contentProgress;
+  - reopening mid-close retargets the live springs.
+  morphFrame stays as the fallback below 33 and under reduced motion.
+- Tab bar: GlassNavBar renders GlasmioNavigationBar on API 33+.
+  - Neiro's icons go through LocalGlasmioIconResolver.
+  - compactProgress follows the scroll connection's isInline, and onExpand
+    calls expand().
+  - Search is a separate liquid-glass circle.
+  - The now-playing accessory sits above the bar, or inline when compact.
+- Motion:
+  - GlasmioNavigationMotion.kt copies Glasmio's IosNavigationFloatSpring,
+    the parallax offset and the 10% dim.
+  - Push/pop and IosPageFrame progress use them.
+  - Album zoom open uses the spring. The close keeps PageMotion.closeFrame
+    over 350 ms.
+- Tests: GlassSliderStepTest added. GlassMorphTest, PageMotionTest and
+  ReleaseOriginCoverageTest are unaffected.
+
+Stage Summary:
+- Static checks:
+  - The Kyant grep is empty.
+  - The glasmio trees are still identical to upstream.
+  - Every Glasmio control call is behind glasmioAvailable.
+  - Braces and parentheses balance in every touched file.
+- Not compiled. There is no SDK, rules.md forbids local builds, and no push
+  has been approved yet. The first CI round is the compiler.
+- Not done:
+  - Interactive edge swipe-back. Neiro's AnimatedContent router has no
+    seekable transition for IosSwipeBack to drive.
+  - Root-tab crossfade. The deliberate no-fade tab swap is kept.
+
+## Task 9-c: Glasmio port, review round 2
+
+Task ID: 9-c
+Agent: Curialy Engineer
+
+Task: Reviewer round 2 on the Glasmio port.
+
+Work Log:
+- Morph fallback: GlasmioMorphDriver.open() is split into prepare() and
+  expand().
+  - prepare() waits until both the anchor and the panel rect are positive,
+    for at most 60 frames.
+  - If they never are, it sets `fallback`, and IosMenuPopover,
+    GlassAlertDialog and HeldContextMenu run the legacy morphFrame path for
+    that open. A popup can no longer stay at alpha 0.
+  - Closing after a fallback open uses the legacy close.
+- archivetuneplayer below API 33: bridge/GlasmioEffects.kt now also has
+  drawBackdrop. It forwards every Glasmio parameter, but passes
+  highlight/shadow/innerShadow = null when !isRuntimeShaderSupported().
+  The five copied files that call drawBackdrop import it from the bridge
+  (import-only). No copied file imports Glasmio's drawBackdrop or lens
+  directly any more: checked by grep.
+- Sliders:
+  - sharedUi ThinSlider has a LocalGlassSlider slot. The app provides
+    GlassSlider there on API 33+, so the player scrubber, the volume bar,
+    the lyrics-offset bar and the audio-output volume render Glasmio's
+    slider.
+  - ThinSlider still draws itself while loading, mixing, pulsing or showing
+    an Automix window, so those states are kept.
+  - GlassSlider falls back to Material's Slider for a non-finite or
+    non-increasing range, or a non-finite value, instead of hitting
+    GlasmioSlider's require().
+- Tab symbols: explicit SfSymbol.House, Safari and
+  MusicNoteSquareStackFilled for Home, Explore and Library, instead of enum
+  ordinals.
+- Not changed:
+  - DacVolumeHud. It is the transient hardware-volume HUD, not a slider
+    control.
+  - Root-tab switching stays instant. Glasmio's scaffold has no tab-content
+    crossfade: its only AnimatedContent is GlasmioNavDisplay's stack, and
+    UIKit tab bars switch instantly. So the earlier plan line "root tabs
+    crossfade as in Glasmio" is not backed by the upstream source.
+  - Edge swipe-back is still not implemented. Glasmio's IosSwipeBack scrubs
+    a seekable navigation3 scene. Neiro's page area is one AnimatedContent
+    keyed on the destination, in MainActivity. Driving it by a finger means
+    moving that area to a SeekableTransitionState-driven transition, a
+    separate and risky change. This needs the owner's or Architect's
+    decision before it is done, and the PR body must say so.
+- User-visible regression for the PR body: Android 12/12L lose the app's
+  glass surfaces, which now need API 33 (Glasmio's RuntimeShader renderer),
+  and show the non-glass fallbacks.
+
+Stage Summary:
+- Static checks:
+  - The Kyant grep is empty outside the docs.
+  - The glasmio trees are identical to upstream.
+  - archivetuneplayer's copied files differ from dev only in import lines
+    plus one fully qualified type.
+  - Braces and parentheses balance in every touched file.
+- Still not compiled: no SDK, no approved push. CI on a PR into dev is the
+  next gate.
+
+---
+
+Task ID: 1 (this window)
+Agent: Super Z (main agent, session web-4388e63e)
+
+Task: Fix the main-branch CI failure (Android Release APK, run 44340611121)
+without removing anything vendored — and fix the "app doesn't even open"
+release crash the previous fix's APK shipped.
+
+Work Log:
+- Pulled the failing run's logs: :glasmio:ui:compileReleaseKotlin died on
+  `LayerOutsets` / `GraphicsLayerScope.outsets`, which exist only from
+  Compose ui 1.12. The vendored sources are written against upstream
+  Glasmio's line (BOM 2026.09.00, ui 1.12), while Neiro's modules pinned
+  the 1.11-beta line (BOM 2024.12.01 + foundation 1.11.0-beta02).
+- The previous fix (489006fe) deleted the outsets from the vendored file to
+  make it compile — breaking the byte-for-byte vendoring contract in
+  AGENTS.md and clipping the navigation glass's exterior shadow. Reverted:
+  GlasmioSidebarMorphSurface.kt is byte-for-byte upstream again (diff -r
+  against the pinned commit prints nothing).
+- Diagnosed the launch crash from the actual signed APK of the successful
+  run and the resolved dependency graph: the phone's runtime classpath was
+  ui 1.12.0 (elevated transitively by the JetBrains Compose 1.12.2 plugin
+  sharedUi rides) riding foundation 1.11.1 and material3 1.5.0-alpha18
+  (both compiled against the 1.11-beta line) — a split runtime whose mixed
+  bytecode dies on the first frame. The removal "fix" made the build green
+  and shipped exactly that mix.
+- The fix is the move the glasmio README already sanctioned: "If CI shows
+  these sources need 1.12 APIs, move the whole app line in one commit and
+  record why in AGENTS.md." One commit moves every Android module to the
+  1.12 line: compose-bom 2026.09.00 (ui/foundation 1.12.1 through it),
+  material3 1.5.0-rc01 (the 1.5.0 line's pairing with ui 1.12 — alpha18 was
+  the 1.11-beta pairing), activity-compose 1.13.0, sharedUi's cmp to 1.12.0.
+  Nothing vendored is edited; only Neiro's own build files move.
+- Verified the resolved prodRelease runtime graph is now single-line
+  (ui 1.12.1, foundation 1.12.1, material3 1.5.0-rc01, no -> arrows left)
+  and that :glasmio:ui:compileReleaseKotlin is green with the restored
+  outsets on the new line. The rest is CI's to check, per the owner's rule.
+
+Stage Summary:
+- Vendored glasmio restored byte-for-byte, app-wide Compose on one 1.12
+  line, launch-crash root cause (split runtime) removed at the source.
+
+---
+
+Task ID: 2 (this window)
+Agent: Super Z (main agent, session web-4388e63e)
+
+Task: CI round 2 — :archivetuneplayer compiles against the material3 1.5.0-rc01
+API surface the line move picked up (alpha18's experimental surfaces finalized
+differently by rc01).
+
+Work Log:
+- Read every failing call site and the rc01 signatures straight out of the
+  material3-android 1.5.0-rc01 AAR already in the Gradle cache (javap) plus
+  the androidx-main sources for the same files; no local build run.
+- Slider migration, the big one: rc01's rememberSliderState dropped the
+  onValueChange/onValueChangeFinished factory params and renamed valueRange to
+  trackRange, SliderState lost the settable onValueChange, and the state-based
+  Slider now takes onValueChange (required) + onValueChangeFinished itself.
+  Converted all ten sites the CI round flagged — Preference's three dialog
+  sliders and PlayerSettings' preload slider (static ranges), LyricsScreen
+  and PlayerComponents' Thick style (ranges that change per song — keyed
+  remember on the range ends constructing SliderState directly, value synced
+  per recomposition), and Flamingo's seek (keyed on the track duration) and
+  volume sliders. PlayerSliderTrack reads .trackRange now.
+- ToggleButtonDefaults.toggleButtonColors -> ToggleButtonDefaults.colors
+  (renamed; same six color params) in QueueComponents.
+- ShortNavigationBarItemDefaults.colors' selectedTextColor split into
+  selectedTextColorTopIconPosition / selectedTextColorStartIconPosition;
+  both set to the same colour at all three FloatingNavigationToolbar sites.
+- ExposedDropdownMenu's scope-member became HIDDEN in rc01; the replacement
+  is the top-level extension of the same name — imported it in
+  EqualizerDialog, and menuAnchor() now takes its type:
+  PrimaryNotEditable, the anchor of a read-only field.
+- LoadingIndicator's opt-in marker is ExperimentalMaterial3ExpressiveApi on
+  the rc01 line; added it to the module's compiler opt-ins beside the
+  ExperimentalMaterial3Api that was already there.
+- Verified (javap only) that the app's own fragile APIs all exist on the
+  1.12 line: LocalOverscrollFactory (foundation OverscrollKt),
+  rememberPullToRefreshState / PullToRefreshBox (m3 pulltorefresh),
+  rememberModalBottomSheetState, ModalBottomSheetProperties,
+  LocalClipboardManager. TV's failure was the same archivetuneplayer set,
+  so this covers all three workflows.
+
 ## Task 9: the Glasmio port — glass controls, popups, navigation, motion
 
 Task ID: 9
@@ -1788,3 +2062,118 @@ Stage Summary:
   sandbox's 3.9 GB memory recipe. The full APK assembly's native link
   was disk-starved in this sandbox (unchanged C++ sources, bus error at
   100% disk); CI's runners carry the rest.
+
+
+---
+
+Task: analyse and fix the Glasmio sample's crashes on taps and scrolling (user log 19_11-19-24-36)
+
+- Four RenderThread SIGSEGVs in 22 s, fault addresses null+0x38, 1.0f+0x38,
+  float data and "android." bytes: use-after-free; no backtrace (crash_dump
+  denied /proc maps by SELinux; UnityDisplayTweaker injected).
+- The phone's Dimensity 8100 auto-classifies Balanced (cap 60) on a 120 Hz
+  panel, so every glass surface ran through GlassFrameCache (v0.2.2+), the
+  second renderer behind the afternoon's earlier crash/ANR fixes.
+- Fix as patches against 0681a13 (third_party/glasmio-patches/fix): the
+  off-screen renderer is opt-in (cachedGlass), and for opt-in hosts the glass
+  layer is released after the renderer and readers close on the image thread.
+- glasmio-sample-smoke.yml + .github/scripts/glasmio-sample-smoke.sh: build the
+  sample (harness: GWP-ASan, cap/route/cached extras), tap every control,
+  scroll every page, monkey seeds 1-3, on API 34/35/36; prints tombstones.
+- GlasmioVersionGuardTest: Neiro stays on v0.2.1 until FIXED_IN names a tag.
+- Not run yet: the workflow (needs a push); Neiro's pin is unchanged.
+
+## Task: merge curialy/glassmio (PR #25) into main
+
+Task ID: merge-pr25
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: Fix the conflicts of PR #25 (branch curialy/glassmio, the JitPack
+Glasmio fork port) and merge it into main.
+
+Work Log:
+- Merge base 21549b94 (PR #1); main carried 112 commits since (Listen
+  Together, backup, i18n, settings reorg, CI/build fixes on the vendored
+  Glasmio port); the PR carried the final Glasmio port state as one
+  snapshot commit 8f00951a.
+- Architecture resolved to the PR's: the vendored `glasmio/` Gradle modules
+  are deleted (the JitPack fork `com.github.myself-tsuki.Glasmio` v0.2.1
+  replaces them — glasmio-ui + glasmio-scaffold in :app/:tv,
+  glasmio-glass in :archivetuneplayer), settings.gradle.kts loses the four
+  module includes, app/tv build files lose `project(":glasmio:ui")`, and
+  `bridge/GlasmioEffects.kt` is dropped with the whole module importing the
+  fork's render namespace directly. The manifests keep the five-package
+  tools:overrideLibrary from the PR.
+- Components resolved to the PR's port state: GlassMorph (DropdownMorphSpring
+  constants), GlassDialog, GlassNavBar (GlasmioNavigationBarWithTrailingItem;
+  the Echo FloatingTabBar/GlassSelectionPill shell deleted with the fold
+  driver now in NavigationBarScroll.kt), HeldContextMenu, IosMenu, IosSwitch
+  (GlasmioSwitch behind LocalLiquidGlassEnabled + isGlassSupported), the app
+  LiquidGlass glue, SnapshotBackdrop + the flat InverseLayerScope, page
+  motion (IosPageTransitions/PageMotion/IosNavigationMotion), and the three
+  motion tests that pin the ported constants. GlasmioMenuMorph.kt (main's
+  LiquidMenuMorphSurface driver) is superseded and deleted.
+- Main's post-port fixes preserved: the rc01 Slider/ToggleButton/dropdown
+  conversions in archivetuneplayer (FlamingoPlayer/PlayerComponents/
+  Preference/PlayerSettings keep the SliderState-based calls; only the fork
+  import rewiring was taken from the PR), the Compose 1.12 / BOM 2026.09.00
+  line everywhere, launch-smoke.yml, GlassSliderStepTest, proguard dontwarn,
+  and every main-only feature (Listen Together, backup, i18n, sources...).
+- sharedUi's ThinSlider keeps main's LocalGlassSlider glass ride: the slot
+  is provided from MainActivity inside the PR's GlasmioBackdropProvider
+  wiring (GlasmioThinSlider in GlasmioSupport.kt), and AGENTS.md documents
+  the merged architecture.
+
+Stage Summary:
+- Compile/test evidence: recorded by the CI run that follows this merge.
+
+---
+
+## Task: fix the launch RenderThread crash, push to dev, open the PR
+
+Task ID: crash-guard-pr26
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: Fix the app's startup crash (user log 19_11-21-23-30_017.txt), push the
+fix on dev, open a pull request, monitor the build — no local compiling.
+
+Work Log:
+- Read the log: `Fatal signal 5 (SIGTRAP), code 1 (TRAP_BRKPT)` in
+  RenderThread, three launches dead in six seconds, each right after the
+  glass nav bar's first frame — realme RMX3563, Android 16, Mali, ColorOS
+  GED/MEOW hooks injected into RenderThread. No tombstone (SELinux denies
+  crash_dump the maps), and a native death never reaches the Java
+  uncaught-exception handler, so the existing CrashLoopGuard was blind to
+  it: every relaunch armed the same glass and died the same way.
+- Traced the first-frame render path: MainActivity's GlasmioTheme +
+  rememberLayerBackdrop + GlasmioNavigationBarWithTrailingItem (the fork's
+  full optics: AGSL refraction lens, blur, vibrancy, CASDF union) — the
+  port's new GPU load. The fork itself documents the same device and
+  signature (myself-tsuki/Glasmio#7, Muzo, RMX3563/Android 16/Mali) and is
+  rebuilding its render cap around it; that fix is unmerged and
+  GlasmioVersionGuardTest pins v0.2.1, so the app guards itself app-side.
+- The fix, in CrashLoopGuard (the repo's own crash-loop idiom, extended to
+  native deaths): every launch writes a glass session marker in files/crash
+  while Liquid Glass is armed (Application.onCreate, before any glass
+  renders); a launch that survives QUICK_CRASH_MS deletes it; a marker still
+  standing at the next checkOnLaunch is the remains of a launch that died
+  young; two of those in a row — CrashLoopPolicy.isNativeDeathLoop, the
+  same two-quick-crashes rule the style guard uses — switch Liquid Glass
+  off (MainActivity then draws the Haze bars this hardware ran before the
+  port) and the surviving launch says so once. A Java crash clears the
+  marker (the style guard owns that death), one young death never counts, a
+  stale marker is yesterday's force-stop, and the setting can be turned
+  back on at any time.
+- liquid_glass_crash_reset added to values + the 19 locale folders that
+  translate player_style_reset (LocaleStringsTest requires every supported
+  language to carry it); the it/tr apostrophes escaped for AAPT.
+- Resolved this branch against main (PR #26's back-merge): 138 files
+  auto-merged; SettingsSheet.kt takes main's rc01 SliderState conversion
+  (the merged dependency line is compose-bom 2026.09.00 / material3
+  1.5.0-rc01, and the shared bare-track tail needs it); worklog.md unions
+  both histories.
+
+Stage Summary:
+- Pushed to dev (bf8c97c8 the guard, then this merge); PR #26 opened
+  dev -> main. CI is the compile evidence: monitored in check.yml's
+  testDevDebugUnitTest + assembleDevDebug round that follows.

@@ -174,6 +174,7 @@ import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.ui.player.ArchiveTuneBridgeImpl
+import com.music.bitchord.ui.player.LocalGlassSlider
 import moe.rukamori.archivetune.bridge.ArchiveTunePlayerHost
 import com.music.bitchord.data.settings.DefaultOpenTab
 import com.music.bitchord.data.settings.MiniPlayerBarBehavior
@@ -296,6 +297,7 @@ import com.music.bitchord.ui.components.rememberFloatingTabBarScrollConnection
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
+import com.music.bitchord.ui.components.GlasmioThinSlider
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.BitChordGlasmioIconResolver
 import com.music.bitchord.ui.components.rememberSnapshotBackdrop
@@ -595,6 +597,11 @@ class MainActivity : AppCompatActivity() {
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
                     LocalDensity provides scaledDensity,
+                    // The sharedUi thin slider's glass ride — the player's
+                    // seek bar renders Glasmio's slider wherever the glass is
+                    // on and supported, and the M3 capsule everywhere else
+                    // (see GlasmioSupport's GlassSlider for the fallback).
+                    LocalGlassSlider provides GlasmioThinSlider,
                 ) {
                 // The window's width, measured rather than asked for.
                 //
