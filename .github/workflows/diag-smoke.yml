@@ -1,0 +1,63 @@
+name: Diag Smoke
+
+on:
+  push:
+    branches: [arena/d984ef3d-neiro]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  api34:
+    name: Diag smoke API 34
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smoke-apks
+          path: apks
+          run-id: 44509682936
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Launch each APK and read logcat
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: false
+          script: |
+            set +e
+            bash .github/scripts/launch-smoke.sh 34 apks > smoke.log 2>&1
+            echo "EXITCODE=$?" >> smoke.log
+            exit 0
+
+      - name: Publish what the smoke saw
+        if: always()
+        shell: python3 {0}
+        run: |
+          import glob
+          lines = open("smoke.log", encoding="utf-8", errors="replace").read().splitlines()
+          print("\n".join(lines))
+          print("::error title=full-log::" + "<NL>".join(lines[-70:]))
+          marks = ("FATAL EXCEPTION", "NATIVE CRASH", "ANR in", "Fatal signal", "DEAD:", "INSTALL FAILED", "PACKAGE MISMATCH")
+          for name, path in sorted(glob.glob("smoke-out/*.txt")):
+              log = open(path, encoding="utf-8", errors="replace").read().splitlines()
+              hits = [i for i, l in enumerate(log) if any(m in l for m in marks)]
+              if hits:
+                  i = hits[0]
+                  print(f"::error title={name}::" + "<NL>".join(log[max(0, i-6):i+40]))
+              else:
+                  errs = [l for l in log if " E " in l and ("glasmio" in l.lower() or "bitchord" in l.lower())][:25]
+                  print(f"::error title={name}-errors::" + ("<NL>".join(errs) if errs else "no crash markers"))
