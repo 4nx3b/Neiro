@@ -2177,3 +2177,56 @@ Stage Summary:
 - Pushed to dev (bf8c97c8 the guard, then this merge); PR #26 opened
   dev -> main. CI is the compile evidence: monitored in check.yml's
   testDevDebugUnitTest + assembleDevDebug round that follows.
+
+---
+
+## Task: fix the second launch crash log — SIGSEGV this time
+
+Task ID: glass-frost-wiring
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: Fix the crash in the new user log (19_11-22-25-14_825.txt): Fatal
+signal 11 (SIGSEGV) in RenderThread, three launches dead in six seconds,
+same device (realme RMX3563, Dimensity 8100, Android 16, Mali, ColorOS
+MEOW in RenderThread, LSPosed/UnityDisplayTweaker in every app, SELinux
+denying crash_dump its maps — no tombstone, same environment
+docs/glasmio-crash-2026-11-19.md documents for the fork's own crashes).
+
+Work Log:
+- Read the log: death 1 loads libglasmio_liquid_menu_sdf.so (the fork's
+  native SDF field, shipped inside the v0.2.1 AAR) 263 ms before its
+  RenderThread dies; deaths 2 and 3 fault at the SAME address
+  0xb0b000d5c — a pointer slot holding packed field-pixel data, the
+  use-after-free shape the crash doc decoded for the fork's sample
+  (faults like null+0x38, 1.0f+0x38, "android." bytes). The 4th process
+  survived only because the user swiped the app away mid-launch, before
+  the glass composed. The build on the phone predates the crash guard:
+  three deaths, where the guard converges the third launch with Liquid
+  Glass off.
+- Confirmed the phone's tier is Balanced (Dimensity 8100 -> PreviousFlag
+  SoC): full optics — the nav bar runs the fork's whole AGSL refraction
+  chain over the FP16 contact-field bitmap on first frame.
+- The fork's real fix is unreleased (issue #7 open; the snapshot
+  redesign unmerged), v0.2.2-v0.2.4 are banned by GlasmioVersionGuard
+  Test, and a no-tombstone OEM native crash cannot be pinned to a line
+  app-side. What the app CAN do, this log shows where: the app's own
+  "Better Performance for Glass" switch promises "trade the glass lens
+  for a plain frost" — but it only frosted Modifier.liquidGlass; the
+  fork's navigation bar, the component actually dying, read its optics
+  straight off GlasmioPerformance and ignored the switch entirely.
+- The wiring: BitChordApplication installs
+  GlasmioPerformanceConfig(refraction = !AppSettings.glassPerformance)
+  after AppSettings.init — before the first glass composition — and
+  MainActivity keeps mid-session toggles in step with a LaunchedEffect.
+  A phone that dies under the lens now has the frost as a working-glass
+  option rather than all-or-nothing; the crash guard (bf8c97c8) stays
+  the net that guarantees the app boots either way.
+- Launch Smoke for the guard's head (f9b89894) completed successfully:
+  the merged tree boots on API 30/34 emulators with no Fatal signal in
+  logcat. Check, TV and the Release APK workflows all passed the same
+  head.
+
+Stage Summary:
+- Pushed to dev; CI is the compile evidence (7-minute monitor per the
+  rules). PR #26 (dev -> main) carries the guard and this wiring; it
+  merges once this round is green so the phone's next build boots.
