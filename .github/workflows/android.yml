@@ -91,6 +91,12 @@ jobs:
     - name: Build Signed Prod Release APK (arm64-v8a)
       run: ./gradlew :app:assembleProdRelease -Pbitchord.abis=arm64-v8a
 
+    - name: Verify the baseline profile is packaged
+      run: |
+        for apk in app/build/outputs/apk/prod/release/*arm64*v8a*.apk; do
+          unzip -l "$apk" | grep -E 'assets/dexopt/baseline\.prof' || { echo "no baseline profile in $apk"; exit 1; }
+        done
+
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:

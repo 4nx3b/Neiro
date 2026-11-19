@@ -1518,9 +1518,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 .debounce(300)
                 .collect { reloadRemoteDetail(com.music.bitchord.data.smb.SmbConfig.BROWSE_ID) }
         }
+    }
+
+    private var startupDeferredStarted = false
+
+    fun onFirstFramesDrawn() {
+        if (startupDeferredStarted) return
+        startupDeferredStarted = true
         viewModelScope.launch {
-            // A leftover APK only means "Install Now" for the session that
-            // downloaded it — see AppUpdateChecker.clearCache.
             AppUpdateChecker.clearCache(getApplication())
             AppUpdateChecker.check()
         }

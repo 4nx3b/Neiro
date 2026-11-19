@@ -14,13 +14,13 @@
  * implementations, so the player runs on BitChord's playback while looking
  * and behaving exactly like ArchiveTune's.
  *
- * One exception to byte-for-byte, made at the owner's request: Kyant's
- * backdrop library is gone from this app, so the seven files that drew
- * through it (BottomSheetMenu, CompactBottomControls,
- * FloatingNavigationToolbar, FrostedHeaderPill, LiquidGlass, LyricsMenu,
- * FlamingoPlayer) import Glasmio's API-identical renderer instead, and
- * colorControls/lens through bridge/GlasmioEffects.kt. Only import lines and
- * one fully qualified Backdrop type changed; the glass parameters did not.
+ * One exception to byte-for-byte, made at the owner's request: the glass
+ * renderer the seven files that drew through Kyant's backdrop
+ * (BottomSheetMenu, CompactBottomControls, FloatingNavigationToolbar,
+ * FrostedHeaderPill, LiquidGlass, LyricsMenu, FlamingoPlayer) import is the
+ * vendored AndroidLiquidGlass backdrop module (com.kyant.backdrop), and
+ * colorControls/lens through it. Only import lines and one fully qualified
+ * Backdrop type changed; the glass parameters did not.
  *
  * Library versions follow the app's own pins (Compose BOM 2026.09.00 with
  * foundation 1.12.1, material3 1.5.0-rc01, haze 1.3.1, coil 3.0.4, media3 1.11.0)
@@ -184,13 +184,12 @@ dependencies {
     // ---- Libraries ArchiveTune's stack needs that the app doesn't use ----
     // The wavy seek bar.
     implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
-    // Liquid-glass rendering behind the ported components — Glasmio's own
-    // backdrop (io.github.neoruaa.glasmio.glass.render) replaces the Kyant
-    // Backdrop artifact this stack used to import: the fork's glass module
-    // owns backdrop recording and the effect pipeline, so the module's
-    // liquidGlass glue (colorControls → vibrancy, blur, lens, Shadow) reads
-    // the same shapes of API out of Glasmio's namespace instead.
-    implementation("com.github.myself-tsuki.Glasmio:glasmio-glass:v0.2.1")
+    // Liquid-glass rendering behind the ported components — the vendored
+    // AndroidLiquidGlass backdrop module (com.kyant.backdrop) owns backdrop
+    // recording and the effect pipeline, so this module's liquidGlass glue
+    // (colorControls, vibrancy, blur, lens, Shadow) reads the same shapes of
+    // API straight out of it.
+    implementation(project(":backdrop"))
     implementation("com.valentinilk.shimmer:compose-shimmer:1.5.0")
     // Reorderable queues and lists.
     implementation("sh.calvin.reorderable:reorderable:3.1.0")

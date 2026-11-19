@@ -303,6 +303,7 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 }
 
 dependencies {
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
     // The ported ArchiveTune player stack (only the phone app mounts it).
@@ -316,10 +317,8 @@ dependencies {
     // own pins held foundation back at 1.11.x and material3 at its
     // 1.11-beta02-compiled alpha — a mix that crashed the release build on
     // launch with the binary incompatibilities between those lines. The
-    // Glasmio fork's transitive pins (foundation 1.12.1) resolve above ours
-    // — foundation depends on ui, not the reverse, which Compose supports
-    // deliberately — so the whole app rides the BOM with material3 from
-    // the BOM overridden to the 1.5.0 line the ported player styles draw
+    // whole app rides the BOM now, with material3 from the BOM overridden to
+    // the 1.5.0 line the ported player styles draw
     // (their expressive widgets exist only from the 1.5 alphas on).
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
@@ -405,19 +404,19 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.3.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
 
-    // ---- Glasmio: iOS 27 Liquid Glass components and motion ----
-    // The myself-tsuki fork of NEORUAA/Glasmio, served from JitPack (the fork
-    // is not on Maven Central — the upstream io.github.neoruaa.glasmio
-    // coordinates only resolve for the original project). Brings the glass
-    // sliders, glass toggles, liquid-morph popups, the navigation bar and the
-    // iOS page-switch motion, and replaces the vendored Kyant0/backdrop
-    // sources: glasmio-glass owns backdrop recording and material rendering
-    // under io.github.neoruaa.glasmio.glass.render, so no separate Kyant
-    // Backdrop dependency is required. Its transitive Compose pins
-    // (foundation 1.12.1) resolve above ours, which Compose supports
-    // deliberately — foundation depends on ui, not the reverse.
-    implementation("com.github.myself-tsuki.Glasmio:glasmio-ui:v0.2.1")
-    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1")
+    // ---- Liquid Glass: the vendored AndroidLiquidGlass renderer ----
+    // The backdrop module of guozhiqiang123/AndroidLiquidGlass (Kyant's
+    // fork, Apache-2.0), vendored under backdrop/ — see that module's
+    // build file. Brings the glass rendering (backdrop recording, blur,
+    // lens, highlight, shadow) the app's own liquid glass, sliders,
+    // toggles and the navigation bar draw through, plus Kyant's shapes
+    // (the SDF capsules the lens extracts its corner radii from). No
+    // transitive Compose pins: the module declares nothing above the BOM
+    // this app already rides.
+    implementation(project(":backdrop"))
+    // The SDF shapes the ported liquid controls lay out with (Capsule), the
+    // same library the renderer reads its corner radii from.
+    implementation("io.github.kyant0:shapes:1.2.1")
 
     // ---- QR encoding, for the party invite ----
     // `core` only: the `android-core`/`zxing-android-embedded` artifacts bring
