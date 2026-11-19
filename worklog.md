@@ -1967,3 +1967,162 @@ Work Log:
   rememberModalBottomSheetState, ModalBottomSheetProperties,
   LocalClipboardManager. TV's failure was the same archivetuneplayer set,
   so this covers all three workflows.
+
+## Task 9: the Glasmio port — glass controls, popups, navigation, motion
+
+Task ID: 9
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: Port the glass sliders, glass toggles, popup opening animations,
+navigation bar, page switch animation and album opening animation from
+myself-tsuki/Glasmio (the JitPack fork of NEORUAA/Glasmio), and replace
+the Kyant Backdrop dependency — the vendored source in the app, the
+io.github.kyant0:backdrop artifact in :archivetuneplayer — with the
+backdrop implementation Glasmio's own glass module ships.
+
+Work Log:
+- Dependency: com.github.myself-tsuki.Glasmio:glasmio-ui + :glasmio-scaffold
+  v0.2.1 from JitPack in :app (the fork is not on Maven Central — the
+  upstream io.github.neoruaa.glasmio coordinates only resolve for the
+  original project, so the fork coordinates are the ones used);
+  :glasmio-glass in :archivetuneplayer; io.github.kyant0:backdrop removed.
+  Glasmio minSdks 31 against the app's 26, so the manifest gains
+  tools:overrideLibrary for the five fork packages and every fork surface
+  stays behind isGlassSupported(), the gate the vendored glass already sat
+  behind. GlasmioPerformance.configure() at Application start;
+  GlasmioTheme nested inside BitChordTheme (the app's own colour scheme
+  and typography passed through), GlasmioBackdropProvider over the app
+  backdrop, and GlasmioIconProvider with a resolver that maps the
+  navigation bar's four SF names to BitChordIcons and falls through to
+  Glasmio's stock Material mapping.
+- Backdrop swap: LiquidGlass.kt (the app's glue) rewritten on
+  io.github.neoruaa.glasmio.glass.render — drawBackdrop with vibrancy,
+  blur, lens, Highlight/Shadow, the resolution scale moving from the
+  vendored backdropScale parameter to Glasmio's samplingScale (the fork
+  multiplies it by its own performance-tier scale). The vendored Kyant
+  package ui/components/backdrop/** deleted entire; SnapshotBackdrop and
+  InverseLayerScope — the app's own still-of-the-source recorder — moved
+  to ui/components and rewritten against Glasmio's Backdrop interface.
+  IosMenu's menuBackdropFrost, AndroidPlayerHost's PlayerFrost and the
+  MainActivity wiring (rememberLayerBackdrop/layerBackdrop imports) all
+  follow. :archivetuneplayer's LiquidGlass glue and its eight kyant
+  importers (FlamingoPlayer, LyricsMenu, BottomSheetMenu,
+  FloatingNavigationToolbar, CompactBottomControls, FrostedHeaderPill)
+  swapped to the same render namespace, colorControls → vibrancy.
+- Glass toggles: IosSwitch delegates to GlasmioSwitch — the iOS 27 63×28
+  track with the elastic liquid-thumb lens — wherever Liquid Glass is on
+  and supported; the plain iOS 26 capsule stays for Android 8-11, glass
+  off, and read-out rows (null callback). 111 call sites through one
+  wrapper; the flip haptic stays.
+- Glass sliders: SettingsSheet's SliderRow renders GlasmioSlider (the
+  40dp capsule track, accent fill, 37×24 glass-lens thumb) in glass mode,
+  22 call sites through one wrapper; the discrete rows quantise the drag
+  to the same steps+1 intervals M3's own slider used, so every settings
+  writer sees the values it always did. M3 Slider stays as the fallback.
+- Navigation bar: GlassNavBar rebuilt on GlasmioNavigationBarWithTrailingItem
+  — the fork's split-search tab bar, the Home/Explore/Library platter with
+  the Search circle fused through the BottomNavigationContact union, the
+  selection indicator a native control lens, the platter's own morph into
+  the selected tab's circle on the fold. The now-playing accessory rides
+  above as its own glass capsule on Modifier.liquidGlass, fading with the
+  fold; the fold driver (FloatingTabBarScrollConnection) moved to
+  NavigationBarScroll.kt and drives the compact progress on the fork's
+  own navigation spring. The Echo FloatingTabBar and GlassSelectionPill —
+  the shell the fork replaces — deleted; the plain FloatingBottomBar path
+  is untouched.
+- Popup opening animations: GlassMorph.kt now carries Glasmio's exact
+  DropdownMorphSpring (damping 0.8, stiffness (2π/0.3)² = 438.64908 —
+  AnimationKit's liquidMorph content spring), the content fade curve
+  ((progress − 0.12) / 0.64) and the 300 ms collapse; every popup that
+  grows out of its control — IosMenuPopover, HeldContextMenu — picks the
+  ported constants up where they read MORPH_*. :archivetuneplayer's
+  BottomSheetMenu and LyricsMenu entrances swapped to the same spring
+  (GlasmioMotion.kt, module-local) with the fork's 120/300 ms alphas.
+  The unit tests that pinned the old curve (GlassMorphTest) moved with
+  the engine, per house rule.
+- Page switch and album opening: IosNavigationMotion.kt — Glasmio's
+  IosNavigationMotion ported verbatim where physics and adapted only
+  where it was typed against navigation3's Scene (the unnormalised
+  critical spring IosNavigationFloatSpring sampled on nanos, the slide
+  spring, UIKit's thirty-percent parallax offset pixel-exact through the
+  density round-trip, the 350 ms easing). iosPageTransform slides on the
+  fork's spring with RTL sign; tab swaps crossfade on the fork's
+  rootTabTransition (fadeIn togetherWith fadeOut, what its own sample
+  swaps top-level routes on); the under-page dim is the fork's native
+  ten percent; IosPageFrame's progress runs the fork's easing. The album
+  zoom out of its cover — the app's own ReleaseOrigin card — rides
+  unchanged over the ported slide. PageMotionTest now pins the ported
+  spring and parallax instead of the retired tween curve.
+
+Stage Summary:
+- :app:compileDevDebugKotlin and :archivetuneplayer:compileDebugKotlin
+  green; :app:testDevDebugUnitTest green (1340 tests, the three motion
+  tests updated with the port); manifest merge, D8 external dexes with
+  the fork's classes and the wearos R8 pass verified locally under the
+  sandbox's 3.9 GB memory recipe. The full APK assembly's native link
+  was disk-starved in this sandbox (unchanged C++ sources, bus error at
+  100% disk); CI's runners carry the rest.
+
+
+---
+
+Task: analyse and fix the Glasmio sample's crashes on taps and scrolling (user log 19_11-19-24-36)
+
+- Four RenderThread SIGSEGVs in 22 s, fault addresses null+0x38, 1.0f+0x38,
+  float data and "android." bytes: use-after-free; no backtrace (crash_dump
+  denied /proc maps by SELinux; UnityDisplayTweaker injected).
+- The phone's Dimensity 8100 auto-classifies Balanced (cap 60) on a 120 Hz
+  panel, so every glass surface ran through GlassFrameCache (v0.2.2+), the
+  second renderer behind the afternoon's earlier crash/ANR fixes.
+- Fix as patches against 0681a13 (third_party/glasmio-patches/fix): the
+  off-screen renderer is opt-in (cachedGlass), and for opt-in hosts the glass
+  layer is released after the renderer and readers close on the image thread.
+- glasmio-sample-smoke.yml + .github/scripts/glasmio-sample-smoke.sh: build the
+  sample (harness: GWP-ASan, cap/route/cached extras), tap every control,
+  scroll every page, monkey seeds 1-3, on API 34/35/36; prints tombstones.
+- GlasmioVersionGuardTest: Neiro stays on v0.2.1 until FIXED_IN names a tag.
+- Not run yet: the workflow (needs a push); Neiro's pin is unchanged.
+
+## Task: merge curialy/glassmio (PR #25) into main
+
+Task ID: merge-pr25
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: Fix the conflicts of PR #25 (branch curialy/glassmio, the JitPack
+Glasmio fork port) and merge it into main.
+
+Work Log:
+- Merge base 21549b94 (PR #1); main carried 112 commits since (Listen
+  Together, backup, i18n, settings reorg, CI/build fixes on the vendored
+  Glasmio port); the PR carried the final Glasmio port state as one
+  snapshot commit 8f00951a.
+- Architecture resolved to the PR's: the vendored `glasmio/` Gradle modules
+  are deleted (the JitPack fork `com.github.myself-tsuki.Glasmio` v0.2.1
+  replaces them — glasmio-ui + glasmio-scaffold in :app/:tv,
+  glasmio-glass in :archivetuneplayer), settings.gradle.kts loses the four
+  module includes, app/tv build files lose `project(":glasmio:ui")`, and
+  `bridge/GlasmioEffects.kt` is dropped with the whole module importing the
+  fork's render namespace directly. The manifests keep the five-package
+  tools:overrideLibrary from the PR.
+- Components resolved to the PR's port state: GlassMorph (DropdownMorphSpring
+  constants), GlassDialog, GlassNavBar (GlasmioNavigationBarWithTrailingItem;
+  the Echo FloatingTabBar/GlassSelectionPill shell deleted with the fold
+  driver now in NavigationBarScroll.kt), HeldContextMenu, IosMenu, IosSwitch
+  (GlasmioSwitch behind LocalLiquidGlassEnabled + isGlassSupported), the app
+  LiquidGlass glue, SnapshotBackdrop + the flat InverseLayerScope, page
+  motion (IosPageTransitions/PageMotion/IosNavigationMotion), and the three
+  motion tests that pin the ported constants. GlasmioMenuMorph.kt (main's
+  LiquidMenuMorphSurface driver) is superseded and deleted.
+- Main's post-port fixes preserved: the rc01 Slider/ToggleButton/dropdown
+  conversions in archivetuneplayer (FlamingoPlayer/PlayerComponents/
+  Preference/PlayerSettings keep the SliderState-based calls; only the fork
+  import rewiring was taken from the PR), the Compose 1.12 / BOM 2026.09.00
+  line everywhere, launch-smoke.yml, GlassSliderStepTest, proguard dontwarn,
+  and every main-only feature (Listen Together, backup, i18n, sources...).
+- sharedUi's ThinSlider keeps main's LocalGlassSlider glass ride: the slot
+  is provided from MainActivity inside the PR's GlasmioBackdropProvider
+  wiring (GlasmioThinSlider in GlasmioSupport.kt), and AGENTS.md documents
+  the merged architecture.
+
+Stage Summary:
+- Compile/test evidence: recorded by the CI run that follows this merge.

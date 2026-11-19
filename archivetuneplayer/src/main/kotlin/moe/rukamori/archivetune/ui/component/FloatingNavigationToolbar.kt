@@ -124,10 +124,10 @@ import moe.rukamori.archivetune.constants.NavigationBarWidthKey
 import moe.rukamori.archivetune.ui.screens.Screens
 import moe.rukamori.archivetune.utils.rememberPreference
 import io.github.neoruaa.glasmio.glass.render.Backdrop
-import moe.rukamori.archivetune.bridge.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
 import io.github.neoruaa.glasmio.glass.render.effects.blur
-import moe.rukamori.archivetune.bridge.colorControls
-import moe.rukamori.archivetune.bridge.lens
+import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
+import io.github.neoruaa.glasmio.glass.render.effects.lens
 import io.github.neoruaa.glasmio.glass.render.shadow.Shadow as KyantShadow
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -847,7 +847,7 @@ fun FloatingNavigationToolbar(
                             .drawBackdrop(
                                 backdrop = liquidGlassBackdrop,
                                 effects = {
-                                    colorControls(saturation = glassTuning.saturation)
+                                    vibrancy(saturation = glassTuning.saturation)
                                     blur((4f * glassTuning.blurFactor).dp.toPx())
                                     lens(
                                         refractionHeight = minOf(

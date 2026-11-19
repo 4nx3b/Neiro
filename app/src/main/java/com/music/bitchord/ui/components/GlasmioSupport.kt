@@ -63,7 +63,7 @@ fun rememberGlasmioLocals(backdrop: Backdrop, liquidGlass: Boolean): Array<Provi
     return locals.toTypedArray()
 }
 
-private val GlasmioThinSlider: @Composable (Float, (Float) -> Unit, (() -> Unit)?, Modifier) -> Unit =
+internal val GlasmioThinSlider: @Composable (Float, (Float) -> Unit, (() -> Unit)?, Modifier) -> Unit =
     { value, onValueChange, onValueChangeFinished, modifier ->
         GlassSlider(
             value = value,

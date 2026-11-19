@@ -67,12 +67,11 @@ import androidx.compose.ui.unit.toIntSize
 import androidx.compose.ui.util.lerp
 import io.github.neoruaa.glasmio.glass.render.Backdrop
 import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
-import io.github.neoruaa.glasmio.glass.render.backdrops.layerBackdrop as kyantLayerBackdrop
-import moe.rukamori.archivetune.bridge.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.backdrops.layerBackdrop as glasmioLayerBackdrop
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
 import io.github.neoruaa.glasmio.glass.render.effects.blur
-import moe.rukamori.archivetune.bridge.colorControls
-import moe.rukamori.archivetune.bridge.lens
 import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
+import io.github.neoruaa.glasmio.glass.render.effects.lens
 import io.github.neoruaa.glasmio.glass.render.shadow.Shadow
 import moe.rukamori.archivetune.constants.LIQUID_GLASS_ADAPTIVE_LUMINANCE_DEFAULT
 import moe.rukamori.archivetune.constants.LIQUID_GLASS_BACKDROP_VIBRANCY_DEFAULT
@@ -135,7 +134,7 @@ fun Modifier.layerBackdrop(backdrop: Backdrop): Modifier =
     when (backdrop) {
         is ThrottledLayerBackdrop -> throttledLayerBackdrop(backdrop)
 
-        is LayerBackdrop -> this.kyantLayerBackdrop(backdrop)
+        is LayerBackdrop -> this.glasmioLayerBackdrop(backdrop)
         else -> this
     }
 
@@ -446,7 +445,7 @@ fun Modifier.liquidGlass(
             effects = {
                 val l = 0f
 
-                colorControls(saturation = tuning.saturation)
+                vibrancy(saturation = tuning.saturation)
                 blur(
                     if (l > 0f) {
                         lerp(blurRadius.toPx() * 2f, blurRadius.toPx() * 4f, l)

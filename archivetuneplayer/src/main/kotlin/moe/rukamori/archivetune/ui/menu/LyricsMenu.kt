@@ -7,6 +7,9 @@
 
 package moe.rukamori.archivetune.ui.menu
 
+import moe.rukamori.archivetune.ui.component.GlasmioDropdownMorphSpring
+import moe.rukamori.archivetune.ui.component.GlasmioMorphAlphaInMs
+import moe.rukamori.archivetune.ui.component.GlasmioMorphCloseMs
 import moe.rukamori.archivetune.ui.component.LocalLiquidGlassTuning
 import androidx.activity.compose.BackHandler
 import android.app.SearchManager
@@ -15,8 +18,6 @@ import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -110,9 +111,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.neoruaa.glasmio.glass.render.effects.blur
-import moe.rukamori.archivetune.bridge.colorControls
-import moe.rukamori.archivetune.bridge.lens
-import moe.rukamori.archivetune.bridge.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
+import io.github.neoruaa.glasmio.glass.render.effects.lens
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -1490,17 +1491,16 @@ fun AnchoredLyricsOverflowMenu(
         val scaleJob = scope.launch {
             scaleAnim.animateTo(
                 targetValue = 1f,
-                animationSpec =
-                    spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
+                // Glasmio's DropdownMorphSpring — the fork's liquid-morph
+                // content spring (see GlasmioMotion.kt).
+                animationSpec = GlasmioDropdownMorphSpring,
             )
         }
         val alphaJob = scope.launch {
             alphaAnim.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(180),
+                // Glasmio's morph entrance alpha: 120 ms.
+                animationSpec = tween(GlasmioMorphAlphaInMs),
             )
         }
         scaleJob.join()
@@ -1512,17 +1512,14 @@ fun AnchoredLyricsOverflowMenu(
         val scaleJob = scope.launch {
             scaleAnim.animateTo(
                 targetValue = 0.3f,
-                animationSpec =
-                    spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMedium,
-                    ),
+                animationSpec = GlasmioDropdownMorphSpring,
             )
         }
         val alphaJob = scope.launch {
             alphaAnim.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(180),
+                // Glasmio's liquid-morph collapse: 300 ms.
+                animationSpec = tween(GlasmioMorphCloseMs),
             )
         }
         scaleJob.join()
@@ -1551,7 +1548,7 @@ fun AnchoredLyricsOverflowMenu(
             Modifier.drawBackdrop(
                 backdrop = backdrop,
                 effects = {
-                    colorControls(saturation = glassTuning.saturation)
+                    vibrancy(saturation = glassTuning.saturation)
 
                     blur((20f * glassTuning.blurFactor).dp.toPx())
 

@@ -22,9 +22,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.coroutineScope
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -111,25 +108,8 @@ fun <T : Any> HeldContextMenu(
     val reduceMotion = appReduceAnimation || systemAnimationsOff
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
 
-    val driver = remember { GlasmioMorphDriver() }
-    val liquid = glasmioAvailable && !reduceMotion && !driver.fallback
     val progress = remember { Animatable(0f) }
     LaunchedEffect(open) {
-        val glasmioMorph = glasmioAvailable && !reduceMotion &&
-            if (open) driver.prepare() else !driver.fallback
-        if (glasmioMorph) {
-            coroutineScope {
-                launch {
-                    progress.animateTo(
-                        if (open) 1f else 0f,
-                        spring(dampingRatio = MORPH_DAMPING, stiffness = MORPH_STIFFNESS),
-                    )
-                }
-                if (open) driver.expand() else driver.close()
-            }
-            if (!open) last = null
-            return@LaunchedEffect
-        }
         if (open) {
             progress.animateTo(
                 1f,
@@ -252,7 +232,7 @@ fun <T : Any> HeldContextMenu(
                 // Added onto the plate, on a dark one only: see [IosMenuPopover].
                 Column(
                     Modifier
-                        .then(if (liquid) Modifier.glasmioMorphContent(driver) else Modifier.morphContent(progress::value, reduceMotion))
+                        .morphContent(progress::value, reduceMotion)
                         .additiveChrome(dark && !plain),
                 ) {
                     actions(menuItem)
@@ -352,16 +332,9 @@ fun <T : Any> HeldContextMenu(
             // keeping the edge it shares with it, as every popup in the app does.
             val itemBox = MorphBox(itemBounds.left, itemBounds.top, itemBounds.width, itemBounds.height)
             val menuBox = MorphBox(menuX.toFloat(), menuY.toFloat(), menu.width.toFloat(), menu.height.toFloat())
-            val menuRect = Rect(menuBox.left, menuBox.top, menuBox.right, menuBox.bottom)
-            driver.source = Rect(itemBox.left, itemBox.top, itemBox.right, itemBox.bottom)
-            driver.target = menuRect
-            driver.radius = 30.dp.toPx()
-            driver.density = density
             menu.placeWithLayer(menuX, menuY) {
                 val p = progress.value
-                if (liquid) {
-                    applyGlasmioPanel(driver, menuRect)
-                } else if (reduceMotion) {
+                if (reduceMotion) {
                     alpha = p.coerceIn(0f, 1f)
                 } else {
                     val frame = morphFrame(p, itemBox, menuBox)

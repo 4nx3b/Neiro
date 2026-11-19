@@ -140,6 +140,17 @@ its own source system. Porting rules:
   When touching a BitChord file, leave its comments alone; when creating a new
   file, keep it comment-clean.
 
+- **Glasmio capped-glass crash (2026-11-19).** Glasmio v0.2.2–v0.2.4 render capped
+  glass in a second `HardwareRenderer` (`GlassFrameCache`). On the user's 120 Hz
+  Mali phone (auto tier Balanced, cap 60) the Glasmio sample crashes RenderThread
+  (SIGSEGV, use-after-free) on taps and scrolls — see
+  `docs/glasmio-crash-2026-11-19.md`. The library fix lives as `git am` patches
+  in `third_party/glasmio-patches/fix` (against `UPSTREAM_SHA`); the user applies
+  them to myself-tsuki/Glasmio and tags a release. **Do not bump Glasmio past
+  v0.2.1 until `third_party/glasmio-patches/FIXED_IN` names that tag**
+  (`GlasmioVersionGuardTest` enforces it). `.github/workflows/glasmio-sample-smoke.yml`
+  rebuilds the sample with or without the fix and walks every page on API 34/35/36.
+
 ## Modules & submodules
 
 - Gradle modules: `:app` (Android phone), `:tv`, `:wearos`, `:shared` (plain JVM
@@ -148,63 +159,49 @@ its own source system. Porting rules:
   present (`settings.gradle.kts`).
 - **The Compose line is the 1.12 era, whole** (`compose-bom:2026.09.00`, so
   ui/foundation 1.12.1; material3 pinned app-wide at 1.5.0-rc01 for the ported
-  player styles' expressive widgets; activity-compose 1.13.0). It moved off the
-  old split line (BOM 2024.12.01 with foundation 1.11.0-beta02 and material3
-  1.5.0-alpha18) in one commit because that graph resolved a split runtime: the
-  JetBrains Compose plugin sharedUi rides (1.12.x) elevated androidx ui to
-  1.12.0 in the merged graph while those pins held foundation and material3
-  back on the 1.11-beta-compiled line, and the mixed APK crashed the release
-  build on launch (first-frame NoSuchMethodError-class failures). The same
-  move is what the vendored Glasmio sources need (`LayerOutsets` arrived with
-  ui 1.12) — do not pin modules to a different line than the app resolves.
-- **Glasmio** (`glasmio/`, NEORUAA/Glasmio @ 905919bc, Apache-2.0) is the
-  app's liquid-glass renderer and control/motion library. Kyant's backdrop is
-  gone: there is no vendored copy, and no `io.github.kyant0:backdrop`.
-  - **Modules.** `:glasmio:core`, `:glasmio:glass`, `:glasmio:icons` and
-    `:glasmio:ui` are vendored as source. Each `src/main` stays byte-for-byte
-    with upstream (`diff -r` against the pinned commit must print nothing).
-    Only the build files are Neiro's; every difference is listed in
-    `glasmio/README.md`.
-  - **The API-33 gate.** The modules are minSdk 33, and app, tv and
-    archivetuneplayer carry `tools:overrideLibrary` for them, so minSdk stays
-    26. Every Glasmio control and morph goes through `glasmioAvailable`
-    (`ui/components/GlasmioSupport.kt`). Below 33 each surface keeps its old
-    Neiro implementation, and `isGlassSupported()` is API 33 too.
-    MainActivity provides Glasmio's backdrop, colour and appearance locals
-    from Neiro's theme (`rememberGlasmioLocals`). It never uses
-    `GlasmioTheme`, which would replace Neiro's MaterialTheme.
+  player styles' expressive widgets). The old split line (BOM 2024.12.01 with
+  foundation 1.11.0-beta02 and material3 1.5.0-alpha18) resolved a split
+  runtime — the JetBrains Compose plugin sharedUi rides elevated androidx ui
+  while those pins held foundation/material3 back — and the mixed APK crashed
+  the release build on launch. The Glasmio fork's transitive Compose pins
+  (foundation 1.12.1) resolve above the app's BOM, which Compose supports
+  deliberately (foundation depends on ui, not the reverse). Do not pin
+  modules to a different line than the app resolves.
+- **Glasmio** is the liquid-glass controls and motion library, served from the
+  JitPack fork `com.github.myself-tsuki.Glasmio` (of NEORUAA/Glasmio) and
+  pinned at **v0.2.1** — `glasmio-ui` + `glasmio-scaffold` in `:app` and `:tv`,
+  `glasmio-glass` in `:archivetuneplayer`. Kyant's backdrop is gone: no
+  vendored source and no `io.github.kyant0:backdrop`. The fork minSdks 31 while
+  the app keeps 26: app and tv carry `tools:overrideLibrary` for the five fork
+  packages, and every fork surface is gated at runtime on
+  `isGlassSupported()` (API 31+). MainActivity wires
+  `GlasmioIconProvider` (with `BitChordGlasmioIconResolver`), `GlasmioTheme`
+  (nested inside `BitChordTheme`, the app's palette passed through) and
+  `GlasmioBackdropProvider` over the app backdrop.
   - **Owners of each surface.**
-    - `IosSwitch` → `GlasmioSwitch`.
-    - The settings `SliderRow` → `GlassSlider` (`GlasmioSlider` +
-      `snapToSteps`, tested in `GlassSliderStepTest`). A degenerate or
-      non-finite range falls back to Material's `Slider`.
+    - `IosSwitch` → `GlasmioSwitch` wherever Liquid Glass is on and supported;
+      the plain iOS 26 capsule stays below API 31, glass-off and read-out rows.
+    - The settings `SliderRow` → `GlasmioSlider`, the drag quantised to M3's
+      own steps + 1 intervals; M3's `Slider` stays as the fallback.
     - sharedUi `ThinSlider` (scrubber, volume, lyrics offset, audio output)
-      → `GlassSlider` through the `LocalGlassSlider` slot. The app provides
-      it only on API 33+. ThinSlider keeps drawing itself while it is
-      loading, mixing, pulsing or showing an Automix window.
-    - `IosMenuPopover`, `GlassAlertDialog` and `HeldContextMenu` → Glasmio's
-      `LiquidMenuMorphMotion`, through `GlasmioMorphDriver`. `morphFrame`
-      (GlassMorphTest) is the fallback below 33, under reduced motion, and
-      whenever `prepare()` finds no positive anchor/panel rects. A failed
-      prepare sets `fallback`, so a popup is never left invisible.
-    - `GlassNavBar` → `GlasmioNavigationBar`, with Neiro's icons through
-      `LocalGlasmioIconResolver` and Search as a separate glass circle.
-    - Page push/pop and the album zoom → Glasmio's navigation spring,
-      parallax and dim (`ui/motion/GlasmioNavigationMotion.kt`, copied from
-      glasmio-scaffold with its Apache header). The zoom geometry is still
-      `PageMotion.card`.
-  - **Kyant leftovers, re-homed.** `SnapshotBackdrop` is Neiro's own file
-    on Glasmio's `Backdrop`. `colorControls` is re-implemented in
-    GlasmioSupport. Neiro's old `backdropScale` is Glasmio's
-    `samplingScale`.
-  - **archivetuneplayer exception.** At the owner's request its seven glass
-    files import Glasmio instead of Kyant (import lines only, plus one fully
-    qualified type). `colorControls`, an API-guarded `lens` and a
-    `drawBackdrop` that drops highlight and shadows below API 33 come from
-    `bridge/GlasmioEffects.kt`. Glasmio draws those through RuntimeShader, so
-    the gate is enforced there, not assumed.
-  - Android 12/12L devices lose the app's own glass surfaces (they get the
-    non-glass fallbacks). Glasmio's renderer needs API 33.
+      → `GlassSlider` (`GlasmioSlider` + `snapToSteps`, in
+      `ui/components/GlasmioSupport.kt`) through the `LocalGlassSlider` slot
+      MainActivity provides. A degenerate or non-finite range, or
+      `!glasmioAvailable`, falls back to Material's `Slider`. ThinSlider keeps
+      drawing itself while it is loading, mixing, pulsing or showing an
+      Automix window.
+    - `IosMenuPopover` and `HeldContextMenu` → the popup morph rides the
+      ported DropdownMorphSpring constants (`GlassMorph.kt`, tested in
+      `GlassMorphTest`); :archivetuneplayer's menus use `GlasmioMotion.kt`.
+    - `GlassNavBar` → `GlasmioNavigationBarWithTrailingItem`, with Neiro's
+      icons through `BitChordGlasmioIconResolver` and the fold driver in
+      `NavigationBarScroll.kt`. The old Echo FloatingTabBar shell is deleted.
+    - Page push/pop and the album zoom → the fork's navigation spring,
+      parallax and dim (`ui/motion/IosNavigationMotion.kt`, with
+      `IosPageTransitions`; `PageMotionTest` pins the spring).
+  - Do not bump Glasmio past v0.2.1 until `third_party/glasmio-patches/FIXED_IN`
+    names that tag (`GlasmioVersionGuardTest` enforces it — see the
+    capped-glass rule above).
 - `shared/…/data/model/Models.kt` owns `Song`; the app module has no model file.
 - Source system: `app/…/data/sources/` — `MusicSource` (search + stream),
   `SourceKind` (rank-ordered), `SourceRegistry` (encrypted-prefs persistence,

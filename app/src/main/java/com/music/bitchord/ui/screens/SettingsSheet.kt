@@ -1,7 +1,5 @@
 package com.music.bitchord.ui.screens
 
-import com.music.bitchord.ui.components.glasmioAvailable
-import com.music.bitchord.ui.components.GlassSlider
 import com.music.bitchord.ui.components.GlassAlertDialog
 import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.wear.WatchInstaller
@@ -99,7 +97,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SliderState
 import androidx.compose.material3.rememberDatePickerState
 import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
@@ -157,6 +154,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.music.bitchord.ui.components.PillSegmentedControl
+import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.theme.CustomFontLoader
 import com.music.bitchord.ui.theme.SfProFontCatalog
@@ -208,6 +206,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import io.github.neoruaa.glasmio.ui.GlasmioSlider
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -4059,26 +4058,39 @@ internal fun SliderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (glasmioAvailable) GlassSlider(
-            value = sliderValue,
-            onValueChange = onSliderValue,
-            enabled = enabled,
-            valueRange = valueRange,
-            steps = steps,
-            modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
-        ) else {
-            val sliderState = remember(valueRange.start, valueRange.endInclusive, steps) {
-                SliderState(
-                    value = sliderValue,
-                    steps = steps,
-                    trackRange = valueRange,
-                )
-            }
-            sliderState.value = sliderValue
+        if (LocalLiquidGlassEnabled.current && isGlassSupported()) {
+            // The glass slider, ported from Glasmio: the 40dp capsule track
+            // with the accent fill and the 37×24 thumb as a real glass lens
+            // that lifts and enlarges under the finger. The discrete rows
+            // keep their M3 snapping — the drag is quantised to the same
+            // steps + 1 intervals M3's own slider used, so every writer of
+            // these settings sees the values it always did.
+            val span = valueRange.endInclusive - valueRange.start
+            val step = if (steps > 0 && span > 0f) span / (steps + 1) else 0f
+            GlasmioSlider(
+                value = sliderValue.coerceIn(valueRange),
+                onValueChange = { raw ->
+                    if (step > 0f) {
+                        val snapped = valueRange.start +
+                            ((raw - valueRange.start) / step).roundToInt() * step
+                        onSliderValue(snapped.coerceIn(valueRange))
+                    } else {
+                        onSliderValue(raw)
+                    }
+                },
+                modifier = Modifier
+                    .padding(start = ICON_SIZE + ICON_GAP)
+                    .fillMaxWidth(),
+                valueRange = valueRange,
+                enabled = enabled,
+            )
+        } else {
             Slider(
-                state = sliderState,
+                value = sliderValue,
                 onValueChange = onSliderValue,
                 enabled = enabled,
+                valueRange = valueRange,
+                steps = steps,
                 colors = colors,
                 // Bare track: the step ticks and the end-stop dot are noise when the
                 // value is already spelled out on the line above.

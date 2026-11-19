@@ -1,0 +1,125 @@
+From 3ec39c67b5936bf60b6604c8469c21b617d72ae7 Mon Sep 17 00:00:00 2001
+From: Neiro fix <engineer@curialy.local>
+Date: Thu, 19 Nov 2026 14:14:45 +0000
+Subject: [PATCH 2/2] fix(glass): opted-in capped glass releases its layer
+ after the off-screen renderer, and closes readers on the image thread
+
+Defence for hosts that set cachedGlass: onDetach handed the glass layer back
+to Compose (discarding its display lists) while the cache's renderer, whose
+destroy waits for the next window frame, could still reach it. The layer is
+now released from GlassFrameCache.release's onDestroyed, after
+renderer.destroy(). Retired ImageReaders are closed on GlasmioGlassFrames,
+so a close never races an acquire queued on that thread.
+---
+ CHANGELOG.md                                  |  1 +
+ .../glass/render/DrawBackdropModifier.kt      | 20 +++++++++++++------
+ .../glasmio/glass/render/GlassFrameCache.kt   | 20 +++++++++++++++----
+ 3 files changed, 31 insertions(+), 10 deletions(-)
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 2e83dcc..e75b36b 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -3,6 +3,7 @@
+ ## Unreleased
+ 
+ - Fix RenderThread crashing (SIGSEGV with a garbage fault address, four times in 25 s in the sample) on a 120 Hz Android 16 / Mali phone when a page scrolled or a control was tapped. The device was auto-classified as Balanced, so its 60 Hz cap sent every glass surface through `GlassFrameCache`, where the glass layer's render node is reachable from the window and from a second `HardwareRenderer`; HWUI then used freed native state. Rendering capped glass off screen is now opt-in (`GlasmioPerformanceConfig(cachedGlass = true)`, `GlasmioPerformance.cachedGlass`). By default `frameRateCap` gates the glass clocks only, as in 0.2.1, so tier detection alone never enables the second renderer.
++- With `cachedGlass` on, a detaching glass surface returns its layer to Compose only after the off-screen renderer that may still parent it is destroyed, and retired `ImageReader`s are closed on the image thread behind any callback already queued for them.
+ - Fix an "Input dispatching timed out" ANR with `frameRateCap` set, typically when a menu opens. The capped-glass renderer draws into a 4-buffer queue, and buffers were only taken off that queue on the main thread. The RenderThread waited for a free buffer while drawing glass, the main thread waited for the RenderThread, and neither could continue. Finished glass images are now taken off the queue on their own thread (`GlasmioGlassFrames`). The main thread only swaps in the newest image, so the RenderThread never waits on it.
+ - Fix the app crashing when a menu opens with `frameRateCap` set (0.2.2/0.2.3), and the backdrop going stale or blank with the cap on. While the window shows the cached glass image, the off-screen renderer is the only parent of the glass layer's render node. The cache destroyed that renderer on every size change (a menu resizes several times while it opens) and right after handing the layer back to the window. That dropped the node's last parent, and Android's renderer then deleted the glass layer's display lists while Compose still used them. Each cache now keeps one renderer for its whole life, a resize only swaps its output surface, and the renderer is destroyed only after the window has committed a frame that draws the glass layer itself.
+ 
+diff --git a/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/DrawBackdropModifier.kt b/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/DrawBackdropModifier.kt
+index 4de545c..df7a5eb 100644
+--- a/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/DrawBackdropModifier.kt
++++ b/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/DrawBackdropModifier.kt
+@@ -1053,7 +1053,20 @@ private class DrawBackdropNode(
+     }
+ 
+     override fun onDetach() {
+-        releaseFrameCache()
++        val graphicsContext = requireGraphicsContext()
++        val detachedLayer = graphicsLayer
++        graphicsLayer = null
++        val detachedCache = frameCache
++        frameCache = null
++        // The cache's renderer may still parent the glass layer's render node until the window commits a frame. The
++        // layer goes back to Compose only after that renderer is destroyed, so its display lists are never discarded
++        // while another renderer can still draw them.
++        if (detachedCache != null && detachedLayer != null) {
++            detachedCache.release { graphicsContext.releaseGraphicsLayer(detachedLayer) }
++        } else {
++            detachedCache?.release()
++            detachedLayer?.let(graphicsContext::releaseGraphicsLayer)
++        }
+         sourceObservation?.invoke()
+         sourceObservation = null
+         luminanceGeneration++
+@@ -1061,11 +1074,6 @@ private class DrawBackdropNode(
+         luminanceJob = null
+         luminanceCapturing = false
+         releaseLuminanceLayers()
+-        val graphicsContext = requireGraphicsContext()
+-        graphicsLayer?.let { layer ->
+-            graphicsContext.releaseGraphicsLayer(layer)
+-            graphicsLayer = null
+-        }
+         atlasPasses?.release()
+         atlasPasses = null
+         atlasBackingLayer?.let(graphicsContext::releaseGraphicsLayer)
+diff --git a/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt b/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt
+index 9f92a31..2698bae 100644
+--- a/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt
++++ b/glasmio-glass/src/main/java/io/github/neoruaa/glasmio/glass/render/GlassFrameCache.kt
+@@ -328,10 +328,15 @@ internal class GlassFrameCache(
+         surfaceSize = IntSize.Zero
+     }
+ 
++    /**
++     * Closes retired readers on the image thread, after any image callback already queued there for them: a reader
++     * is never closed while that thread is acquiring from it.
++     */
+     private fun closeStaleReaders() {
+         if (staleReaders.isEmpty()) return
+-        staleReaders.forEach { it.close() }
++        val closing = staleReaders.toList()
+         staleReaders.clear()
++        GlassFrameImageThread.handler.post { closing.forEach { it.close() } }
+     }
+ 
+     /** Image thread. Always takes the image off the queue, so the RenderThread never waits on the main thread. */
+@@ -384,9 +389,11 @@ internal class GlassFrameCache(
+     /**
+      * Stops caching. The window draws the live layer from this frame on (or the layer is being released), so the
+      * renderer is destroyed only after the window has committed a frame, when the window's own tree holds the glass
+-     * layer. Destroying it now would drop the layer's last parent and delete its display lists.
++     * layer. Destroying it now would drop the layer's last parent and delete its display lists. [onDestroyed] runs
++     * after the renderer is destroyed (immediately when there was none), so a caller can release the glass layer
++     * only once no second renderer can reach it.
+      */
+-    fun release() {
++    fun release(onDestroyed: (() -> Unit)? = null) {
+         if (released) return
+         released = true
+         handler.removeCallbacks(promote)
+@@ -394,12 +401,17 @@ internal class GlassFrameCache(
+         GlassFrameClock.untrack(root)
+         source = null
+         retireReader()
+-        val renderer = renderer ?: run { closeStaleReaders(); return }
++        val renderer = renderer ?: run {
++            closeStaleReaders()
++            onDestroyed?.invoke()
++            return
++        }
+         this.renderer = null
+         val destroy = RunOnce {
+             renderer.destroy()
+             node.discardDisplayList()
+             closeStaleReaders()
++            onDestroyed?.invoke()
+         }
+         val observer = root.viewTreeObserver
+         if (observer.isAlive) observer.registerFrameCommitCallback(destroy)
+-- 
+2.39.5
+

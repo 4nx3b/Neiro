@@ -307,9 +307,6 @@ dependencies {
     implementation(project(":sharedUi"))
     // The ported ArchiveTune player stack (only the phone app mounts it).
     implementation(project(":archivetuneplayer"))
-    // Glasmio's liquid-glass controls and motion, vendored at glasmio/ (minSdk 33,
-    // reached only behind glasmioAvailable).
-    implementation(project(":glasmio:ui"))
 
     // ---- Compose (Material 3) ----
     // The 1.12 line, whole. The old line (BOM 2024.12.01 with foundation
@@ -318,12 +315,12 @@ dependencies {
     // elevated androidx ui to 1.12.0 in the merged graph while the app's
     // own pins held foundation back at 1.11.x and material3 at its
     // 1.11-beta02-compiled alpha — a mix that crashed the release build on
-    // launch with the binary incompatibilities between those lines. The same
-    // line move is what the vendored Glasmio sources need (GlasmioSidebar
-    // MorphSurface's LayerOutsets arrived with ui 1.12), so the whole app
-    // rides upstream Glasmio's BOM now: ui/foundation 1.12.1, material3
-    // from the BOM overridden to the 1.5.0 line the ported player styles
-    // draw (their expressive widgets exist only from the 1.5 alphas on).
+    // launch with the binary incompatibilities between those lines. The
+    // Glasmio fork's transitive pins (foundation 1.12.1) resolve above ours
+    // — foundation depends on ui, not the reverse, which Compose supports
+    // deliberately — so the whole app rides the BOM with material3 from
+    // the BOM overridden to the 1.5.0 line the ported player styles draw
+    // (their expressive widgets exist only from the 1.5 alphas on).
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
@@ -407,6 +404,20 @@ dependencies {
     // ---- Frosted glass / progressive blur (Telegram-style bars) ----
     implementation("dev.chrisbanes.haze:haze:1.3.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
+
+    // ---- Glasmio: iOS 27 Liquid Glass components and motion ----
+    // The myself-tsuki fork of NEORUAA/Glasmio, served from JitPack (the fork
+    // is not on Maven Central — the upstream io.github.neoruaa.glasmio
+    // coordinates only resolve for the original project). Brings the glass
+    // sliders, glass toggles, liquid-morph popups, the navigation bar and the
+    // iOS page-switch motion, and replaces the vendored Kyant0/backdrop
+    // sources: glasmio-glass owns backdrop recording and material rendering
+    // under io.github.neoruaa.glasmio.glass.render, so no separate Kyant
+    // Backdrop dependency is required. Its transitive Compose pins
+    // (foundation 1.12.1) resolve above ours, which Compose supports
+    // deliberately — foundation depends on ui, not the reverse.
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-ui:v0.2.1")
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1")
 
     // ---- QR encoding, for the party invite ----
     // `core` only: the `android-core`/`zxing-android-embedded` artifacts bring

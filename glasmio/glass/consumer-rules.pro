@@ -1,1 +1,0 @@
--keep class io.github.neoruaa.glasmio.glass.LiquidMenuNativeField { *; }

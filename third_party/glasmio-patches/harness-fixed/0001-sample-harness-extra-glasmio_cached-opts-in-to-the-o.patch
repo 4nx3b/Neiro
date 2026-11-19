@@ -1,0 +1,46 @@
+From e42bd34c4ded87a753b1d3917c5af4061f0e1d0d Mon Sep 17 00:00:00 2001
+From: Neiro harness <engineer@curialy.local>
+Date: Thu, 19 Nov 2026 14:15:11 +0000
+Subject: [PATCH] sample: harness extra glasmio_cached opts in to the
+ off-screen capped renderer
+
+---
+ .../io/github/neoruaa/glasmio/sample/HarnessLaunch.kt | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt b/sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt
+index cd1bbdc..bf44a3d 100644
+--- a/sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt
++++ b/sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt
+@@ -8,7 +8,7 @@ import io.github.neoruaa.glasmio.core.GlasmioPerformanceConfig
+ /**
+  * Crash-harness launch extras (Neiro's glasmio-sample-smoke workflow; not for release):
+  * `glasmio_cap` forces GlasmioPerformanceConfig.frameRateCap so the capped glass path runs on a 60 Hz emulator,
+- * `glasmio_route` opens a sample route on top of Home.
++ * `glasmio_route` opens a sample route on top of Home, `glasmio_cached` opts in to the off-screen capped renderer.
+  */
+ internal object HarnessLaunch {
+     var route: String? = null
+@@ -16,13 +16,16 @@ internal object HarnessLaunch {
+ 
+     fun read(context: Context, intent: Intent?) {
+         intent ?: return
+-        if (intent.hasExtra(ExtraCap)) {
+-            val cap = intent.getIntExtra(ExtraCap, 0)
+-            GlasmioPerformance.configure(context, GlasmioPerformanceConfig(frameRateCap = cap))
++        if (intent.hasExtra(ExtraCap) || intent.hasExtra(ExtraCached)) {
++            GlasmioPerformance.configure(context, GlasmioPerformanceConfig(
++                frameRateCap = if (intent.hasExtra(ExtraCap)) intent.getIntExtra(ExtraCap, 0) else null,
++                cachedGlass = if (intent.hasExtra(ExtraCached)) intent.getBooleanExtra(ExtraCached, false) else null,
++            ))
+         }
+         route = intent.getStringExtra(ExtraRoute)
+     }
+ 
+     private const val ExtraCap = "glasmio_cap"
+     private const val ExtraRoute = "glasmio_route"
++    private const val ExtraCached = "glasmio_cached"
+ }
+-- 
+2.39.5
+

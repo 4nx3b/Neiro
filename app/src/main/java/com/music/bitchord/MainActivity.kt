@@ -3,6 +3,7 @@ package com.music.bitchord
 import com.music.bitchord.ui.motion.IosPageFrame
 import com.music.bitchord.ui.motion.PageMotionState
 import com.music.bitchord.ui.motion.iosPageTransform
+import com.music.bitchord.ui.motion.rootTabFade
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -121,6 +122,7 @@ import com.music.bitchord.data.settings.AppFont
 import com.music.bitchord.ui.theme.CustomFontLoader
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -172,6 +174,7 @@ import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.ui.player.ArchiveTuneBridgeImpl
+import com.music.bitchord.ui.player.LocalGlassSlider
 import moe.rukamori.archivetune.bridge.ArchiveTunePlayerHost
 import com.music.bitchord.data.settings.DefaultOpenTab
 import com.music.bitchord.data.settings.MiniPlayerBarBehavior
@@ -289,18 +292,23 @@ import com.music.bitchord.ui.components.FLOATING_BAR_MAX_WIDTH
 import com.music.bitchord.ui.components.FloatingBottomBar
 import com.music.bitchord.ui.components.GlassNavBar
 import com.music.bitchord.ui.components.CompactControlCircles
-import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
-import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScrollConnection
+import com.music.bitchord.ui.components.FloatingTabBarInlineBehavior
+import com.music.bitchord.ui.components.rememberFloatingTabBarScrollConnection
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
-import com.music.bitchord.ui.components.rememberGlasmioLocals
+import com.music.bitchord.ui.components.GlasmioThinSlider
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
+import com.music.bitchord.ui.components.BitChordGlasmioIconResolver
+import com.music.bitchord.ui.components.rememberSnapshotBackdrop
+import com.music.bitchord.ui.components.snapshotBackdropSource
+import io.github.neoruaa.glasmio.core.GlasmioTheme
+import io.github.neoruaa.glasmio.core.defaultGlassColors
+import io.github.neoruaa.glasmio.glass.GlasmioBackdropProvider
+import io.github.neoruaa.glasmio.icons.GlasmioIconProvider
 import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
 import io.github.neoruaa.glasmio.glass.render.backdrops.layerBackdrop
 import io.github.neoruaa.glasmio.glass.render.backdrops.rememberLayerBackdrop
-import com.music.bitchord.ui.components.rememberSnapshotBackdrop
-import com.music.bitchord.ui.components.snapshotBackdropSource
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceKind
@@ -521,6 +529,25 @@ class MainActivity : AppCompatActivity() {
                 font = appFont,
                 customFontFamily = customFontFamily,
             ) {
+                // The app's icon resolver for Glasmio's SF Symbol names — the
+                // navigation bar's tab glyphs resolve to BitChord's own icons,
+                // everything else falls through to the fork's stock Material
+                // mapping. No SF Symbols font is shipped, so the vectors are
+                // the glyphs.
+                GlasmioIconProvider(resolver = BitChordGlasmioIconResolver) {
+                // Glasmio's theme, nested inside BitChord's: the app keeps its own
+                // Material colour scheme and typography (Glasmio re-provides the
+                // MaterialTheme around its glass tokens, so the app's palette and
+                // fonts are passed straight through), while every Glasmio glass
+                // control below reads its colors, appearance and dimensions off
+                // the locals this installs — GlasmioSwitch, GlasmioSlider, the
+                // Glasmio navigation bar and the liquid-morph menus.
+                GlasmioTheme(
+                    isDark = darkTheme,
+                    colorScheme = MaterialTheme.colorScheme,
+                    typography = MaterialTheme.typography,
+                    colors = defaultGlassColors(darkTheme, MaterialTheme.colorScheme.primary),
+                ) {
                 // The app-wide status-bar hiding, ported from ArchiveTune's
                 // Appearance setting. Composed beside the player's own so both
                 // can ask at once — see HideStatusBar's reference counting.
@@ -542,13 +569,24 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
-                val glasmioLocals = rememberGlasmioLocals(appBackdrop, liquidGlassEnabled)
+                // What every Glasmio glass control samples: LocalGlassBackdrop for
+                // the controls and LocalBlurBackdrop for modal surfaces, both the
+                // app backdrop the pages are recorded into — the nav bar, the
+                // popovers and the player's panels sit outside the recording, so
+                // they sample the page exactly as the vendored glass did, and the
+                // glass switches and sliders the fork ships sit inside the pages
+                // and refract the recorded page beneath them.
+                GlasmioBackdropProvider(backdrop = appBackdrop) {
                 CompositionLocalProvider(
                     LocalOverscrollFactory provides iosOverscrollFactory,
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
                     LocalDensity provides scaledDensity,
-                    *glasmioLocals,
+                    // The sharedUi thin slider's glass ride — the player's
+                    // seek bar renders Glasmio's slider wherever the glass is
+                    // on and supported, and the M3 capsule everywhere else
+                    // (see GlasmioSupport's GlassSlider for the fallback).
+                    LocalGlassSlider provides GlasmioThinSlider,
                 ) {
                 // The window's width, measured rather than asked for.
                 //
@@ -568,6 +606,9 @@ class MainActivity : AppCompatActivity() {
                         windowHeight = maxHeight,
                         appBackdrop = appBackdrop,
                     )
+                }
+                }
+                }
                 }
                 }
             }
@@ -3129,31 +3170,31 @@ private fun BitChordApp(
                     lastPageKey[0] = pageTarget.key
                 }
                 val reducePageMotion by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+                // Captured for the transitionSpec lambda, which is not a
+                // composable scope: Glasmio's slide needs the layout
+                // direction for its mirrored travel and the density for the
+                // pixel-exact parallax offset.
+                val pageLayoutDirection = LocalLayoutDirection.current
                 val pageDensity = LocalDensity.current.density
                 AnimatedContent(
                     targetState = pageTarget,
                     // A route's entry is copied when the release pages under it
                     // change, which is not a different page.
                     contentKey = { it.key },
-                    // Tabs swap outright; everything else crossfades.
+                    // Tabs swap on Glasmio's root fade; everything else
+                    // slides on the fork's navigation motion — or the album
+                    // zoom, when the page is a release opened from its cover.
                     //
-                    // A tab is not a place you travel to — the bar is the whole
-                    // navigation and it carries its own movement — so a fade
-                    // between two of them only ever reads as a stutter. And it
-                    // cannot read as anything else: neither page paints a
-                    // background, so a crossfade dissolves both through to the
-                    // window and the switch dips through a dimmer frame in the
-                    // middle. Pushing a page or raising Settings is a real
-                    // change of context and keeps the fade.
+                    // A tab is not a place you travel to — the bar is the
+                    // whole navigation — and Glasmio's own sample answers that
+                    // with a straight crossfade between top-level routes:
+                    // `fadeIn() togetherWith fadeOut()`, the fork's root-tab
+                    // transition, ported verbatim as [rootTabFade].
                     //
                     // "Show all" swapping with the Library tab underneath it is
-                    // the same case as a tab swap, not a pushed page: it's still
-                    // that tab, just laid out as a grid instead of a row, sharing
-                    // its background rather than painting its own — so this one
-                    // pair gets the tab's no-fade swap too, in both directions, or
-                    // the dip through a dim frame shows up on every hold of a
-                    // card there. A card opened *from* the grid is a real page
-                    // and keeps the fade, same as one opened from the row.
+                    // still that tab's own relayout, not a navigation: it keeps
+                    // no transition in either direction, so a card held there
+                    // doesn't breathe through a fade, same as before.
                     transitionSpec = {
                         val initial = initialState
                         val target = targetState
@@ -3163,11 +3204,19 @@ private fun BitChordApp(
                             (this as? AppDestination.Route)?.entry?.route is AppRoute.LibraryShowAll
                         val libraryShowAllSwap = (initial.isShowAll() && target == libraryTab) ||
                             (target.isShowAll() && initial == libraryTab)
-                        if (tabSwap || libraryShowAllSwap) {
+                        if (libraryShowAllSwap) {
                             EnterTransition.None togetherWith ExitTransition.None
+                        } else if (tabSwap) {
+                            rootTabFade()
                         } else {
-                            // The iOS push / pop slide, or the album zoom.
-                            iosPageTransform(pageMotion, reducePageMotion, pageDensity)
+                            // The iOS push / pop slide on Glasmio's motion, or the
+                            // album zoom out of its cover.
+                            iosPageTransform(
+                                pageMotion,
+                                reducePageMotion,
+                                layoutDirection = pageLayoutDirection,
+                                density = pageDensity,
+                            )
                         }
                     },
                     modifier = Modifier
