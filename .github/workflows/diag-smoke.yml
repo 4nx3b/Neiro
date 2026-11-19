@@ -1,0 +1,67 @@
+name: Diag Smoke
+
+on:
+  push:
+    branches: [arena/d984ef3d-neiro]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  api34:
+    name: Diag smoke API 34
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smoke-apks
+          path: apks
+          run-id: 44509682936
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Launch each APK and read logcat
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: false
+          script: |
+            bash .github/scripts/launch-smoke.sh 34 apks > smoke.log 2>&1 || true
+
+      - name: Publish what the smoke saw
+        if: always()
+        shell: python3 {0}
+        run: |
+          import os
+          lines = open("smoke.log", encoding="utf-8", errors="replace").read().splitlines()
+          print("\n".join(lines))
+          keep, i = [], 0
+          while i < len(lines):
+              l = lines[i]
+              if "FATAL EXCEPTION" in l or l.startswith("DEAD:") or "NATIVE CRASH" in l or "INSTALL FAILED" in l or "PACKAGE MISMATCH" in l:
+                  keep.extend(lines[i:i+45]); i += 45; continue
+              if l.startswith("ALIVE:") or l.startswith("launch "):
+                  keep.append(l)
+              i += 1
+          chunks, cur = [], ""
+          for h in keep:
+              if len(cur) + len(h) + 1 > 2400:
+                  chunks.append(cur); cur = h
+              else:
+                  cur = (cur + "<NL>" + h) if cur else h
+          if cur:
+              chunks.append(cur)
+          for n, c in enumerate(chunks[:8]):
+              print(f"::error title=smoke{n}::{c}")
