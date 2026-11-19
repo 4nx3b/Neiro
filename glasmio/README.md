@@ -25,11 +25,16 @@ Only the build files are Neiro's. They differ from upstream like this:
 - Upstream targets JVM 21. Neiro builds JVM 17 bytecode, so these modules'
   inline functions inline into the app.
 - Upstream pins Compose BOM 2026.09.00, foundation 1.12.1 and material3 1.4.0.
-  Neiro uses its own app-wide line: BOM 2024.12.01, foundation 1.11.0-beta02
-  and material3 1.5.0-alpha18. If CI shows these sources need 1.12 APIs, move
-  the whole app line in one commit and record why in AGENTS.md.
+  Neiro rides the same BOM (2026.09.00 — foundation 1.12.1 through it) with
+  material3 at 1.5.0-rc01, the app-wide 1.12 line: the old split line (BOM
+  2024.12.01 with foundation pinned to 1.11.0-beta02 and material3 to
+  1.5.0-alpha18) resolved a runtime that crashed the release build on
+  launch, and CI showed these sources need the 1.12 APIs anyway
+  (GlasmioSidebarMorphSurface's LayerOutsets). The move is recorded in
+  AGENTS.md; material3 stays on the app's 1.5.0 line because the ported
+  player styles draw its expressive widgets, which exist only from the 1.5
+  alphas on.
 - Upstream pins `ndkVersion` 27.1.12297006. Here it is left unset, so the
   library uses the same default NDK as `:app`'s own CMake build.
-- `activity-compose` is 1.9.3 (the app's pin) instead of 1.13.0.
 - The modules keep upstream's `minSdk = 33`. Consumers with a lower minSdk
   need `tools:overrideLibrary`, and must gate every call on API 33 or higher.

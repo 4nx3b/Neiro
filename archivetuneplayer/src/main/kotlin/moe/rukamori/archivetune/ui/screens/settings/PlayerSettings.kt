@@ -994,14 +994,13 @@ private fun PreloadSongsPreference(
                     val sliderState =
                         rememberSliderState(
                             value = sliderValue,
-                            valueRange = PRELOAD_SONGS_RANGE,
-                            onValueChangeFinished = {},
+                            trackRange = PRELOAD_SONGS_RANGE,
                         )
-                    sliderState.onValueChange = { sliderValue = it }
                     sliderState.value = sliderValue
 
                     Slider(
                         state = sliderState,
+                        onValueChange = { sliderValue = it },
                         modifier = Modifier.fillMaxWidth(),
                         track = {
                             SliderDefaults.Track(

@@ -1882,3 +1882,192 @@ Stage Summary:
   - Braces and parentheses balance in every touched file.
 - Still not compiled: no SDK, no approved push. CI on a PR into dev is the
   next gate.
+
+---
+
+Task ID: 1 (this window)
+Agent: Super Z (main agent, session web-4388e63e)
+
+Task: Fix the main-branch CI failure (Android Release APK, run 44340611121)
+without removing anything vendored — and fix the "app doesn't even open"
+release crash the previous fix's APK shipped.
+
+Work Log:
+- Pulled the failing run's logs: :glasmio:ui:compileReleaseKotlin died on
+  `LayerOutsets` / `GraphicsLayerScope.outsets`, which exist only from
+  Compose ui 1.12. The vendored sources are written against upstream
+  Glasmio's line (BOM 2026.09.00, ui 1.12), while Neiro's modules pinned
+  the 1.11-beta line (BOM 2024.12.01 + foundation 1.11.0-beta02).
+- The previous fix (489006fe) deleted the outsets from the vendored file to
+  make it compile — breaking the byte-for-byte vendoring contract in
+  AGENTS.md and clipping the navigation glass's exterior shadow. Reverted:
+  GlasmioSidebarMorphSurface.kt is byte-for-byte upstream again (diff -r
+  against the pinned commit prints nothing).
+- Diagnosed the launch crash from the actual signed APK of the successful
+  run and the resolved dependency graph: the phone's runtime classpath was
+  ui 1.12.0 (elevated transitively by the JetBrains Compose 1.12.2 plugin
+  sharedUi rides) riding foundation 1.11.1 and material3 1.5.0-alpha18
+  (both compiled against the 1.11-beta line) — a split runtime whose mixed
+  bytecode dies on the first frame. The removal "fix" made the build green
+  and shipped exactly that mix.
+- The fix is the move the glasmio README already sanctioned: "If CI shows
+  these sources need 1.12 APIs, move the whole app line in one commit and
+  record why in AGENTS.md." One commit moves every Android module to the
+  1.12 line: compose-bom 2026.09.00 (ui/foundation 1.12.1 through it),
+  material3 1.5.0-rc01 (the 1.5.0 line's pairing with ui 1.12 — alpha18 was
+  the 1.11-beta pairing), activity-compose 1.13.0, sharedUi's cmp to 1.12.0.
+  Nothing vendored is edited; only Neiro's own build files move.
+- Verified the resolved prodRelease runtime graph is now single-line
+  (ui 1.12.1, foundation 1.12.1, material3 1.5.0-rc01, no -> arrows left)
+  and that :glasmio:ui:compileReleaseKotlin is green with the restored
+  outsets on the new line. The rest is CI's to check, per the owner's rule.
+
+Stage Summary:
+- Vendored glasmio restored byte-for-byte, app-wide Compose on one 1.12
+  line, launch-crash root cause (split runtime) removed at the source.
+
+---
+
+Task ID: 2 (this window)
+Agent: Super Z (main agent, session web-4388e63e)
+
+Task: CI round 2 — :archivetuneplayer compiles against the material3 1.5.0-rc01
+API surface the line move picked up (alpha18's experimental surfaces finalized
+differently by rc01).
+
+Work Log:
+- Read every failing call site and the rc01 signatures straight out of the
+  material3-android 1.5.0-rc01 AAR already in the Gradle cache (javap) plus
+  the androidx-main sources for the same files; no local build run.
+- Slider migration, the big one: rc01's rememberSliderState dropped the
+  onValueChange/onValueChangeFinished factory params and renamed valueRange to
+  trackRange, SliderState lost the settable onValueChange, and the state-based
+  Slider now takes onValueChange (required) + onValueChangeFinished itself.
+  Converted all ten sites the CI round flagged — Preference's three dialog
+  sliders and PlayerSettings' preload slider (static ranges), LyricsScreen
+  and PlayerComponents' Thick style (ranges that change per song — keyed
+  remember on the range ends constructing SliderState directly, value synced
+  per recomposition), and Flamingo's seek (keyed on the track duration) and
+  volume sliders. PlayerSliderTrack reads .trackRange now.
+- ToggleButtonDefaults.toggleButtonColors -> ToggleButtonDefaults.colors
+  (renamed; same six color params) in QueueComponents.
+- ShortNavigationBarItemDefaults.colors' selectedTextColor split into
+  selectedTextColorTopIconPosition / selectedTextColorStartIconPosition;
+  both set to the same colour at all three FloatingNavigationToolbar sites.
+- ExposedDropdownMenu's scope-member became HIDDEN in rc01; the replacement
+  is the top-level extension of the same name — imported it in
+  EqualizerDialog, and menuAnchor() now takes its type:
+  PrimaryNotEditable, the anchor of a read-only field.
+- LoadingIndicator's opt-in marker is ExperimentalMaterial3ExpressiveApi on
+  the rc01 line; added it to the module's compiler opt-ins beside the
+  ExperimentalMaterial3Api that was already there.
+- Verified (javap only) that the app's own fragile APIs all exist on the
+  1.12 line: LocalOverscrollFactory (foundation OverscrollKt),
+  rememberPullToRefreshState / PullToRefreshBox (m3 pulltorefresh),
+  rememberModalBottomSheetState, ModalBottomSheetProperties,
+  LocalClipboardManager. TV's failure was the same archivetuneplayer set,
+  so this covers all three workflows.
+
+## Task 10: main's build error, and a launch-smoke workflow for the crash on open
+
+Task ID: 10
+Agent: Curialy Engineer
+
+Task: Run 44340611121 failed on main. Fix the build without removing Glasmio
+or anything else, and find out why the APK built after the previous fix
+does not open.
+
+Work Log:
+- Workspace sync: the stale be7da5a working tree was checked to be
+  byte-identical to the pushed 6b04a78, which is already in main.
+  curialy/fix-build-launch is branched from origin/main @ df86899, still
+  the tip when work started.
+- History of the failure:
+  - 44340611121 (d25dba2) failed in :glasmio:ui on LayerOutsets under
+    Compose 1.11.
+  - 489006f deleted the outsets, and that build (3023a4f) passed but did
+    not open. e4e3fcb attributes this to a split Compose runtime: ui 1.12
+    from the CMP plugin against foundation 1.11 and material3 alpha18.
+  - e4e3fcb restored the file and moved the whole app to BOM 2026.09.00 /
+    material3 1.5.0-rc01.
+  - fe81f58 and df86899 converted the vendored player's rc01 breaks.
+- Build error: Check #152 and Release #122 on df86899 had exactly one
+  error, `e: SettingsSheet.kt:4068:16 None of the following candidates is
+  applicable … No parameter with name 'track' found`. rc01 removed
+  thumb/track from the value-based Slider, and :tv fails on the same file.
+  - SliderRow's below-API-33 branch now uses SliderState
+    (value/steps/trackRange, keyed on the range ends and steps, value synced
+    each recomposition) with the same bare SliderDefaults.Track, so there
+    is still no stop dot and no ticks.
+  - The GlassSlider branch is untouched.
+  - A sweep of app/ and sharedUi/ finds no other value-based Slider with
+    thumb/track. GlassSlider's plain value-based fallback still resolves:
+    it is deprecated in rc01, not removed.
+- Launch crash: there is no SDK or device here, so
+  .github/workflows/launch-smoke.yml + .github/scripts/launch-smoke.sh were
+  added. Details are in AGENTS.md › Build & test.
+  - Static pre-check, to spend fewer CI rounds:
+    - The two Glasmio locals that throw when missing (LocalGlassBackdrop,
+      LocalBlurBackdrop) are provided at MainActivity's root.
+    - The only other setContent (AodDreamService) never reaches a Glasmio
+      control.
+    - The ComposeUiFlags reflection in BitChordApplication is wrapped in
+      runCatching.
+  - No root cause is claimed yet. It will be fixed from the emulator's
+    stack trace.
+
+Stage Summary:
+- Two local commits on curialy/fix-build-launch: the slider fix and the
+  launch-smoke workflow. Not compiled locally (rules.md Rule 1) and not
+  pushed: this run had no push tool. Next steps:
+  - push and open the PR into main;
+  - read Check, TV and Launch Smoke;
+  - fix the stack trace launch-smoke prints;
+  - confirm the arm64 nightly after merge.
+
+## Task 10-b: review round 1 on the build/launch fix
+
+Task ID: 10-b
+Agent: Curialy Engineer
+
+Task: Reviewer round 1. Make the smoke script unable to pass without
+launching anything, and examine the sharedUi material3 lead.
+
+Work Log:
+- launch-smoke.sh: the script now counts the APKs before the loop.
+  - It exits 1 with "MISSING APKS" unless it finds at least two APKs,
+    including one -dev- and one -prod-.
+  - After the loop, it fails if fewer APKs launched than were found.
+  - Tested against empty, one-APK and two-APK directories: fail, fail, pass.
+- sharedUi material3 lead, checked against Maven Central's Gradle module
+  metadata:
+  - sharedUi pins org.jetbrains.compose.material3:material3:1.7.3. Its
+    Android variant requires androidx.compose.material3:material3 1.3.1, so
+    sharedUi's Android code is compiled against material3 1.3.1 and run
+    against the 1.5.0-rc01 the app forces. This is the same compile/run
+    split the file header blames for an earlier first-frame
+    NoSuchMethodError.
+  - Candidates:
+    - CMP material3 1.12.0-alpha03 maps to androidx 1.5.0-alpha22 on CMP
+      1.12.0-beta01. It is the last one built on the 1.12 line.
+    - 1.13.0-rc01 maps to 1.5.0-rc01 exactly, but pulls CMP ui/foundation
+      1.13.0-rc01, which would split the graph the other way.
+    - material-icons-extended has no release past 1.7.3; icons are plain
+      ImageVectors.
+  - Risk of the move: material3 1.12.0-alpha03 also raises the Windows
+    desktop runtime above the 1.10 line its haze constraint needs.
+  - Static check: all 17 material3 symbols sharedUi imports exist by name in
+    the rc01 AAR (Google Maven). Method signatures were not compared (no
+    javap here).
+  - Not changed blind. launch-smoke's dependency print now also lists
+    sharedUi's releaseCompileClasspath material3 beside the app's runtime
+    line, and the step is continue-on-error so a wrong configuration name
+    cannot fail the build. If the logcat shows a NoSuchMethodError or
+    NoSuchFieldError in androidx.compose.material3 from a sharedUi class,
+    the fix is to move the material3 pin to 1.12.0-alpha03 for androidMain
+    only, keeping desktop on its own line, and record that in AGENTS.md.
+
+Stage Summary:
+- Four local commits on curialy/fix-build-launch. Still not pushed and not
+  compiled: this run has no push tool. The PR into main and its Check, TV
+  and Launch Smoke runs are the next gate.

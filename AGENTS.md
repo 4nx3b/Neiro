@@ -146,6 +146,17 @@ its own source system. Porting rules:
   common data), `:sharedUi` (Compose Multiplatform screens), `:web`, `:backend`
   (Go Listen-Together server). Android modules are only included when an SDK is
   present (`settings.gradle.kts`).
+- **The Compose line is the 1.12 era, whole** (`compose-bom:2026.09.00`, so
+  ui/foundation 1.12.1; material3 pinned app-wide at 1.5.0-rc01 for the ported
+  player styles' expressive widgets; activity-compose 1.13.0). It moved off the
+  old split line (BOM 2024.12.01 with foundation 1.11.0-beta02 and material3
+  1.5.0-alpha18) in one commit because that graph resolved a split runtime: the
+  JetBrains Compose plugin sharedUi rides (1.12.x) elevated androidx ui to
+  1.12.0 in the merged graph while those pins held foundation and material3
+  back on the 1.11-beta-compiled line, and the mixed APK crashed the release
+  build on launch (first-frame NoSuchMethodError-class failures). The same
+  move is what the vendored Glasmio sources need (`LayerOutsets` arrived with
+  ui 1.12) — do not pin modules to a different line than the app resolves.
 - **Glasmio** (`glasmio/`, NEORUAA/Glasmio @ 905919bc, Apache-2.0) is the
   app's liquid-glass renderer and control/motion library. Kyant's backdrop is
   gone: there is no vendored copy, and no `io.github.kyant0:backdrop`.
@@ -211,6 +222,27 @@ its own source system. Porting rules:
 - JDK 17, Android SDK (compileSdk 37, targetSdk 36), flavors dev/prod.
 - CI (`check.yml`): `./gradlew testDevDebugUnitTest` + `assembleDevDebug` + Go
   backend build/vet/test. Push to `dev` or open a PR to run it.
+- **main is the active line** (since 2026-11-18: the Glasmio port and the
+  Compose 1.12 / material3 1.5.0-rc01 move landed there; dev is behind).
+  Branch from `origin/main` and PR into main.
+- **Launch smoke** (`launch-smoke.yml`, on every PR and by hand). It builds
+  `:app:assembleDevDebug` and `:app:assembleProdRelease` (R8) for x86_64
+  once and prints the resolved Compose line. An unsigned release is signed
+  with the debug key. It then installs and launches each APK on an API 30
+  (below the Glasmio gate) and an API 34 emulator, using
+  `.github/scripts/launch-smoke.sh`.
+  - The packages are `com.dev.bitchord` (dev) and `com.music.bitchord`
+    (prod).
+  - A leg fails if the process is dead 25 s after launch, or on a
+    `FATAL EXCEPTION`, native crash or ANR. The 60 lines after each fatal
+    exception are printed into the job log.
+  - The logcats and screenshots are the `launch-smoke-api<N>` artifacts.
+  - This is the only launch evidence there is (no SDK or device in the
+    agent sandbox). Read it before guessing at a crash.
+- material3 1.5.0-rc01 removed `thumb`/`track` from the value-based `Slider`.
+  A custom track needs the `SliderState` overload: a state keyed on the
+  range, with the external value synced each recomposition. See SliderRow
+  and archivetuneplayer's PlayerComponents.
 - Fork contract tests live in `app/src/test/java/com/music/bitchord/` — add one
   per ported feature where the logic is JVM-testable (manifest parsing, tier
   mapping, URL shaping).

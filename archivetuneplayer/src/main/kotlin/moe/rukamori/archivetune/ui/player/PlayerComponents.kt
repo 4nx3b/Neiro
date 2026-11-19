@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
@@ -133,16 +134,24 @@ fun StyledPlaybackSlider(
         }
 
         SliderStyle.Thick -> {
+            val sliderState =
+                remember(valueRange.start, valueRange.endInclusive) {
+                    SliderState(
+                        value = value,
+                        steps = 0,
+                        trackRange = valueRange,
+                    )
+                }
+            sliderState.value = value
             Slider(
-                value = value,
-                valueRange = valueRange,
+                state = sliderState,
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
                 colors = PlayerSliderColors.thickSliderColors(activeColor),
                 thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-                track = { sliderState ->
+                track = { state ->
                     PlayerSliderTrack(
-                        sliderState = sliderState,
+                        sliderState = state,
                         colors = PlayerSliderColors.thickSliderColors(activeColor),
                         trackHeight = 12.dp,
                     )
@@ -168,16 +177,24 @@ fun StyledPlaybackSlider(
         }
 
         SliderStyle.Simple -> {
+            val sliderState =
+                remember(valueRange.start, valueRange.endInclusive) {
+                    SliderState(
+                        value = value,
+                        steps = 0,
+                        trackRange = valueRange,
+                    )
+                }
+            sliderState.value = value
             Slider(
-                value = value,
-                valueRange = valueRange,
+                state = sliderState,
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
                 colors = PlayerSliderColors.simpleSliderColors(activeColor),
                 thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-                track = { sliderState ->
+                track = { state ->
                     PlayerSliderTrack(
-                        sliderState = sliderState,
+                        sliderState = state,
                         colors = PlayerSliderColors.simpleSliderColors(activeColor),
                         trackHeight = 3.dp,
                     )

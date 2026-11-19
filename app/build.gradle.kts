@@ -312,25 +312,28 @@ dependencies {
     implementation(project(":glasmio:ui"))
 
     // ---- Compose (Material 3) ----
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    // The 1.12 line, whole. The old line (BOM 2024.12.01 with foundation
+    // pinned to 1.11.0-beta02 and material3 to 1.5.0-alpha18) resolved a
+    // split runtime: the JetBrains Compose plugin sharedUi rides (1.12.x)
+    // elevated androidx ui to 1.12.0 in the merged graph while the app's
+    // own pins held foundation back at 1.11.x and material3 at its
+    // 1.11-beta02-compiled alpha — a mix that crashed the release build on
+    // launch with the binary incompatibilities between those lines. The same
+    // line move is what the vendored Glasmio sources need (GlasmioSidebar
+    // MorphSurface's LayerOutsets arrived with ui 1.12), so the whole app
+    // rides upstream Glasmio's BOM now: ui/foundation 1.12.1, material3
+    // from the BOM overridden to the 1.5.0 line the ported player styles
+    // draw (their expressive widgets exist only from the 1.5 alphas on).
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
-    // Pinned above the BOM's 1.7.6: [IosOverscroll] uses OverscrollFactory,
-    // which that version doesn't have. Newer foundation alongside the BOM's
-    // older ui/material3 is a combination Compose supports deliberately —
-    // foundation depends on ui, not the reverse — and this exact pairing was
-    // already in effect (foundation was reaching 1.10.0 transitively through
-    // the liquid-glass library before that dependency was removed).
-    // 1.11.0-beta02 / material3 1.5.0-alpha18: the line the vendored
-    // ArchiveTune player stack (:archivetuneplayer) rides — its expressive
-    // widgets exist only in the 1.5 alphas, and those pull this foundation.
-    // The app shares the module's classpath, so it declares the same line
-    // outright rather than resolving it behind its back. The one flag the
-    // app read that this line retired (ComposeUiFlags.isAdaptiveRefreshRateEnabled) is now set through reflection in BitChordApplication.
-    implementation("androidx.compose.foundation:foundation:1.11.0-beta02")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha18")
+    // rc01 is the 1.5.0 line's pairing with ui 1.12: the alpha the app rode
+    // before (1.5.0-alpha18) was compiled against ui 1.11.0-beta02 and ran
+    // against the elevated 1.12.0. Same API surface the player styles use,
+    // linked against the line the app actually resolves.
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     // The bridge preferences the ported player's settings adapters carry in
     // their signatures (Preferences.Key), which the app's sources construct
     // and read.
@@ -340,7 +343,7 @@ dependencies {
     // Same coordinate :archivetuneplayer uses.
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
