@@ -1574,6 +1574,7 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">前回 Neiro がクラッシュしました — ログを %1$s に保存しました</string>
     <string name="player_style_reset">%1$s プレーヤーがクラッシュを繰り返したため、Neiro は標準のプレーヤーに戻しました。クラッシュログは Downloads/Neiro にあります。</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass が起動時に繰り返しクラッシュしたため、オフにしました。設定から再度オンにできます。</string>
     <string name="permanent_shuffle">常時シャッフルモード</string>
     <string name="permanent_shuffle_subtitle">新しい曲を再生し始めてもシャッフルをオンのままにする</string>
     <string name="auto_skip_on_error">エラー発生時に次の曲へ自動的にスキップ</string>

@@ -1596,6 +1596,7 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro ist beim letzten Mal abgestürzt – Protokoll gespeichert unter %1$s</string>
     <string name="player_style_reset">Der Player %1$s ist wiederholt abgestürzt, daher hat Neiro auf den eigenen Player zurückgeschaltet. Das Absturzprotokoll liegt unter Downloads/Neiro.</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass stürzte beim Start immer wieder ab und wurde daher deaktiviert. Du kannst es in den Einstellungen wieder aktivieren.</string>
     <string name="permanent_shuffle">Dauerhafter Zufallsmodus</string>
     <string name="permanent_shuffle_subtitle">Zufallswiedergabe aktiviert lassen, wenn ein neues Lied beginnt</string>
     <string name="auto_skip_on_error">Bei Fehlern automatisch zum nächsten Lied springen</string>

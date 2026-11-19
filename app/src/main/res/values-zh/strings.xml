@@ -1573,6 +1573,7 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro 上次崩溃了 — 日志已保存到 %1$s</string>
     <string name="player_style_reset">%1$s 播放器反复崩溃，Neiro 已切换回自带播放器。崩溃日志位于 Downloads/Neiro。</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass 启动时反复崩溃，已自动关闭。你可以在设置中重新开启。</string>
     <string name="permanent_shuffle">永久随机播放模式</string>
     <string name="permanent_shuffle_subtitle">开始新歌曲时保持随机播放开启</string>
     <string name="auto_skip_on_error">发生错误时自动跳到下一首歌</string>

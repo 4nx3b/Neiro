@@ -1411,6 +1411,7 @@
     <string name="libre_fm">Libre.fm</string>
     <string name="crash_log_saved">Neiro 上次當機了 — 記錄已儲存至 %1$s</string>
     <string name="player_style_reset">%1$s 播放器反覆當機，Neiro 已切換回內建播放器。當機記錄位於 Downloads/Neiro。</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass 啟動時反覆當機，已自動關閉。你可以在設定中重新開啟。</string>
     <string name="permanent_shuffle">永久隨機播放模式</string>
     <string name="permanent_shuffle_subtitle">開始新歌曲時保持隨機播放開啟</string>
     <string name="auto_skip_on_error">發生錯誤時自動跳到下一首歌</string>

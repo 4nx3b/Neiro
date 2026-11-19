@@ -1579,6 +1579,7 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro ขัดข้องเมื่อครั้งที่แล้ว — บันทึกล็อกไว้ที่ %1$s</string>
     <string name="player_style_reset">เครื่องเล่น %1$s ขัดข้องซ้ำ ๆ Neiro จึงกลับไปใช้เครื่องเล่นของตัวเอง บันทึกการขัดข้องอยู่ที่ Downloads/Neiro</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass ขัดข้องซ้ำ ๆ ตอนเปิดแอป จึงถูกปิดไปแล้ว สามารถเปิดใช้อีกครั้งได้ในการตั้งค่า</string>
     <string name="permanent_shuffle">โหมดสุ่มถาวร</string>
     <string name="permanent_shuffle_subtitle">เปิดการสุ่มเพลงค้างไว้เมื่อเริ่มเพลงใหม่</string>
     <string name="auto_skip_on_error">ข้ามไปเพลงถัดไปอัตโนมัติเมื่อเกิดข้อผิดพลาด</string>

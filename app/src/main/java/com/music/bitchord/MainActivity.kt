@@ -466,6 +466,21 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG,
                     ).show()
                 }
+                // Liquid Glass kept dying in the renderer before any Java
+                // handler could catch it (a native RenderThread death — see
+                // CrashLoopGuard), so it was switched off before this launch:
+                // say so once too.
+                val glassReset = withContext(Dispatchers.IO) {
+                    runCatching { com.music.bitchord.data.CrashLoopGuard.consumeGlassReset(appContext) }
+                        .getOrDefault(false)
+                }
+                if (glassReset) {
+                    Toast.makeText(
+                        appContext,
+                        getString(R.string.liquid_glass_crash_reset),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
             }
             lifecycleScope.launch {
                 val crashed = withContext(Dispatchers.IO) {

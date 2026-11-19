@@ -1589,6 +1589,7 @@
 
     <string name="crash_log_saved">Neiro crashed last time — log saved to %1$s</string>
     <string name="player_style_reset">The %1$s player kept crashing, so Neiro switched back to its own player. The crash log is in Downloads/Neiro.</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass kept crashing at launch, so it has been turned off. You can turn it back on in Settings.</string>
     <string name="permanent_shuffle">Permanent shuffle mode</string>
     <string name="permanent_shuffle_subtitle">Keep shuffle enabled when you start a new song</string>
     <string name="auto_skip_on_error">Auto skip to next song when error occurs</string>
