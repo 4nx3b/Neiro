@@ -9,7 +9,7 @@
 
 package moe.rukamori.archivetune.ui.component
 
-import com.kyant.backdrop.Backdrop
+import io.github.neoruaa.glasmio.glass.render.Backdrop
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row

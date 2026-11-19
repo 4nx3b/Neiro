@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.motion.releaseOrigin
 import com.music.bitchord.ui.components.trackArtSize
 import android.os.Build
 import com.music.bitchord.R
@@ -488,6 +489,10 @@ fun DetailScreen(
     // Albums only: a playlist's artwork is a collage and an artist page's is a
     // photograph, and neither is something a label publishes a canvas for.
     val canvasEnabled by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
+    // The same feature's header half: off, the page keeps to the static cover
+    // while the player still gets its clip. On — the default — the headers
+    // keep to what they have always done while [canvasEnabled] was on.
+    val canvasInHeaders by AppSettings.canvasInHeaders.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedDetailArtwork.collectAsStateWithLifecycle()
     val prioritizeSpotifyCanvas by AppSettings.prioritizeSpotifyCanvas.collectAsStateWithLifecycle()
     // The credit line the header shows is the artist as far as the catalogue
@@ -495,10 +500,10 @@ fun DetailScreen(
     // which case the tracks themselves know who it is.
     val credit = page.headerLines(songs.size).first.ifBlank { songs.firstOrNull()?.artist.orEmpty() }
     var canvas by remember(page.browseId) { mutableStateOf<CanvasArtwork?>(null) }
-    LaunchedEffect(page.browseId, page.title, credit, canvasEnabled, prioritizeSpotifyCanvas) {
+    LaunchedEffect(page.browseId, page.title, credit, canvasEnabled, canvasInHeaders, prioritizeSpotifyCanvas) {
         // An artist's clip is set below, by the lookup that finds it.
         if (isArtist) return@LaunchedEffect
-        if (!canvasEnabled || page.type != BrowseType.ALBUM) {
+        if (!canvasEnabled || !canvasInHeaders || page.type != BrowseType.ALBUM) {
             canvas = null
             return@LaunchedEffect
         }
@@ -509,8 +514,8 @@ fun DetailScreen(
     }
     // An artist's clip comes with the same Apple lookup as its photograph.
     val artistVideo = appleArt?.videoUrl
-    LaunchedEffect(artistVideo, canvasEnabled) {
-        if (isArtist) canvas = artistVideo?.takeIf { canvasEnabled }?.let { CanvasArtwork(url = it) }
+    LaunchedEffect(artistVideo, canvasEnabled, canvasInHeaders) {
+        if (isArtist) canvas = artistVideo?.takeIf { canvasEnabled && canvasInHeaders }?.let { CanvasArtwork(url = it) }
     }
 
     // Opening the search carries the page up to it, so the field lands just
@@ -2255,6 +2260,7 @@ private fun TopReleaseCard(
             contentDescription = null,
             modifier = Modifier
                 .size(96.dp)
+                .releaseOrigin(item.browseId)
                 .clip(coverShape)
                 .border(1.dp, Color.White.copy(alpha = TOP_RELEASE_COVER_EDGE_ALPHA), coverShape)
                 .background(palette.elevated),
@@ -2368,6 +2374,7 @@ private fun SectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                .releaseOrigin(item.browseId)
                 .clip(RoundedCornerShape(10.dp))
                 .thumbnailBorder(RoundedCornerShape(10.dp))
                 .background(palette.elevated),

@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.motion.releaseOrigin
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -693,6 +694,7 @@ private fun AlbumGridCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                .releaseOrigin(group.browseId)
                 .clip(CARD_SHAPE)
                 .thumbnailBorder(CARD_SHAPE),
         ) {

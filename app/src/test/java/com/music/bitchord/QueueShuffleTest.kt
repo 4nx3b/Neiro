@@ -117,4 +117,36 @@ class QueueShuffleTest {
         val upcoming = original.shuffled()
         assertEquals(original, restored(upcoming, original))
     }
+
+    @Test
+    fun `a fresh queue only goes shuffled while shuffle is on`() {
+        assertEquals(
+            false,
+            QueueShuffle.shuffleCarriesIntoFreshQueue(enabled = false, requested = true, permanent = false),
+        )
+    }
+
+    @Test
+    fun `the shuffle button carries into the queue it was pressed for`() {
+        assertEquals(
+            true,
+            QueueShuffle.shuffleCarriesIntoFreshQueue(enabled = true, requested = true, permanent = false),
+        )
+    }
+
+    @Test
+    fun `permanent shuffle carries into every fresh queue`() {
+        assertEquals(
+            true,
+            QueueShuffle.shuffleCarriesIntoFreshQueue(enabled = true, requested = false, permanent = true),
+        )
+    }
+
+    @Test
+    fun `without either, a fresh queue starts in order and shuffle turns off`() {
+        assertEquals(
+            false,
+            QueueShuffle.shuffleCarriesIntoFreshQueue(enabled = true, requested = false, permanent = false),
+        )
+    }
 }

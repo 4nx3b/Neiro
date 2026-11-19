@@ -23,7 +23,6 @@
   <string name="close">Chiudi</string>
   <string name="minimum_volume">Volume minimo</string>
   <string name="maximum_volume">Volume massimo</string>
-  <string name="hide_player_thumbnail">Nascondi miniatura player</string>
   <plurals name="n_element">
     <item quantity="one">%d elemento</item>
     <item quantity="many">%d elementi</item>

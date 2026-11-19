@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.music.bitchord.ui.components.IosSwitch
@@ -68,22 +69,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
+import com.music.bitchord.auth.clearSpotifyWebSession
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.permits
 import com.music.bitchord.data.smb.SmbRepository
 import com.music.bitchord.data.webdav.WebDavRepository
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.sources.AddonSource
+import com.music.bitchord.data.sources.MuzoApiCheck
+import com.music.bitchord.data.sources.MuzoService
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceHealth
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.data.deezer.DeezerAccountStore
+import com.music.bitchord.data.qobuz.QobuzAccountStore
+import com.music.bitchord.data.soundcloud.SoundCloudAccountStore
+import com.music.bitchord.data.tidal.TidalAccountStore
+import com.music.bitchord.sharedui.resources.Res
+import com.music.bitchord.sharedui.resources.spotify_logo
 import com.music.bitchord.ui.components.AddonEditorAlert
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * Where the app is allowed to get audio from.
@@ -123,8 +134,32 @@ fun SourcesScreen(
     onEditWebDav: () -> Unit,
     /** As [onEditWebDav], for the SMB share editor. */
     onEditSmb: () -> Unit,
+    /** As [onEditWebDav], for the Muzo Data API key editor. */
+    onEditMuzoKey: () -> Unit,
     /** Opens the full-window warning before JioSaavn is opted into. */
     onConfirmJioSaavn: () -> Unit,
+    /** Opens the Tidal account sign-in screen, raised for the same reason as [onEditSource]. */
+    onSignInTidal: () -> Unit,
+    /** Opens the sign-out confirmation, raised for the same reason. */
+    onSignOutTidal: () -> Unit,
+    /** Opens the Deezer account sign-in screen, raised for the same reason. */
+    onSignInDeezer: () -> Unit,
+    /** Opens the Deezer sign-out confirmation, raised for the same reason. */
+    onSignOutDeezer: () -> Unit,
+    /** Opens the Qobuz account sign-in screen, raised for the same reason. */
+    onSignInQobuz: () -> Unit,
+    /** Opens the Qobuz sign-out confirmation, raised for the same reason. */
+    onSignOutQobuz: () -> Unit,
+    /** Opens the SoundCloud account sign-in screen, raised for the same reason. */
+    onSignInSoundCloud: () -> Unit,
+    /** Opens the SoundCloud sign-out confirmation, raised for the same reason. */
+    onSignOutSoundCloud: () -> Unit,
+    /**
+     * Opens the Spotify page — the one external catalogue this app talks to
+     * without playing from it. Moved here from the Integration page, where it
+     * sat in an External sources group of its own.
+     */
+    onOpenSpotify: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -140,6 +175,7 @@ fun SourcesScreen(
     val smbShare by AppSettings.smbShare.collectAsStateWithLifecycle()
     val smbUsername by AppSettings.smbUsername.collectAsStateWithLifecycle()
     val smbPassword by AppSettings.smbPassword.collectAsStateWithLifecycle()
+    val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
 
     /** Last known reachability per source, filled in as the probes come back. */
     val health = remember { mutableStateMapOf<String, SourceHealth>() }
@@ -150,10 +186,11 @@ fun SourcesScreen(
     // was any good, and the only place a manifest that fails validation gets to
     // say why. Except an addon waiting on a lossless output: it is not to be
     // contacted at all until one is connected, and connecting one re-runs this.
-    val probeKey = configs.filter { it.kind.needsServer }
+    val probeKey = configs.filter { it.kind.needsServer || it.kind == SourceKind.TIDAL }
         .joinToString { "${it.id}@${it.baseUrl}@${it.checkValidLossless}" } + "@${losslessOutput.capable}"
     LaunchedEffect(probeKey) {
-        configs.filter { it.kind.needsServer && it.isComplete && !it.awaitsLosslessOutput }.forEach { config ->
+        configs.filter { (it.kind.needsServer || it.kind == SourceKind.TIDAL) && it.isComplete && !it.awaitsLosslessOutput }
+            .forEach { config ->
             val source = SourceRegistry.instance(config.id) ?: return@forEach
             health[config.id] = withContext(Dispatchers.IO) {
                 runCatching { source.health() }
@@ -301,6 +338,254 @@ fun SourcesScreen(
             AddSourceRow(
                 onClick = { onEditSource(SourceConfig(kind = SourceKind.ADDON)) },
             )
+
+            // Direct Source Stream, moved here from the main settings page:
+            // it qualifies the whole card above rather than being a setting
+            // of its own — the fetch policy every source in the list answers
+            // to, drawn like the animated-cover cellular line (no icon).
+            // Off for the length of a party: holding every fetch until a
+            // track is about to play would leave this phone behind the
+            // others at each sync — see [DirectSourceGate.isActive].
+            val party by com.music.bitchord.data.listentogether.ListenTogether.state.collectAsStateWithLifecycle()
+            val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
+            RowDivider()
+            SettingsSubRow(
+                title = stringResource(R.string.direct_source_stream),
+                checked = directSourceStream && !party.inParty,
+                onCheckedChange = AppSettings::setDirectSourceStream,
+                subtitle = stringResource(R.string.direct_source_stream_in_party).takeIf { party.inParty },
+                enabled = !party.inParty,
+            )
+        }
+
+        // The Tidal account, which the row above streams through. Raised to
+        // the activity like every other full-screen interaction: the sign-in
+        // WebView cannot live inside this haze-sampling subtree.
+        val tidalSession by TidalAccountStore.session.collectAsStateWithLifecycle()
+        val tidalSignedIn = tidalSession != null
+        SettingsGroup(
+            header = stringResource(R.string.tidal_account),
+            footer = stringResource(R.string.tidal_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.Waves,
+                title = stringResource(R.string.tidal_account),
+                subtitle = tidalSession?.username
+                    ?: stringResource(R.string.tidal_not_signed_in),
+                value = when (tidalSession?.flow) {
+                    TidalAccountStore.FLOW_PKCE -> stringResource(R.string.tidal_full_access)
+                    null -> null
+                    else -> stringResource(R.string.tidal_session_limited)
+                },
+                onClick = if (tidalSignedIn) onSignOutTidal else onSignInTidal,
+            )
+        }
+
+        // The Deezer account, one tier down from Tidal for the same reason the
+        // source ranks sit that way — both hold the recording, and Tidal's
+        // FLAC is the copy this fork has shipped the longest.
+        val deezerAccount by DeezerAccountStore.account.collectAsStateWithLifecycle()
+        val deezerSignedIn = deezerAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.deezer_account),
+            footer = stringResource(R.string.deezer_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.MusicNote,
+                title = stringResource(R.string.deezer_account),
+                subtitle = deezerAccount?.name
+                    ?: stringResource(R.string.deezer_not_signed_in),
+                value = if (deezerAccount?.lossless == true) {
+                    stringResource(R.string.deezer_lossless_account)
+                } else {
+                    null
+                },
+                onClick = if (deezerSignedIn) onSignOutDeezer else onSignInDeezer,
+            )
+        }
+
+        // The Qobuz account, same tier as the two above. Its lossless rungs go
+        // past everyone else's — MAX and Hi-Res are 24-bit — which is why its
+        // quality picker is the only one with more than three tiers.
+        val qobuzAccount by QobuzAccountStore.account.collectAsStateWithLifecycle()
+        val qobuzSignedIn = qobuzAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.qobuz_account),
+            footer = stringResource(R.string.qobuz_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.SurroundSound,
+                title = stringResource(R.string.qobuz_account),
+                subtitle = qobuzAccount?.label
+                    ?: stringResource(R.string.qobuz_not_signed_in),
+                value = if (qobuzAccount?.premium == true) {
+                    stringResource(R.string.qobuz_lossless_account)
+                } else {
+                    null
+                },
+                onClick = if (qobuzSignedIn) onSignOutQobuz else onSignInQobuz,
+            )
+        }
+
+        // The SoundCloud account — optional, unlike the three above: search
+        // and streams work anonymously, and the sign-in only widens what the
+        // account can play. Its row sits under the source switch, which is
+        // the opt-in that actually gates whether SoundCloud is asked at all.
+        val soundCloudAccount by SoundCloudAccountStore.account.collectAsStateWithLifecycle()
+        val soundCloudSignedIn = soundCloudAccount != null
+        SettingsGroup(
+            header = stringResource(R.string.soundcloud_account),
+            footer = stringResource(R.string.soundcloud_account_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.Cloud,
+                title = stringResource(R.string.soundcloud_account),
+                subtitle = soundCloudAccount?.username
+                    ?: stringResource(R.string.soundcloud_not_signed_in),
+                value = if (soundCloudSignedIn) {
+                    stringResource(R.string.soundcloud_signed_in_value)
+                } else {
+                    null
+                },
+                onClick = if (soundCloudSignedIn) onSignOutSoundCloud else onSignInSoundCloud,
+            )
+        }
+
+        // The Muzo Data credential — the account row this source's own group
+        // sits on, in the account block because it is the same shape as them:
+        // a third party this app only reaches once the listener has connected
+        // something. The something is an API key rather than a sign-in, and the
+        // group holds the key editor plus the one question — Check API — that
+        // proves the key without playing a track.
+        //
+        // One usage question is asked per visit, and again whenever the key
+        // changes, because that is the one edit that can turn a refusal into
+        // an answer. Its result feeds this group's rows *and* the numbered row
+        // above through the [health] map, so both tell one story.
+        val muzoApiKey by AppSettings.muzoApiKey.collectAsStateWithLifecycle()
+        val muzoConfig = configs.firstOrNull { it.kind == SourceKind.MUZO }
+        var muzoCheck by remember { mutableStateOf<MuzoApiCheck?>(null) }
+        var muzoChecking by remember { mutableStateOf(false) }
+        val muzoScope = rememberCoroutineScope()
+
+        /** One usage question against the key as it stands. Keyless answers locally, without the network. */
+        fun runMuzoCheck() {
+            if (muzoChecking) return
+            muzoChecking = true
+            muzoScope.launch {
+                val check = withContext(Dispatchers.IO) {
+                    runCatching { MuzoService.checkApi(muzoApiKey) }
+                        .getOrElse { MuzoApiCheck.Unreachable(it.message ?: "Failed") }
+                }
+                muzoCheck = check
+                muzoConfig?.let { config -> health[config.id] = check.asSourceHealth() }
+                muzoChecking = false
+            }
+        }
+
+        LaunchedEffect(muzoApiKey, muzoConfig?.id) {
+            runMuzoCheck()
+        }
+
+        val muzoStreamingUnlimited = stringResource(R.string.muzo_streaming_unlimited)
+        val muzoResult = when (val check = muzoCheck) {
+            is MuzoApiCheck.Ok -> stringResource(
+                R.string.muzo_api_ok,
+                check.usageToday,
+                check.dailyLimit,
+                // The service says "unlimited"; anything else it ever names
+                // is worth reading as itself rather than translated into the
+                // word for the state it isn't.
+                check.streamLimit
+                    ?.takeIf { it.isNotBlank() && !it.equals("unlimited", ignoreCase = true) }
+                    ?: muzoStreamingUnlimited,
+            )
+            is MuzoApiCheck.Rejected -> stringResource(R.string.muzo_api_rejected, check.reason)
+            is MuzoApiCheck.Unreachable -> stringResource(R.string.source_unreachable, check.reason)
+            null -> stringResource(R.string.muzo_api_checking)
+        }
+
+        SettingsGroup(
+            header = stringResource(R.string.muzo_data),
+            footer = stringResource(R.string.muzo_data_footer),
+        ) {
+            SettingsRow(
+                icon = SfIcons.AutoAwesome,
+                title = stringResource(R.string.muzo_data),
+                subtitle = when {
+                    muzoApiKey.isBlank() -> stringResource(R.string.muzo_api_key_required)
+                    muzoChecking -> stringResource(R.string.muzo_api_checking)
+                    else -> muzoResult
+                },
+                onClick = onEditMuzoKey,
+            )
+            RowDivider()
+            SettingsRow(
+                icon = SfIcons.Key,
+                title = stringResource(R.string.muzo_api_key),
+                subtitle = when {
+                    muzoApiKey.isBlank() -> stringResource(R.string.muzo_api_key_subtitle)
+                    else -> stringResource(R.string.muzo_api_key_set)
+                },
+                onClick = onEditMuzoKey,
+            )
+            RowDivider()
+            // The forced re-check: the rows above hold the last answer, this
+            // one asks again now. A spinner while it runs, the reason when it
+            // refuses — the same shape the WebDAV test row gives its server,
+            // with the spinner this screen's rows have room for in [trailing].
+            SettingsRow(
+                icon = SfIcons.Cached,
+                title = when {
+                    muzoChecking -> stringResource(R.string.muzo_api_checking)
+                    muzoCheck == null -> stringResource(R.string.muzo_check_api)
+                    else -> muzoResult
+                },
+                subtitle = stringResource(R.string.muzo_check_api_subtitle),
+                onClick = { runMuzoCheck() },
+                trailing = if (muzoChecking) {
+                    // Only while the question is in flight: the moment it
+                    // lands, the trailing slot frees the chevron back and the
+                    // answer takes its place on the row instead.
+                    {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                } else {
+                    null
+                },
+            )
+        }
+
+        // Spotify, the one service this app talks to without playing from it:
+        // Canvas artwork and the playlists Browse reaches into, played back
+        // through the sources above. Moved here from the Integration page so
+        // every account the app signs into is on the page that owns the rest
+        // of them.
+        SettingsGroup(
+            header = stringResource(R.string.spotify),
+            footer = stringResource(R.string.spotify_connect_subtitle),
+        ) {
+            SettingsRow(
+                iconPainter = painterResource(Res.drawable.spotify_logo),
+                title = stringResource(R.string.spotify),
+                subtitle = stringResource(
+                    if (spotifyConnected.isNotBlank()) R.string.connected else R.string.tap_to_connect,
+                ),
+                onClick = onOpenSpotify,
+            )
+            if (spotifyConnected.isNotBlank()) {
+                RowDivider()
+                DestructiveRow(
+                    label = stringResource(R.string.spotify_disconnect),
+                    onClick = {
+                        clearSpotifyWebSession()
+                        AppSettings.setSpotifySpdcToken("")
+                    },
+                )
+            }
         }
 
         // A personal library rather than a catalogue in the order above: it
@@ -817,6 +1102,11 @@ private fun SourceRow(
                 SourceKind.ADDON -> SfIcons.Extension
                 SourceKind.CUSTOM_MODULE -> SfIcons.Extension
                 SourceKind.MODULE -> SfIcons.Extension
+                SourceKind.TIDAL -> SfIcons.Waves
+                SourceKind.DEEZER -> SfIcons.MusicNote
+                SourceKind.QOBUZ -> SfIcons.SurroundSound
+                SourceKind.MUZO -> SfIcons.AutoAwesome
+                SourceKind.SOUNDCLOUD -> SfIcons.Cloud
                 SourceKind.JIOSAAVN -> SfIcons.GraphicEq // or some other icon
                 SourceKind.YOUTUBE -> SfIcons.PlayCircle
             },
@@ -844,7 +1134,7 @@ private fun SourceRow(
             // the label's length, so it adds the same height to every addon;
             // the full label is in the list it opens.
             val quality = config.activeQuality
-            if (config.kind == SourceKind.ADDON && config.isComplete && quality != null) {
+            if ((config.kind == SourceKind.ADDON || config.kind == SourceKind.TIDAL) && config.isComplete && quality != null) {
                 Row(
                     modifier = Modifier
                         .clickable(
@@ -999,16 +1289,6 @@ private fun SourceRow(
         }
     }
 }
-
-@Composable
-private fun AudioQuality.localizedLabel(): String = stringResource(
-    when (this) {
-        AudioQuality.LOW -> R.string.low
-        AudioQuality.MEDIUM -> R.string.medium
-        AudioQuality.HIGH -> R.string.high
-        AudioQuality.LOSSLESS -> R.string.lossless
-    },
-)
 
 /** The second line of a row: what this source is, or what is wrong with it. */
 @Composable

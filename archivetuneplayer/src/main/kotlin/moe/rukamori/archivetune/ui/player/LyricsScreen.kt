@@ -31,7 +31,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,7 +42,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -59,6 +57,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -76,15 +75,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -125,17 +120,7 @@ import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.LocalDatabase
 import moe.rukamori.archivetune.LocalPlayerConnection
 import moe.rukamori.archivetune.R
-import moe.rukamori.archivetune.constants.BlurRadiusKey
-import moe.rukamori.archivetune.constants.DisableBlurKey
 import moe.rukamori.archivetune.constants.EnableHapticFeedbackKey
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyle
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyleKey
-import moe.rukamori.archivetune.constants.PlayerBackgroundStyle
-import moe.rukamori.archivetune.constants.PlayerBackgroundStyleKey
-import moe.rukamori.archivetune.constants.PlayerCustomBlurKey
-import moe.rukamori.archivetune.constants.PlayerCustomBrightnessKey
-import moe.rukamori.archivetune.constants.PlayerCustomContrastKey
-import moe.rukamori.archivetune.constants.PlayerCustomImageUriKey
 import moe.rukamori.archivetune.constants.AutoTranslateExcludedLanguagesKey
 import moe.rukamori.archivetune.constants.AutoTranslateLyricsKey
 import moe.rukamori.archivetune.constants.AutoHideLyricsPlayerControlsKey
@@ -176,7 +161,6 @@ private val AppleMusicFallbackGradient =
 
 private val LyricsSwipeStartRegion = 144.dp
 
-private const val MovingBlurDriftScale = 2.4f
 private val LyricsSwipeDismissThreshold = 96.dp
 
 private const val LyricsControlsAutoHideDelayMs = 5_000L
@@ -217,16 +201,7 @@ fun LyricsScreen(
 
     val (enableHapticFeedback) = rememberPreference(EnableHapticFeedbackKey, true)
 
-    val playerBackground by rememberEnumPreference(PlayerBackgroundStyleKey, PlayerBackgroundStyle.DEFAULT)
     val lyricsMode by rememberEnumPreference(LyricsModeKey, LyricsMode.ENHANCED)
-    val configuredLyricsBackground by rememberEnumPreference(LyricsBackgroundStyleKey, LyricsBackgroundStyle.DEFAULT)
-    val lyricsBackground = configuredLyricsBackground.resolveFor(playerBackground)
-    val disableBlur by rememberPreference(DisableBlurKey, false)
-    val blurRadius by rememberPreference(BlurRadiusKey, 48f)
-    val playerCustomImageUri by rememberPreference(PlayerCustomImageUriKey, "")
-    val playerCustomBlur by rememberPreference(PlayerCustomBlurKey, 0f)
-    val playerCustomContrast by rememberPreference(PlayerCustomContrastKey, 1f)
-    val playerCustomBrightness by rememberPreference(PlayerCustomBrightnessKey, 1f)
     val foregroundColor = Color.White
     val density = LocalDensity.current
     val swipeStartRegionPx = with(density) { LyricsSwipeStartRegion.toPx() }
@@ -377,16 +352,8 @@ fun LyricsScreen(
     val fallbackColor = remember { Color.Black.toArgb() }
     val darkTheme = isSystemInDarkTheme()
 
-    LaunchedEffect(mediaMetadata.id, mediaMetadata.thumbnailUrl, lyricsBackground, darkTheme) {
+    LaunchedEffect(mediaMetadata.id, mediaMetadata.thumbnailUrl, darkTheme) {
         kotlinx.coroutines.delay(120)
-        if (lyricsBackground != LyricsBackgroundStyle.DEFAULT &&
-            lyricsBackground != LyricsBackgroundStyle.COLORING &&
-            lyricsBackground != LyricsBackgroundStyle.MOVING_BLUR
-        ) {
-            gradientColors = AppleMusicFallbackGradient
-            hasValidPalette = false
-            return@LaunchedEffect
-        }
         val thumbnailUrl = mediaMetadata.thumbnailUrl
         if (thumbnailUrl == null) {
             if (!hasValidPalette) gradientColors = AppleMusicFallbackGradient
@@ -398,7 +365,7 @@ fun LyricsScreen(
                 mediaId = mediaMetadata.id,
                 provider = guessArtworkProvider(thumbnailUrl),
                 artworkIdentity = thumbnailUrl,
-                backgroundMode = lyricsBackground.name,
+                backgroundMode = "DEFAULT",
                 darkTheme = darkTheme,
             )
         PlayerPaletteCache.get(cacheKey)?.let {
@@ -555,15 +522,8 @@ fun LyricsScreen(
                 },
     ) {
         LyricsScreenBackground(
-            style = lyricsBackground,
             mediaMetadata = mediaMetadata,
             gradientColors = gradientColors,
-            disableBlur = disableBlur,
-            blurRadius = blurRadius,
-            playerCustomImageUri = playerCustomImageUri,
-            playerCustomBlur = playerCustomBlur,
-            playerCustomContrast = playerCustomContrast,
-            playerCustomBrightness = playerCustomBrightness,
         )
 
         Box(
@@ -665,7 +625,7 @@ fun LyricsScreen(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(horizontal = 36.dp, vertical = 8.dp),
+                                    .padding(vertical = 8.dp),
                         )
                     }
                 }
@@ -720,247 +680,28 @@ fun LyricsScreen(
     }
 }
 
+/**
+ * What stands behind the lyrics: the blurred cover, as it has always been —
+ * see [AppleMusicBackground].
+ */
 @Composable
 private fun LyricsScreenBackground(
-    style: LyricsBackgroundStyle,
     mediaMetadata: MediaMetadata,
     gradientColors: List<Color>,
-    disableBlur: Boolean,
-    blurRadius: Float,
-    playerCustomImageUri: String,
-    playerCustomBlur: Float,
-    playerCustomContrast: Float,
-    playerCustomBrightness: Float,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(
-                    if (style == LyricsBackgroundStyle.FOLLOW_THEME) {
-                        MaterialTheme.colorScheme.surface
-                    } else {
-                        Color.Black
-                    },
-                ),
+                .background(Color.Black),
     ) {
-        when (style) {
-            LyricsBackgroundStyle.DEFAULT -> {
-                AppleMusicBackground(
-                    mediaMetadata = mediaMetadata,
-                    gradientColors = gradientColors,
-                )
-            }
-
-            LyricsBackgroundStyle.MOVING_BLUR -> {
-                MovingBlurBackground(
-                    mediaMetadata = mediaMetadata,
-                    gradientColors = gradientColors,
-                )
-            }
-
-            LyricsBackgroundStyle.FOLLOW_THEME -> Unit
-
-            LyricsBackgroundStyle.COLORING,
-            LyricsBackgroundStyle.CUSTOM,
-            -> {
-                PlayerBackground(
-                    playerBackground =
-                        if (style == LyricsBackgroundStyle.CUSTOM) {
-                            PlayerBackgroundStyle.CUSTOM
-                        } else {
-                            PlayerBackgroundStyle.COLORING
-                        },
-                    mediaMetadata = mediaMetadata,
-                    gradientColors = gradientColors,
-                    disableBlur = disableBlur,
-                    blurRadius = blurRadius,
-                    playerCustomImageUri = playerCustomImageUri,
-                    playerCustomBlur = playerCustomBlur,
-                    playerCustomContrast = playerCustomContrast,
-                    playerCustomBrightness = playerCustomBrightness,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-internal fun MovingBlurBackground(
-    mediaMetadata: MediaMetadata,
-    gradientColors: List<Color>,
-    modifier: Modifier = Modifier,
-) {
-    val isPlaying by (LocalPlayerConnection.current?.isPlaying
-        ?: remember { kotlinx.coroutines.flow.MutableStateFlow(false) })
-        .collectAsStateWithLifecycle()
-    val colors = if (gradientColors.isNotEmpty()) gradientColors else AppleMusicFallbackGradient
-
-    val backgroundBrush =
-        remember(colors) {
-            Brush.verticalGradient(
-                listOf(
-
-                    colors.getOrElse(0) { AppleMusicFallbackGradient[0] }.copy(alpha = 0.55f),
-                    colors.getOrElse(1) { AppleMusicFallbackGradient[1] }.copy(alpha = 0.42f),
-                    colors.getOrElse(2) { AppleMusicFallbackGradient[2] }.copy(alpha = 0.62f),
-                ),
-            )
-        }
-    val bottomScrim =
-        remember {
-            Brush.verticalGradient(
-                listOf(
-                    Color.Transparent,
-                    Color.Black.copy(alpha = 0.10f),
-                ),
-            )
-        }
-
-    val vibrancyColorFilter = remember {
-        val sat = 1.85f
-        val alpha = 0.213f + 0.787f * sat
-        val beta = 0.715f - 0.715f * sat
-        val gamma = 0.072f - 0.072f * sat
-        ColorFilter.colorMatrix(
-            ColorMatrix(
-                floatArrayOf(
-                    alpha, beta, gamma, 0f, 0f,
-                    alpha, beta, gamma, 0f, 0f,
-                    alpha, beta, gamma, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f,
-                ),
-            ),
-        )
-    }
-
-    val context = LocalContext.current
-    val imageLoader = context.imageLoader
-    val isPreS = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-
-    BoxWithConstraints(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .clipToBounds()
-                .background(AppleMusicFallbackGradient.last()),
-    ) {
-        val wanderMaxDrift = movingBlurWanderMaxDriftDp(maxWidth, maxHeight)
-        val blurWander = rememberBlurWanderDrift(active = isPlaying, maxDriftDp = wanderMaxDrift)
-        val preSDriftScale =
-            if (isPreS) {
-                val safetyMargin = 48.dp
-                val requiredScaleX = 1f + 2f * (wanderMaxDrift + safetyMargin.value) / maxWidth.value
-                val requiredScaleY = 1f + 2f * (wanderMaxDrift + safetyMargin.value) / maxHeight.value
-                maxOf(requiredScaleX, requiredScaleY, 1.4f)
-            } else {
-                MovingBlurDriftScale
-            }
-
-        val driftFootprint =
-            remember(maxWidth, maxHeight) {
-                blurBackdropFootprint(
-                    width = maxWidth,
-                    height = maxHeight,
-                    restScale = MovingBlurDriftScale,
-                    driftScale = MovingBlurDriftScale,
-                    maxDriftDp = movingBlurWanderMaxDriftDp(maxWidth, maxHeight),
-                )
-            }
-
-        AnimatedContent(
-            targetState = mediaMetadata.thumbnailUrl,
-            transitionSpec = { fadeIn(tween(700)) togetherWith fadeOut(tween(700)) },
-            label = "lyrics-moving-blur-bg",
-        ) { thumbnailUrl ->
-            if (thumbnailUrl != null) {
-                if (isPreS) {
-                    val blurredBitmap by produceState<Bitmap?>(null, thumbnailUrl) {
-                        value = withContext(Dispatchers.IO) {
-                            try {
-                                val request = ImageRequest.Builder(context)
-                                    .data(thumbnailUrl)
-                                    .allowHardware(false)
-                                    .memoryCacheKey(thumbnailUrl)
-                                    .diskCacheKey(thumbnailUrl)
-                                    .size(Size(720, 720))
-                                    .build()
-                                val result = imageLoader.execute(request)
-                                if (result is SuccessResult) {
-                                    val bitmap = result.image.toBitmap()
-                                        .copy(Bitmap.Config.ARGB_8888, true)
-                                    val density = context.resources.displayMetrics.density
-                                    ImageBlurUtils.blur(bitmap, 64f * density)
-                                } else null
-                            } catch (_: Exception) {
-                                null
-                            }
-                        }
-                    }
-                    blurredBitmap?.let { bm ->
-                        Image(
-                            bitmap = bm.asImageBitmap(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            colorFilter = vibrancyColorFilter,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    scaleX = preSDriftScale
-                                    scaleY = preSDriftScale
-                                    translationX = blurWander.xDp.floatValue.dp.toPx()
-                                    translationY = blurWander.yDp.floatValue.dp.toPx()
-                                }
-
-                                .alpha(0.95f),
-                        )
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AsyncImage(
-                            model = thumbnailUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            colorFilter = vibrancyColorFilter,
-                            modifier = Modifier
-                                .requiredSize(driftFootprint)
-
-                                .graphicsLayer {
-                                    scaleX = MovingBlurDriftScale
-                                    scaleY = MovingBlurDriftScale
-
-                                    translationX = blurWander.xDp.floatValue.dp.toPx()
-                                    translationY = blurWander.yDp.floatValue.dp.toPx()
-
-                                    rotationZ = blurWander.rotationDeg.floatValue
-                                    compositingStrategy = CompositingStrategy.Offscreen
-                                }
-                                .blur(64.dp)
-                                .alpha(0.95f),
-                        )
-                    }
-                }
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(backgroundBrush),
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(bottomScrim),
+        AppleMusicBackground(
+            mediaMetadata = mediaMetadata,
+            gradientColors = gradientColors,
         )
     }
 }
-
 @Composable
 private fun AppleMusicBackground(
     mediaMetadata: MediaMetadata,
@@ -1238,10 +979,7 @@ private fun AppleMusicLyricsPane(
         lyricsMode = lyricsMode,
         sliderPositionProvider = sliderPositionProvider,
         lyricsSyncOffset = lyricsSyncOffset,
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
+        modifier = modifier.fillMaxSize(),
         textColor = foregroundColor,
     )
 }
@@ -1473,21 +1211,29 @@ private fun AppleMusicSlider(
             inactiveTrackColor = inactiveColor,
         )
 
+    val sliderState =
+        remember(safeStart, safeEnd) {
+            SliderState(
+                value = value.coerceIn(safeRange),
+                steps = 0,
+                trackRange = safeRange,
+            )
+        }
+    sliderState.value = value.coerceIn(safeRange)
+
     Slider(
-        value = value.coerceIn(safeRange),
-        valueRange = safeRange,
+        state = sliderState,
         onValueChange = onValueChange,
         onValueChangeFinished = onValueChangeFinished,
         colors = sliderColors,
         thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-        track = { sliderState ->
+        track = { state ->
             PlayerSliderTrack(
-                sliderState = sliderState,
+                sliderState = state,
                 colors = sliderColors,
                 trackHeight = trackHeight,
             )
         },
-
         modifier = modifier,
     )
 }

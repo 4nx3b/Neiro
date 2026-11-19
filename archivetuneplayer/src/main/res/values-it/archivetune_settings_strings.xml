@@ -3,7 +3,6 @@
 <resources>
     <string name="manage_playlist_tags">Etichette della playlist</string>
     <string name="manage_playlist_tags_desc">Crea e gestisci etichette per organizzare le playlist</string>
-    <string name="hide_player_thumbnail_desc">Sostituisci la copertina dell\'album con il logo dell\'app nel player</string>
     <string name="show_tags_in_library">Mostra le etichette nella libreria</string>
     <string name="show_tags_in_library_desc">Mostra i chip di filtro delle etichette nella libreria</string>
     <string name="seek_seconds_addup">Ricerca progressiva</string>
@@ -12,15 +11,10 @@
     <string name="follow_theme">Segui tema</string>
     <string name="gradient">Gradiente</string>
     <string name="player_design_style">Stile design del player</string>
-    <string name="player_design_v4">Cinematografico</string>
-    <string name="player_design_v5">Piccolo</string>
     <string name="player_background_blur">Sfoca</string>
     <string name="coloring">Colorazione</string>
     <string name="blur_gradient">Sfoca Gradiente</string>
     <string name="glow">Brillante</string>
-    <string name="player_buttons_style">Colori pulsanti player</string>
-    <string name="default_style">Predefinito</string>
-    <string name="secondary_color_style">Secondario</string>
     <string name="enable_swipe_thumbnail">Abilita lo scorrimento per cambiare brano</string>
     <string name="swipe_song_to_add">Scorri il brano verso sinistra per aggiungerlo alla coda o verso destra per riprodurlo come prossimo brano</string>
     <string name="lyrics_click_change">Cambia testo con un clic</string>
@@ -62,7 +56,6 @@
     <string name="crop_thumbnail_to_square_desc">Mostra le thumbnails di YouTube in formato quadrato invece di 16:9</string>
     <string name="show_home_category_chips">Mostra chip categorie nella home</string>
     <string name="show_home_category_chips_desc">Mostra i chip delle categorie nella schermata principale</string>
-    <string name="player_design_v7">Immersivo</string>
     <string name="lyrics_romanize_chinese">Converti in alfabeto latino i testi cinesi</string>
     <string name="lyrics_romanize_hindi">Converti in alfabeto latino i testi hindi</string>
     <string name="lyrics_romanize_other_languages">Converti in alfabeto latino altri testi non latini</string>
@@ -144,11 +137,9 @@
     <string name="dark_theme">Tema oscuro</string>
     <string name="dark_theme_on">Su</string>
     <string name="dark_theme_off">Spento</string>
-    <string name="corner_radius">Raggio dell\'angolo: %1$d</string>
     <string name="adjust_radius">Regola il raggio dell\'angolo</string>
     <string name="cancel_button">Annulla</string>
     <string name="ok_button">Va bene</string>
-    <string name="custom_radius">Personalizza il raggio dell\'angolo della miniatura</string>
     <string name="custom">Personalizzato</string>
     <string name="customized_background">Sfondo personalizzato</string>
     <string name="customize_background_title">Personalizza lo sfondo</string>
@@ -161,7 +152,6 @@
     <string name="disable_blur">Disattiva gli effetti di sfocatura</string>
     <string name="disable_blur_desc">Disabilita gli effetti di sfocatura in tutta l\'app</string>
     <string name="player">Giocatore</string>
-    <string name="player_slider_style">Stile del dispositivo di scorrimento del giocatore</string>
     <string name="misc">Varie</string>
     <string name="default_open_tab">Scheda aperta predefinita</string>
     <string name="lyrics_animation_style">Stile di animazione dei testi</string>

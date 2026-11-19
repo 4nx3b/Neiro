@@ -18,8 +18,8 @@
  * foundation 1.10.0, material3 1.3.1, haze 1.3.1, coil 3.0.4, media3 1.11.0)
  * so adding this module never moves the versions the rest of the app
  * compiled against. Where ArchiveTune's stack needs a library this app
- * doesn't use (lottie, reorderable, accompanist-lyrics, squigglyslider,
- * backdrop, datastore, timber, materialkolor), it is declared here at the
+ * doesn't use (lottie, reorderable, squigglyslider,
+ * backdrop, datastore, timber), it is declared here at the
  * newest version that still compiles against those pins.
  */
 import java.util.Properties
@@ -171,23 +171,14 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
 
     // ---- Libraries ArchiveTune's stack needs that the app doesn't use ----
-    // Karaoke lyrics rendering (LyricsV2 / the flamingo and tiktok styles).
-    implementation("com.mocharealm.accompanist:lyrics-ui:1.0.19")
-    implementation("com.mocharealm.accompanist:lyrics-core:0.4.6")
     // The wavy seek bar.
     implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
-    // Liquid-glass effects behind the ported components.
-    implementation("io.github.kyant0:backdrop:2.0.0")
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-glass:v0.2.1")
     implementation("com.valentinilk.shimmer:compose-shimmer:1.5.0")
     // Reorderable queues and lists.
     implementation("sh.calvin.reorderable:reorderable:3.1.0")
     // Lottie icons (the animated like button, download states).
     implementation("com.airbnb.android:lottie-compose:6.6.6")
-    // Seed-grown schemes for the dynamic backgrounds — ArchiveTune's own
-    // pin. The 5.0 alphas default isAmoled (the copied Theme.kt calls
-    // dynamicColorScheme without it) and are built against Compose
-    // 1.11.0-alpha03, which this module's 1.11.0-beta02 pins resolve over.
-    implementation("com.materialkolor:material-kolor:5.0.0-alpha07")
     // Logging — the copied stack logs through Timber throughout.
     implementation("com.jakewharton.timber:timber:5.0.1")
     // Direct okhttp/ktor use inside the copied providers.
@@ -200,8 +191,6 @@ dependencies {
     // The frost behind the ported components' glass surfaces — the app's
     // own pin; the player closure uses only its stable core API.
     implementation("dev.chrisbanes.haze:haze:1.3.1")
-    // The ported settings pages: the palette picker draws its previews from SVG,
-    // and the copied pages carry @Preview functions.
-    implementation("com.caverock:androidsvg-aar:1.4")
+    // The ported settings pages carry @Preview functions.
     implementation("androidx.compose.ui:ui-tooling-preview")
 }

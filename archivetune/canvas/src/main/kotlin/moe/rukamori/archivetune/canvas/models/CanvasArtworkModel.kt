@@ -42,5 +42,15 @@ data class CanvasArtwork(
     companion object {
         const val PROVIDER_SPOTIFY = "spotify"
         const val PROVIDER_APPLE_MUSIC = "apple_music"
+
+        /**
+         * PORT-NOTE (BitChord): Muzo Data's canvas rung — see
+         * [MuzoCanvasProvider][moe.rukamori.archivetune.canvas.MuzoCanvasProvider].
+         * Carries `videoUrl`/`videoUrlVertical` like the Spotify shape, so it
+         * plays through the same video artwork players; no rank of its own in
+         * the provider order, because it is the resolver's last rung rather
+         * than a listener-configurable preference.
+         */
+        const val PROVIDER_MUZO = "muzo"
     }
 }

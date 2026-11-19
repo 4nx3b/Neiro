@@ -36,6 +36,14 @@ object QueueShuffle {
 
     private val _enabled = MutableStateFlow(false)
 
+    /**
+     * The Shuffle button on an album or playlist page asking for the queue
+     * that is about to replace this one to go in shuffled — a one-shot request,
+     * consumed by the queue start it was made for. Without it, whether shuffle
+     * carries into a fresh queue is [AppSettings.permanentShuffle]'s to say.
+     */
+    @Volatile private var requestedForNextQueue = false
+
     /** Whether the queue is currently held in shuffled order. */
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
     fun setEnabled(enabled: Boolean) {
@@ -176,9 +184,35 @@ object QueueShuffle {
     fun enableForNextQueue() {
         original = emptyList()
         clearCanonicalContext()
+        requestedForNextQueue = true
         _enabled.value = true
         AppSettings.setShuffleEnabled(true)
     }
+
+    /**
+     * Whether a queue about to start goes in shuffled order: shuffle is on,
+     * and either the listener asked for this queue shuffled or permanent
+     * shuffle is keeping it on across queue starts. The one-shot request is
+     * consumed either way, and a shuffle that does not carry is turned off
+     * here rather than left claiming a queue that is about to play in order.
+     */
+    fun freshQueueShuffle(): Boolean {
+        val carry = shuffleCarriesIntoFreshQueue(
+            enabled = _enabled.value,
+            requested = requestedForNextQueue,
+            permanent = AppSettings.permanentShuffle.value,
+        )
+        requestedForNextQueue = false
+        if (_enabled.value && !carry) {
+            _enabled.value = false
+            AppSettings.setShuffleEnabled(false)
+        }
+        return carry
+    }
+
+    /** The decision [freshQueueShuffle] makes, free of any state to hold. */
+    internal fun shuffleCarriesIntoFreshQueue(enabled: Boolean, requested: Boolean, permanent: Boolean): Boolean =
+        enabled && (requested || permanent)
 
     /**
      * The order a queue should go in when it is started while shuffle is on:

@@ -1,7 +1,7 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.components.GlassAlertDialog
 import com.music.bitchord.ui.icons.SfIcons
-import com.music.bitchord.ui.player.ThinSlider
 import com.music.bitchord.wear.WatchInstaller
 import android.content.Context
 import androidx.annotation.StringRes
@@ -85,23 +85,25 @@ import androidx.compose.material.icons.rounded.Wifi
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
-import com.music.bitchord.data.lyrics.translationLanguageName
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.rememberDatePickerState
 import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -136,6 +138,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
 import com.music.bitchord.AppIcon
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -151,6 +154,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.music.bitchord.ui.components.PillSegmentedControl
+import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.theme.CustomFontLoader
 import com.music.bitchord.ui.theme.SfProFontCatalog
@@ -162,17 +166,16 @@ import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import com.music.bitchord.ui.performance.supportedPerformanceRefreshRates
 import com.music.bitchord.data.model.Account
+import com.music.bitchord.data.canvas.CanvasCache
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.NerdStats
+import com.music.bitchord.data.NetPolicy
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.listentogether.ListenTogether
+import com.music.bitchord.data.lyrics.LyricsTranslation
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.data.settings.BackAnimationStyle
 import com.music.bitchord.data.settings.DefaultOpenTab
-import com.music.bitchord.data.settings.LyricsBackgroundStyle
-import com.music.bitchord.data.settings.MiniPlayerBackgroundStyle
-import com.music.bitchord.data.settings.PlayerButtonsStyle
-import com.music.bitchord.data.settings.PlayerSliderStyle
+import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.OutputPcmMode
 import com.music.bitchord.data.settings.BitPerfectMode
 import com.music.bitchord.data.settings.LiquidGlassIntensity
@@ -182,19 +185,34 @@ import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
 import com.music.bitchord.data.sources.DeviceCodecs
+import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.download.Downloads
+import com.music.bitchord.download.DownloadsExport
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
 import com.music.bitchord.data.settings.AppFont
-import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.PlayerTheme
-import com.music.bitchord.data.stats.Backup
+import com.music.bitchord.data.backup.BackupArchive
+import com.music.bitchord.data.backup.PlaylistTransfer
+import com.music.bitchord.data.backup.ScheduledBackup
+import com.music.bitchord.data.backup.ScheduledBackupFrequency
+import com.music.bitchord.data.spotify.LocalPlaylist
+import com.music.bitchord.data.spotify.LocalPlaylistStore
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import io.github.neoruaa.glasmio.ui.GlasmioSlider
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
@@ -214,11 +232,14 @@ fun SettingsScreen(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     onAccountScrobbling: () -> Unit,
+    onIntegration: () -> Unit,
+    onInternet: () -> Unit,
     onEqualizer: () -> Unit,
     onOpenReplay: () -> Unit,
-    onLyricsSources: () -> Unit,
-    onTranslationLanguage: () -> Unit,
+    onLyricsSettings: () -> Unit,
     onSources: () -> Unit,
+    /** Opens the Canvas page under Playback — the looping artwork's own settings. */
+    onOpenCanvas: () -> Unit,
     onListenTogether: () -> Unit,
     onWearOs: () -> Unit,
     onSpotifyCanvasAuth: () -> Unit,
@@ -248,15 +269,21 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
 
-    val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
-    val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
+    val skipGaplessAlbums by AppSettings.skipGaplessAlbums.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
+    val permanentShuffle by AppSettings.permanentShuffle.collectAsStateWithLifecycle()
+    val autoSkipOnError by AppSettings.autoSkipOnError.collectAsStateWithLifecycle()
+    val keepCpuAwake by AppSettings.keepCpuAwake.collectAsStateWithLifecycle()
+    val persistentQueue by AppSettings.persistentQueue.collectAsStateWithLifecycle()
+    val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
+    val autoStartOnBluetooth by AppSettings.autoStartOnBluetooth.collectAsStateWithLifecycle()
+    val historyDurationSeconds by AppSettings.historyDurationSeconds.collectAsStateWithLifecycle()
+    val preloadSongsCount by AppSettings.preloadSongsCount.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
-    val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
     // against a key that can never change — see [DeviceCodecs.playsDolbyAtmos],
     // which caches the codec-list walk for the life of the process.
@@ -270,7 +297,6 @@ fun SettingsScreen(
     val hideStatusBar by AppSettings.hideStatusBar.collectAsStateWithLifecycle()
     val uiScale by AppSettings.uiScale.collectAsStateWithLifecycle()
     val blurIntensity by AppSettings.blurIntensity.collectAsStateWithLifecycle()
-    val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
@@ -280,26 +306,13 @@ fun SettingsScreen(
     val playerTheme by AppSettings.playerTheme.collectAsStateWithLifecycle()
     val playerDesignStyle by AppSettings.playerDesignStyle.collectAsStateWithLifecycle()
     val tikTokMainLyrics by AppSettings.tikTokMainLyrics.collectAsStateWithLifecycle()
-    val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
-    val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
-    val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
     val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
     val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
     // The Appearance page's ported rows, collected once here for every section
     // they appear in below.
     val customFontName by AppSettings.customFontName.collectAsStateWithLifecycle()
-    val movingBlur by AppSettings.movingBlur.collectAsStateWithLifecycle()
-    val hideSlideBar by AppSettings.hideSlideBar.collectAsStateWithLifecycle()
-    val hidePlayerThumbnail by AppSettings.hidePlayerThumbnail.collectAsStateWithLifecycle()
-    val thumbnailCornerRadius by AppSettings.thumbnailCornerRadius.collectAsStateWithLifecycle()
-    val playerButtonsStyle by AppSettings.playerButtonsStyle.collectAsStateWithLifecycle()
-    val playerSliderStyle by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
-    val lyricsBackgroundStyle by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
-    val miniPlayerBackgroundStyle by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
     val minimalHomeMode by AppSettings.minimalHomeMode.collectAsStateWithLifecycle()
     val defaultOpenTab by AppSettings.defaultOpenTab.collectAsStateWithLifecycle()
-    val tabletMode by AppSettings.tabletMode.collectAsStateWithLifecycle()
-    val backAnimationStyle by AppSettings.backAnimationStyle.collectAsStateWithLifecycle()
     val sessionId by AppSettings.audioSessionId.collectAsStateWithLifecycle()
     val outputPcmMode by AppSettings.outputPcmMode.collectAsStateWithLifecycle()
     val preferUsbDac by AppSettings.preferUsbDac.collectAsStateWithLifecycle()
@@ -316,6 +329,11 @@ fun SettingsScreen(
     val playingDolbyAtmos = playingFormat?.isDolbyAtmos == true
     val cacheLimitBytes by AppSettings.audioCacheLimitBytes.collectAsStateWithLifecycle()
     val showCacheFolder by AppSettings.showCacheFolder.collectAsStateWithLifecycle()
+    val autoDownloadOnLike by AppSettings.autoDownloadOnLike.collectAsStateWithLifecycle()
+    val externalDownloaderEnabled by AppSettings.externalDownloaderEnabled.collectAsStateWithLifecycle()
+    val externalDownloaderPackage by AppSettings.externalDownloaderPackage.collectAsStateWithLifecycle()
+    val maxCanvasCacheSizeMb by AppSettings.maxCanvasCacheSizeMb.collectAsStateWithLifecycle()
+    val smartTrimmer by AppSettings.smartTrimmer.collectAsStateWithLifecycle()
     val downloadQuality by AppSettings.downloadQuality.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by AppSettings.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val exportDownloads by AppSettings.exportDownloads.collectAsStateWithLifecycle()
@@ -336,6 +354,17 @@ fun SettingsScreen(
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
     val filterNonMusicAudio by AppSettings.filterNonMusicAudio.collectAsStateWithLifecycle()
     val localMusicFolderUri by AppSettings.localMusicFolderUri.collectAsStateWithLifecycle()
+    val scheduledBackupEnabled by AppSettings.scheduledBackupEnabled.collectAsStateWithLifecycle()
+    val scheduledBackupFrequency by AppSettings.scheduledBackupFrequency.collectAsStateWithLifecycle()
+    val scheduledBackupCustomDateEpochDay by AppSettings.scheduledBackupCustomDateEpochDay.collectAsStateWithLifecycle()
+    val scheduledBackupDirectoryUri by AppSettings.scheduledBackupDirectoryUri.collectAsStateWithLifecycle()
+    val scheduledBackupDirectoryName by AppSettings.scheduledBackupDirectoryName.collectAsStateWithLifecycle()
+    val scheduledBackupOverwriteExisting by AppSettings.scheduledBackupOverwriteExisting.collectAsStateWithLifecycle()
+    val cloudSyncEnabled by AppSettings.cloudSyncEnabled.collectAsStateWithLifecycle()
+    val cloudSyncFolderUri by AppSettings.cloudSyncFolderUri.collectAsStateWithLifecycle()
+    val cloudSyncFolderName by AppSettings.cloudSyncFolderName.collectAsStateWithLifecycle()
+    val cloudSyncOverwriteExisting by AppSettings.cloudSyncOverwriteExisting.collectAsStateWithLifecycle()
+    val cloudSyncLastRunAt by AppSettings.cloudSyncLastRunAt.collectAsStateWithLifecycle()
     val highPerformanceMode by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
     val performanceRefreshRate by AppSettings.performanceRefreshRate.collectAsStateWithLifecycle()
     val currentDisplay = LocalView.current.display
@@ -364,8 +393,6 @@ fun SettingsScreen(
     val listenBrainzEnabled by AppSettings.listenBrainzEnabled.collectAsStateWithLifecycle()
     val listenBrainzToken by AppSettings.listenBrainzToken.collectAsStateWithLifecycle()
 
-    val replayGenres by AppSettings.replayGenres.collectAsStateWithLifecycle()
-
     // Read here so the row can say "In a party · ABC123" rather than making
     // somebody open the screen to find out whether they are still in one.
     val party by ListenTogether.state.collectAsStateWithLifecycle()
@@ -374,16 +401,59 @@ fun SettingsScreen(
     // exactly as if the field weren't there.
     // Saveable so a search survives a trip into one of the pages it found.
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    // What the last export or import did, shown on the row that did it rather
+    // What the last backup or restore did, shown on the row that did it rather
     // than as a toast: a backup is the one action here whose outcome nobody can
-    // check by looking at the app afterwards. Held per direction, or an import's
-    // result reports itself under the word "Export".
-    var exportStatus by remember { mutableStateOf<String?>(null) }
-    var importStatus by remember { mutableStateOf<String?>(null) }
-    var confirmImport by remember { mutableStateOf(false) }
+    // check by looking at the app afterwards. Held per row, or one action's
+    // result reports itself under another's name.
+    var backupStatus by remember { mutableStateOf<String?>(null) }
+    var restoreStatus by remember { mutableStateOf<String?>(null) }
+    var playlistImportStatus by remember { mutableStateOf<String?>(null) }
+    var playlistExportStatus by remember { mutableStateOf<String?>(null) }
+    var syncStatus by remember { mutableStateOf<String?>(null) }
+    var showFrequencyDialog by remember { mutableStateOf(false) }
+    var showCustomDatePicker by remember { mutableStateOf(false) }
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+    var showRestoreInvalid by remember { mutableStateOf(false) }
+    var showPlaylistPicker by remember { mutableStateOf(false) }
+    var restoreError by remember { mutableStateOf("") }
+    var pendingRestore by remember { mutableStateOf<Uri?>(null) }
+    var pendingRestoreInfo by remember { mutableStateOf(BackupArchive.Validity()) }
+    var pendingExportPlaylist by remember { mutableStateOf<LocalPlaylist?>(null) }
     var confirmClearSongCache by remember { mutableStateOf(false) }
+    // The Storage page's ported rows: their confirmations, the package editor
+    // the external downloader's row opens, and the size choice the canvas
+    // cache's chip stands for — the same frosted pickers the backup page uses.
+    var confirmClearDownloads by remember { mutableStateOf(false) }
+    var confirmClearCanvasCache by remember { mutableStateOf(false) }
+    var confirmClearLyricsCache by remember { mutableStateOf(false) }
+    var showCanvasCacheDialog by remember { mutableStateOf(false) }
+    var showExternalDownloaderPackageDialog by remember { mutableStateOf(false) }
+    // The export's outcome, on the row that started it — a copy of a library
+    // is the other action here whose result nobody can check by looking.
+    var downloadsExportStatus by remember { mutableStateOf<String?>(null) }
     var showPerformanceWarning by remember { mutableStateOf(false) }
     var showPerformanceConfirmation by remember { mutableStateOf(false) }
+    // What the finished downloads are holding, re-read whenever the record of
+    // them changes — a save or a delete while the page is open moves the number.
+    val savedDownloads by Downloads.saved.collectAsStateWithLifecycle()
+    var downloadsBytes by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(savedDownloads) {
+        downloadsBytes = Downloads.bytesInUse(context)
+    }
+    // The clips' hold on the disk: read once, then again whenever the ceiling
+    // moves (the evictor reclaims at once — see CanvasCache) or the cache is
+    // cleared from the row below. Not live while a clip streams in: a number
+    // that ticks up while the page is open is noise, not information.
+    var canvasCacheBytes by remember { mutableStateOf(CanvasCache.sizeBytes()) }
+    LaunchedEffect(maxCanvasCacheSizeMb) {
+        canvasCacheBytes = CanvasCache.sizeBytes()
+    }
+    // The order the next download walks the sources in, from the same walk
+    // that answers it — see [SourceRegistry.activeForDownload].
+    val sourceConfigs by SourceRegistry.configs.collectAsStateWithLifecycle()
+    val downloadSourceOrder = remember(sourceConfigs) {
+        SourceRegistry.activeForDownload().joinToString(" → ") { it.displayName }
+    }
     val backupScope = rememberCoroutineScope()
 
     val batterySettingsLauncher = rememberLauncherForActivityResult(
@@ -405,38 +475,128 @@ fun SettingsScreen(
     }
 
     /**
-     * Both halves go through the system document picker rather than a path of
-     * this app's own choosing. That is what puts the file somewhere the user can
-     * actually find it — Drive, Files, a folder they already back up — and it
-     * means neither direction needs a storage permission, since the grant
-     * arrives with the document they picked.
+     * The Backup and restore page's pickers, every one through the system
+     * document picker rather than a path of this app's own choosing. That is
+     * what puts the file somewhere the user can actually find it — Drive,
+     * Files, a folder they already back up — and it means none of them needs a
+     * storage permission, since the grant arrives with the document they
+     * picked.
      */
-    val exportPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json"),
+    val backupFileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { target ->
         if (target == null) return@rememberLauncherForActivityResult
         backupScope.launch {
-            exportStatus = Backup.exportTo(context, target).fold(
-                onSuccess = { months ->
-                    context.getString(R.string.export_succeeded, context.countOfMonths(months))
-                },
+            backupStatus = BackupArchive.create(context, target).fold(
+                onSuccess = { context.getString(R.string.backup_created) },
                 onFailure = {
-                    context.getString(R.string.export_failed, it.message ?: context.getString(R.string.unknown_error))
+                    context.getString(R.string.backup_create_failed, it.message ?: context.getString(R.string.unknown_error))
                 },
             )
         }
     }
-    val importPicker = rememberLauncherForActivityResult(
+    val restoreFileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { source ->
         if (source == null) return@rememberLauncherForActivityResult
         backupScope.launch {
-            importStatus = Backup.importFrom(context, source).fold(
+            val validity = BackupArchive.validate(context, source)
+            if (validity.isValid) {
+                pendingRestore = source
+                pendingRestoreInfo = validity
+                showRestoreConfirm = true
+            } else {
+                restoreError = context.getString(validity.errorRes ?: R.string.backup_restore_invalid)
+                showRestoreInvalid = true
+            }
+        }
+    }
+    val backupDirectoryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { folder ->
+        if (folder == null) return@rememberLauncherForActivityResult
+        ScheduledBackup.setDirectory(context, folder)
+    }
+    val cloudFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { folder ->
+        if (folder == null) return@rememberLauncherForActivityResult
+        ScheduledBackup.setCloudFolder(context, folder)
+    }
+    val importM3uLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { source ->
+        if (source == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            playlistImportStatus = PlaylistTransfer.importM3u(context, source).fold(
                 onSuccess = {
-                    context.getString(R.string.import_succeeded, context.countOfMonths(it.months), it.from)
+                    context.getString(R.string.backup_import_created, it.songCount, it.playlistTitle)
                 },
                 onFailure = {
-                    context.getString(R.string.import_failed, it.message ?: context.getString(R.string.unknown_error))
+                    it.message ?: context.getString(R.string.unknown_error)
+                },
+            )
+        }
+    }
+    val importCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { source ->
+        if (source == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            playlistImportStatus = PlaylistTransfer.importCsv(context, source).fold(
+                onSuccess = {
+                    context.getString(R.string.backup_import_created, it.songCount, it.playlistTitle)
+                },
+                onFailure = {
+                    it.message ?: context.getString(R.string.unknown_error)
+                },
+            )
+        }
+    }
+    val exportCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv"),
+    ) { target ->
+        if (target == null) return@rememberLauncherForActivityResult
+        val playlist = pendingExportPlaylist
+        pendingExportPlaylist = null
+        if (playlist == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            playlistExportStatus = PlaylistTransfer.exportCsv(context, target, playlist).fold(
+                onSuccess = { context.getString(R.string.backup_export_done) },
+                onFailure = {
+                    context.getString(R.string.backup_export_failed, it.message ?: context.getString(R.string.unknown_error))
+                },
+            )
+        }
+    }
+    // The Downloaded songs page's export: the system's tree picker names a
+    // folder, and every finished download lands in it as the copy it already
+    // is — no re-encode, the file's own audio format, its own name. Progress
+    // and outcome report themselves on the row that started it.
+    val downloadsExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { folder ->
+        if (folder == null) return@rememberLauncherForActivityResult
+        backupScope.launch {
+            DownloadsExport.exportTo(context, folder) { copied, failed, total ->
+                downloadsExportStatus = context.getString(
+                    R.string.download_export_running,
+                    copied + failed,
+                    total,
+                )
+            }.fold(
+                onSuccess = { outcome ->
+                    downloadsExportStatus = if (outcome.failed > 0) {
+                        context.getString(R.string.download_export_with_failures, outcome.copied, outcome.failed)
+                    } else {
+                        context.getString(R.string.download_export_done, outcome.copied)
+                    }
+                },
+                onFailure = {
+                    downloadsExportStatus = context.getString(
+                        R.string.download_export_failed,
+                        it.message ?: context.getString(R.string.unknown_error),
+                    )
                 },
             )
         }
@@ -500,11 +660,8 @@ fun SettingsScreen(
             )
 
             SearchableSettingsGroup(search) {
-                val accountTitle = stringResource(R.string.account_integrations)
-                // What the row opens is the scrobbling screen, so the services it
-                // signs into are worth typing at this field even though none of
-                // them is named on the row itself.
-                row(accountTitle, "scrobbling", "last.fm", "listenbrainz") {
+                val accountTitle = stringResource(R.string.account)
+                row(accountTitle, "account", "profile") {
                     val avatarUrl = account?.thumbnailUrl?.takeIf { signedIn }
                     SettingsRow(
                         icon = SfIcons.Person,
@@ -524,6 +681,40 @@ fun SettingsScreen(
                         onClick = onAccountScrobbling,
                     )
                 }
+                // The services the app talks to, gathered on the page ArchiveTune
+                // gathers them on — Discord, the music sources, Spotify and the
+                // scrobblers. The services it signs into are worth typing at this
+                // field even though none of them is named on the row itself.
+                val integrationTitle = stringResource(R.string.integration)
+                row(
+                    integrationTitle,
+                    "integration", "scrobbling", "last.fm", "listenbrainz", "discord",
+                    "spotify", "tidal", "deezer", "qobuz", "soundcloud", "libre.fm",
+                ) {
+                    SettingsRow(
+                        icon = SfIcons.Extension,
+                        title = integrationTitle,
+                        subtitle = stringResource(R.string.settings_integration_subtitle),
+                        onClick = onIntegration,
+                    )
+                }
+                // Ported from ArchiveTune's Internet page: the region YouTube Music
+                // requests pin themselves to, DNS over HTTPS, and a proxy the whole
+                // shared client routes through — a page rather than rows, because
+                // each of those is a group of its own once it is open.
+                val internetTitle = stringResource(R.string.internet)
+                row(
+                    internetTitle,
+                    "internet", "network", "proxy", "vpn", "socks", "dns", "doh",
+                    "region", "country", "geo", "spoof", "tor",
+                ) {
+                    SettingsRow(
+                        icon = SfIcons.Wifi,
+                        title = internetTitle,
+                        subtitle = stringResource(R.string.settings_internet_subtitle),
+                        onClick = onInternet,
+                    )
+                }
                 // Sits with the account rather than with Playback: a party is up to
                 // five signed-in people, and being signed in is the whole of what
                 // the row needs before it will do anything.
@@ -539,95 +730,17 @@ fun SettingsScreen(
                         onClick = onListenTogether,
                     )
                 }
-            }
-
-            // The row that used to sit at the top of this group was called
-            // "Lossless / HQ Audio" and toggled `SourceRegistry.setModuleEnabled` —
-            // it switched the *module source* on and off, not lossless. Sources
-            // above lists that as the module's own row now. Lossless itself is no
-            // longer a setting at all — see
-            // [SourceResolver.requestForNow][com.music.bitchord.data.sources.SourceResolver.requestForNow].
-            SearchableSettingsGroup(search, header = stringResource(R.string.audio_quality)) {
-                val sourceTitle = stringResource(R.string.source)
-                val sourceSubtitle = stringResource(R.string.sources_subtitle)
-                row(sourceTitle, sourceSubtitle, "addon", "lossless") {
+                // The page a listener goes to directly, like the party above it,
+                // rather than a document filed under Your data: it answers the
+                // question the top group is for — "what am I listening to?".
+                val replayTitle = stringResource(R.string.replay)
+                row(replayTitle, "stats", "history", "wrapped") {
                     SettingsRow(
-                        icon = SfIcons.Extension,
-                        title = sourceTitle,
-                        subtitle = sourceSubtitle,
-                        onClick = onSources,
+                        icon = SfIcons.BarChart,
+                        title = replayTitle,
+                        subtitle = stringResource(R.string.replay_subtitle),
+                        onClick = onOpenReplay,
                     )
-                }
-                // One line on purpose: it qualifies the row above rather than
-                // being a setting of its own, so it reads as part of Sources.
-                val directSourceTitle = stringResource(R.string.direct_source_stream)
-                // Drawn like the animated-cover cellular line: no icon, no divider.
-                row(directSourceTitle, "addon", "direct", "prefetch", "read-ahead", divided = false) {
-                    // Off for the length of a party: holding every fetch until a
-                    // track is about to play would leave this phone behind the
-                    // others at each sync — see [DirectSourceGate.isActive].
-                    SettingsSubRow(
-                        title = directSourceTitle,
-                        checked = directSourceStream && !party.inParty,
-                        onCheckedChange = AppSettings::setDirectSourceStream,
-                        subtitle = stringResource(R.string.direct_source_stream_in_party).takeIf { party.inParty },
-                        enabled = !party.inParty,
-                    )
-                }
-                val onWifiTitle = stringResource(R.string.on_wifi)
-                row(onWifiTitle, "wi-fi", "streaming quality") {
-                    SettingsRow(
-                        icon = SfIcons.Wifi,
-                        title = onWifiTitle,
-                        badge = stringResource(R.string.in_use).takeIf { metered == false },
-                        value = wifiQuality.localizedLabel(),
-                        onClick = { onOpenChoice(SettingsChoiceKind.AUDIO_QUALITY_WIFI) },
-                    )
-                }
-                val onMobileDataTitle = stringResource(R.string.on_mobile_data)
-                row(onMobileDataTitle, "cellular", "streaming quality") {
-                    SettingsRow(
-                        icon = SfIcons.SignalCellularAlt,
-                        title = onMobileDataTitle,
-                        badge = stringResource(R.string.in_use).takeIf { metered == true },
-                        value = cellularQuality.localizedLabel(),
-                        onClick = { onOpenChoice(SettingsChoiceKind.AUDIO_QUALITY_CELLULAR) },
-                    )
-                }
-                // Sits with the quality ceilings rather than with Playback: it
-                // decides which version of a track gets fetched, the same question
-                // the two rows above answer, and not how one is played back.
-                //
-                // Greyed rather than hidden where the device can't decode E-AC-3.
-                // A missing row reads as a feature the app doesn't have; a disabled
-                // one with a reason under it is the difference between "BitChord
-                // has no Atmos" and "this phone has no Dolby decoder", and only the
-                // second is true. The stored preference is left untouched either
-                // way — see [AppSettings.dolbyAtmos].
-                val dolbyAtmosTitle = stringResource(R.string.dolby_atmos)
-                row(dolbyAtmosTitle, "surround", "e-ac-3") {
-                    BypassedByBitPerfect(bitPerfectReady) {
-                        SettingsRow(
-                            iconPainter = painterResource(R.drawable.ic_dolby_atmos),
-                            title = dolbyAtmosTitle,
-                            subtitle = stringResource(
-                                if (dolbyAtmosSupported) {
-                                    R.string.dolby_atmos_subtitle
-                                } else {
-                                    R.string.dolby_atmos_unavailable
-                                },
-                            ),
-                            enabled = dolbyAtmosSupported,
-                            trailing = {
-                                IosSwitch(
-                                    checked = dolbyAtmos && dolbyAtmosSupported,
-                                    onCheckedChange = AppSettings::setDolbyAtmos,
-                                    enabled = dolbyAtmosSupported,
-                                )
-                            },
-                            onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
-                        )
-                    }
                 }
             }
 
@@ -635,58 +748,58 @@ fun SettingsScreen(
             // when their rows answer here instead (below).
             if (!searching) {
                 SettingsCategoryList(onOpen = onOpenSection)
-                if (watchAvailable) {
-                    SettingsGroup {
-                        WearOsSettingsRow(onClick = onWearOs)
-                    }
-                }
             }
         }
 
-        // Its own group rather than rows bolted onto the two above, because a
-        // download is not a third kind of connection. The ceilings answer "what
-        // does this minute cost"; these answer "what am I keeping, and when may
-        // it be fetched" — and those two questions only make sense read
-        // together, which is what puts them side by side here.
-        if (shows(SettingsCategory.DOWNLOADS)) SearchableSettingsGroup(search, header = stringResource(R.string.downloads)) {
-            val downloadQualityTitle = stringResource(R.string.download_quality)
-            row(downloadQualityTitle, "offline", "lossless") {
+        // ---- The ported Content group, as ArchiveTune's player settings page has it ----
+        // Ported from ArchiveTune's Player-and-audio page: its “Player & Content”
+        // group leads with Sources and Lyrics, each a page of its own. The
+        // sources decide what arrives before the playback settings below ever
+        // touch it, and the lyrics ride with them because they are the other
+        // thing the player fetches on the listener's connection.
+        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.settings_section_content),
+        ) {
+            val sourceTitle = stringResource(R.string.source)
+            val sourceSubtitle = stringResource(R.string.sources_subtitle)
+            row(sourceTitle, sourceSubtitle, "addon", "lossless", "proxy", "region") {
                 SettingsRow(
-                    icon = SfIcons.Download,
-                    title = downloadQualityTitle,
-                    subtitle = stringResource(R.string.download_quality_subtitle, downloadQuality.perTrack),
-                    value = downloadQuality.localizedLabel(),
-                    onClick = { onOpenChoice(SettingsChoiceKind.DOWNLOAD_QUALITY) },
+                    icon = SfIcons.Extension,
+                    title = sourceTitle,
+                    subtitle = sourceSubtitle,
+                    trailing = { Chevron() },
+                    onClick = onSources,
                 )
             }
-            // Reads as part of Download quality above it, not as a setting
-            // of its own — same treatment as Play animated cover over
-            // cellular gets under Animated cover art.
-            val downloadWifiOnlyTitle = stringResource(R.string.download_wifi_only)
-            row(downloadWifiOnlyTitle, "wi-fi", "cellular", divided = false) {
-                SettingsSubRow(
-                    title = downloadWifiOnlyTitle,
-                    checked = wifiOnlyDownloads,
-                    onCheckedChange = AppSettings::setWifiOnlyDownloads,
-                    badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
+            val lyricsTitle = stringResource(R.string.lyrics)
+            row(
+                lyricsTitle,
+                "lyrics", "translation", "lrclib", "musixmatch", "romanization", "sync",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Notes,
+                    title = lyricsTitle,
+                    subtitle = stringResource(R.string.settings_lyrics_subtitle),
+                    trailing = { Chevron() },
+                    onClick = onLyricsSettings,
                 )
             }
-            val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)
-            row(exportDownloadsTitle, "music folder") {
-                SettingsSubRow(
-                    title = exportDownloadsTitle,
-                    checked = exportDownloads,
-                    onCheckedChange = AppSettings::setExportDownloads,
-                    subtitle = "Music/BitChord".takeIf { exportDownloads },
-                )
-            }
-            val syncPlaylistsTitle = stringResource(R.string.sync_downloaded_playlists)
-            row(syncPlaylistsTitle, "playlist", "new songs", "background", "automatic") {
-                SettingsSubRow(
-                    title = syncPlaylistsTitle,
-                    checked = syncDownloadedPlaylists,
-                    onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
-                    subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
+            // The third thing the player fetches on the listener's connection:
+            // the looping artwork, ported from ArchiveTune's Canvas settings
+            // page — everything that used to sit under Appearance's Animated
+            // cover art now lives behind this row.
+            val canvasTitle = stringResource(R.string.canvas)
+            row(
+                canvasTitle,
+                "canvas", "artwork", "spotify", "video", "animated", "loop",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Video,
+                    title = canvasTitle,
+                    subtitle = stringResource(R.string.canvas_subtitle),
+                    trailing = { Chevron() },
+                    onClick = onOpenCanvas,
                 )
             }
         }
@@ -843,6 +956,27 @@ fun SettingsScreen(
                     }
                 }
             }
+            // Ported from ArchiveTune's skip gapless albums: the manual
+            // crossfade stands down between consecutive songs from one album.
+            if (!smartFade) {
+                val gaplessTitle = stringResource(R.string.skip_gapless_albums)
+                row(gaplessTitle, "gapless", "album", "mix") {
+                    BypassedByBitPerfect(bitPerfectReady) {
+                        SettingsRow(
+                            icon = SfIcons.Album,
+                            title = gaplessTitle,
+                            subtitle = stringResource(R.string.skip_gapless_albums_subtitle),
+                            trailing = {
+                                IosSwitch(
+                                    checked = skipGaplessAlbums,
+                                    onCheckedChange = AppSettings::setSkipGaplessAlbums,
+                                )
+                            },
+                            onClick = { AppSettings.setSkipGaplessAlbums(!skipGaplessAlbums) },
+                        )
+                    }
+                }
+            }
             val automixTitle = stringResource(R.string.automix)
             row(automixTitle, "crossfade", "smart fade", "mix") {
                 BypassedByBitPerfect(bitPerfectReady) {
@@ -875,6 +1009,133 @@ fun SettingsScreen(
                         onClick = { onOpenChoice(SettingsChoiceKind.AUTOMIX_PERFORMANCE) },
                     )
                 }
+            }
+            val permanentShuffleTitle = stringResource(R.string.permanent_shuffle)
+            row(permanentShuffleTitle, "shuffle", "queue") {
+                SettingsRow(
+                    icon = SfIcons.Shuffle,
+                    title = permanentShuffleTitle,
+                    subtitle = stringResource(R.string.permanent_shuffle_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = permanentShuffle,
+                            onCheckedChange = AppSettings::setPermanentShuffle,
+                        )
+                    },
+                    onClick = { AppSettings.setPermanentShuffle(!permanentShuffle) },
+                )
+            }
+            val autoSkipTitle = stringResource(R.string.auto_skip_on_error)
+            row(autoSkipTitle, "error", "skip") {
+                SettingsRow(
+                    icon = SfIcons.PlayNext,
+                    title = autoSkipTitle,
+                    subtitle = stringResource(R.string.auto_skip_on_error_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoSkipOnError,
+                            onCheckedChange = AppSettings::setAutoSkipOnError,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoSkipOnError(!autoSkipOnError) },
+                )
+            }
+            val keepCpuAwakeTitle = stringResource(R.string.keep_cpu_awake)
+            row(keepCpuAwakeTitle, "cpu", "battery", "doze") {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = keepCpuAwakeTitle,
+                    subtitle = stringResource(R.string.keep_cpu_awake_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = keepCpuAwake,
+                            onCheckedChange = AppSettings::setKeepCpuAwake,
+                        )
+                    },
+                    onClick = { AppSettings.setKeepCpuAwake(!keepCpuAwake) },
+                )
+            }
+            // Ported from ArchiveTune's persistent queue.
+            val persistentQueueTitle = stringResource(R.string.persistent_queue)
+            row(persistentQueueTitle, "queue", "restore", "startup", "resume") {
+                SettingsRow(
+                    icon = SfIcons.Revert,
+                    title = persistentQueueTitle,
+                    subtitle = stringResource(R.string.persistent_queue_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = persistentQueue,
+                            onCheckedChange = AppSettings::setPersistentQueue,
+                        )
+                    },
+                    onClick = { AppSettings.setPersistentQueue(!persistentQueue) },
+                )
+            }
+            // Ported from ArchiveTune's pause on device mute.
+            val pauseAtZeroTitle = stringResource(R.string.pause_at_zero_volume)
+            row(pauseAtZeroTitle, "volume", "mute", "zero") {
+                SettingsRow(
+                    icon = SfIcons.VolumeOff,
+                    title = pauseAtZeroTitle,
+                    subtitle = stringResource(R.string.pause_at_zero_volume_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = pauseAtZeroVolume,
+                            onCheckedChange = AppSettings::setPauseAtZeroVolume,
+                        )
+                    },
+                    onClick = { AppSettings.setPauseAtZeroVolume(!pauseAtZeroVolume) },
+                )
+            }
+            // Ported from ArchiveTune's auto start on Bluetooth.
+            val autoStartBluetoothTitle = stringResource(R.string.auto_start_on_bluetooth)
+            row(autoStartBluetoothTitle, "bluetooth", "auto", "resume", "connect") {
+                SettingsRow(
+                    icon = SfIcons.Bluetooth,
+                    title = autoStartBluetoothTitle,
+                    subtitle = stringResource(R.string.auto_start_on_bluetooth_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoStartOnBluetooth,
+                            onCheckedChange = AppSettings::setAutoStartOnBluetooth,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoStartOnBluetooth(!autoStartOnBluetooth) },
+                )
+            }
+            // Ported from ArchiveTune's history duration: how long a track
+            // plays before it counts as listened to.
+            val historyDurationTitle = stringResource(R.string.history_duration)
+            row(historyDurationTitle, "history", "stats", "listen") {
+                SliderRow(
+                    icon = SfIcons.GraphicEq,
+                    title = historyDurationTitle,
+                    subtitle = stringResource(R.string.history_duration_subtitle),
+                    value = stringResource(R.string.history_duration_value, historyDurationSeconds),
+                    sliderValue = historyDurationSeconds.toFloat(),
+                    onSliderValue = { AppSettings.setHistoryDurationSeconds(it.roundToInt()) },
+                    valueRange = 5f..60f,
+                    steps = 54,
+                )
+            }
+            // Ported from ArchiveTune's preload songs: how many upcoming
+            // tracks read-ahead warms stream URLs for.
+            val preloadSongsTitle = stringResource(R.string.preload_songs)
+            row(preloadSongsTitle, "preload", "warm", "ahead", "read") {
+                SliderRow(
+                    icon = SfIcons.Performance,
+                    title = preloadSongsTitle,
+                    subtitle = stringResource(R.string.preload_songs_subtitle),
+                    value = if (preloadSongsCount == 0) {
+                        stringResource(R.string.off)
+                    } else {
+                        stringResource(R.string.preload_songs_value, preloadSongsCount)
+                    },
+                    sliderValue = preloadSongsCount.toFloat(),
+                    onSliderValue = { AppSettings.setPreloadSongsCount(it.roundToInt()) },
+                    valueRange = 0f..10f,
+                    steps = 9,
+                )
             }
             val skipSilenceTitle = stringResource(R.string.skip_silence)
             row(skipSilenceTitle, "silence") {
@@ -933,6 +1194,42 @@ fun SettingsScreen(
                     )
                 }
             }
+            // Beside Spatial audio now rather than with the quality ceilings it
+            // came from: it decides how a track is played back — the same
+            // question the rows around it answer — and not which version of it
+            // is fetched.
+            //
+            // Greyed rather than hidden where the device can't decode E-AC-3.
+            // A missing row reads as a feature the app doesn't have; a disabled
+            // one with a reason under it is the difference between "BitChord
+            // has no Atmos" and "this phone has no Dolby decoder", and only the
+            // second is true. The stored preference is left untouched either
+            // way — see [AppSettings.dolbyAtmos].
+            val dolbyAtmosTitle = stringResource(R.string.dolby_atmos)
+            row(dolbyAtmosTitle, "surround", "e-ac-3") {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    SettingsRow(
+                        iconPainter = painterResource(R.drawable.ic_dolby_atmos),
+                        title = dolbyAtmosTitle,
+                        subtitle = stringResource(
+                            if (dolbyAtmosSupported) {
+                                R.string.dolby_atmos_subtitle
+                            } else {
+                                R.string.dolby_atmos_unavailable
+                            },
+                        ),
+                        enabled = dolbyAtmosSupported,
+                        trailing = {
+                            IosSwitch(
+                                checked = dolbyAtmos && dolbyAtmosSupported,
+                                onCheckedChange = AppSettings::setDolbyAtmos,
+                                enabled = dolbyAtmosSupported,
+                            )
+                        },
+                        onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
+                    )
+                }
+            }
             // The system panel is not listed here as well. A device with a
             // Dolby or Dirac panel has something BitChord cannot reproduce and
             // keeps its row — but one level in, at the foot of the equaliser
@@ -950,7 +1247,7 @@ fun SettingsScreen(
             }
         }
 
-        if (shows(SettingsCategory.CONTENT_PREFERENCES)) SearchableSettingsGroup(search, header = stringResource(R.string.content_preferences)) {
+        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(search, header = stringResource(R.string.content_preferences)) {
             val preferMusicOnlyTitle = stringResource(R.string.prefer_music_only)
             row(preferMusicOnlyTitle, "video", "audio", "music video", "convert", "song") {
                 SettingsRow(
@@ -1036,6 +1333,45 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setSquareVideoThumbnails(!squareVideoThumbnails) },
+                )
+            }
+        }
+
+        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(search, header = stringResource(R.string.local_music)) {
+            val localMusicFolderTitle = stringResource(R.string.local_music_folder)
+            row(localMusicFolderTitle, "folder", "offline", "files") {
+                SettingsRow(
+                    icon = SfIcons.Folder,
+                    title = localMusicFolderTitle,
+                    subtitle = LocalMediaRepository.selectedFolderLabel(localMusicFolderUri)
+                        ?: stringResource(R.string.all_audio_folders),
+                    onClick = { localMusicFolderPicker.launch(null) },
+                )
+            }
+            if (localMusicFolderUri.isNotBlank()) {
+                val useAllAudioFoldersTitle = stringResource(R.string.use_all_audio_folders)
+                row(useAllAudioFoldersTitle, "folder") {
+                    SettingsRow(
+                        icon = SfIcons.LibraryMusic,
+                        title = useAllAudioFoldersTitle,
+                        subtitle = stringResource(R.string.use_all_audio_folders_subtitle),
+                        onClick = { AppSettings.setLocalMusicFolderUri("") },
+                    )
+                }
+            }
+            val filterNonMusicAudioTitle = stringResource(R.string.filter_non_music_audio)
+            row(filterNonMusicAudioTitle, "podcast", "recording") {
+                SettingsRow(
+                    icon = SfIcons.FilterAlt,
+                    title = filterNonMusicAudioTitle,
+                    subtitle = stringResource(R.string.filter_non_music_audio_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = filterNonMusicAudio,
+                            onCheckedChange = AppSettings::setFilterNonMusicAudio,
+                        )
+                    },
+                    onClick = { AppSettings.setFilterNonMusicAudio(!filterNonMusicAudio) },
                 )
             }
         }
@@ -1277,13 +1613,12 @@ fun SettingsScreen(
                 )
             }
             // The player's own design, ported from ArchiveTune's PlayerDesignStyle
-            // picker: a whole layout of the now-playing screen, eleven of them,
+            // picker: a whole layout of the now-playing screen, three of them,
             // this app's own the default and first.
             val playerDesignTitle = stringResource(R.string.player_design_style)
             row(
                 playerDesignTitle,
-                "player", "design", "style", "layout", "cinematic", "little", "immersive", "editorial",
-                "apple", "tiktok", "simpmusic", "spatialflow", "looper", "material",
+                "player", "design", "style", "layout", "apple", "tiktok",
             ) {
                 SettingsRow(
                     icon = SfIcons.Appearance,
@@ -1309,59 +1644,6 @@ fun SettingsScreen(
                     trailing = { Chevron() },
                     onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_BACKGROUND) },
                 )
-            }
-            val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
-            // Carries the keywords of the rows that only appear once it is on,
-            // so searching "spotify" with animated covers switched off turns up
-            // the switch that brings the Spotify row back rather than nothing.
-            row(animatedCoverArtTitle, "canvas", "video", "spotify") {
-                SettingsRow(
-                    icon = SfIcons.Animation,
-                    title = animatedCoverArtTitle,
-                    subtitle = stringResource(R.string.animated_cover_art_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = animatedCanvas,
-                            onCheckedChange = AppSettings::setAnimatedCanvas,
-                        )
-                    },
-                    onClick = { AppSettings.setAnimatedCanvas(!animatedCanvas) },
-                )
-            }
-            // Reads as part of the Animated cover art option above it, not
-            // as a separate setting. Nothing to narrow while the clip itself
-            // is off. Defaults to off: a clip loops for as long as its track
-            // plays, so on cellular this is not a one-time video cost but
-            // that cost repeated on every loop — see AppSettings.canvasOverCellular.
-            if (animatedCanvas) {
-                val coverCellularTitle = stringResource(R.string.animated_cover_cellular)
-                row(coverCellularTitle, "canvas", "cellular", divided = false) {
-                    SettingsSubRow(
-                        title = coverCellularTitle,
-                        checked = canvasOverCellular,
-                        onCheckedChange = AppSettings::setCanvasOverCellular,
-                    )
-                }
-                val spotifyCanvasTitle = stringResource(R.string.integrate_spotify_canvas)
-                row(spotifyCanvasTitle, "spotify", "canvas", divided = false) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onSpotifyCanvasAuth)
-                            .padding(start = ROW_INSET, end = ROW_INSET, top = 4.dp, bottom = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = spotifyCanvasTitle,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Chevron()
-                    }
-                }
             }
             val artistSignaturesTitle = stringResource(R.string.artist_signatures)
             row(artistSignaturesTitle, "signature", "artist", "logo") {
@@ -1401,195 +1683,6 @@ fun SettingsScreen(
                         Chevron()
                     }
                 }
-            }
-            val syncedLyricsTitle = stringResource(R.string.synced_lyrics)
-            // Same reasoning as Animated cover art above: the lyrics source and
-            // translation rows are only here while this is on.
-            row(syncedLyricsTitle, "lyrics", "translation", "lrclib", "musixmatch") {
-                SettingsRow(
-                    icon = SfIcons.Notes,
-                    title = syncedLyricsTitle,
-                    subtitle = stringResource(R.string.synced_lyrics_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = syncedLyrics,
-                            onCheckedChange = AppSettings::setSyncedLyrics,
-                        )
-                    },
-                    onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
-                )
-            }
-            // Nothing to choose between while the feature is off, and the
-            // sources are third-party services being reached on the user's
-            // connection — which is the part worth being able to narrow.
-            if (syncedLyrics) {
-                val lyricsBlurTitle = stringResource(R.string.blur_unfocused_lyrics)
-                row(lyricsBlurTitle, "lyrics", "blur") {
-                    SettingsRow(
-                        icon = SfIcons.BlurOn,
-                        title = lyricsBlurTitle,
-                        subtitle = stringResource(R.string.blur_unfocused_lyrics_subtitle),
-                        trailing = {
-                            IosSwitch(
-                                checked = lyricsBlur,
-                                onCheckedChange = AppSettings::setLyricsBlur,
-                            )
-                        },
-                        onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
-                    )
-                }
-                val lyricsSourcesTitle = stringResource(R.string.lyrics_sources)
-                row(lyricsSourcesTitle, "lyrics", "lrclib", "musixmatch") {
-                    SettingsRow(
-                        icon = SfIcons.Language,
-                        title = lyricsSourcesTitle,
-                        subtitle = lyricsSources
-                            .sortedBy { it.ordinal }
-                            .joinToString(", ") { it.label }
-                            .ifEmpty { stringResource(R.string.no_lyrics_sources_enabled) },
-                        trailing = { Chevron() },
-                        onClick = onLyricsSources,
-                    )
-                }
-                val translationLanguageTitle = stringResource(R.string.translation_language)
-                row(translationLanguageTitle, "lyrics", "translate") {
-                    SettingsRow(
-                        icon = SfIcons.Translate,
-                        title = translationLanguageTitle,
-                        subtitle = if (translationLanguage.isBlank()) {
-                            stringResource(R.string.translation_language_subtitle)
-                        } else {
-                            translationLanguageName(
-                                translationLanguage,
-                                AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault(),
-                            )
-                        },
-                        trailing = { Chevron() },
-                        onClick = onTranslationLanguage,
-                    )
-                }
-            }
-        }
-
-        // ---- The ported Player group, as ArchiveTune's Appearance page has it ----
-        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.player)) {
-            // Ported from ArchiveTune's moving blur: the blurred cover behind
-            // the player drifts on its own, screen-saver slow.
-            val movingBlurTitle = stringResource(R.string.moving_blur)
-            row(movingBlurTitle, "blur", "drift", "backdrop", "player") {
-                SettingsRow(
-                    icon = SfIcons.Waves,
-                    title = movingBlurTitle,
-                    subtitle = stringResource(R.string.moving_blur_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = movingBlur,
-                            onCheckedChange = AppSettings::setMovingBlur,
-                            enabled = !reduceDynamicBlur,
-                        )
-                    },
-                    enabled = !reduceDynamicBlur,
-                    onClick = { AppSettings.setMovingBlur(!movingBlur) },
-                )
-            }
-            // Ported from ArchiveTune: the seek bar goes, leaving the transport.
-            val hideSlideBarTitle = stringResource(R.string.hide_slide_bar)
-            row(hideSlideBarTitle, "seek", "slider", "progress", "player") {
-                SettingsRow(
-                    icon = SfIcons.Tune,
-                    title = hideSlideBarTitle,
-                    subtitle = stringResource(R.string.hide_slide_bar_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = hideSlideBar,
-                            onCheckedChange = AppSettings::setHideSlideBar,
-                        )
-                    },
-                    onClick = { AppSettings.setHideSlideBar(!hideSlideBar) },
-                )
-            }
-            // Ported from ArchiveTune's player buttons style.
-            val buttonsStyleTitle = stringResource(R.string.player_buttons_style)
-            row(buttonsStyleTitle, "buttons", "color", "transport", "player") {
-                SettingsRow(
-                    icon = SfIcons.Tune,
-                    title = buttonsStyleTitle,
-                    enabled = playerDesignStyle.customizesControls(),
-                )
-                SegmentedControl(
-                    options = PlayerButtonsStyle.entries.map { it.localizedLabel() },
-                    selectedIndex = PlayerButtonsStyle.entries.indexOf(playerButtonsStyle),
-                    onSelect = { AppSettings.setPlayerButtonsStyle(PlayerButtonsStyle.entries[it]) },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
-                )
-            }
-            // Ported from ArchiveTune's slider style, as a page: each option
-            // carries a live preview of the bar it picks.
-            val sliderStyleTitle = stringResource(R.string.player_slider_style)
-            row(sliderStyleTitle, "seek", "slider", "wavy", "circular", "thick", "player") {
-                SettingsRow(
-                    icon = SfIcons.GraphicEq,
-                    title = sliderStyleTitle,
-                    value = playerSliderStyle.localizedLabel(),
-                    enabled = playerDesignStyle.customizesControls(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.PLAYER_SLIDER) },
-                )
-            }
-            // Ported from ArchiveTune's lyrics background style.
-            val lyricsBackgroundTitle = stringResource(R.string.lyrics_background_style)
-            row(lyricsBackgroundTitle, "lyrics", "background", "coloring") {
-                SettingsRow(
-                    icon = SfIcons.Notes,
-                    title = lyricsBackgroundTitle,
-                    value = lyricsBackgroundStyle.localizedLabel(),
-                    enabled = playerDesignStyle.customizesLyricsBackground(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.LYRICS_BACKGROUND) },
-                )
-            }
-            // Ported from ArchiveTune's mini player background style.
-            val miniPlayerBackgroundTitle = stringResource(R.string.mini_player_background_style)
-            row(miniPlayerBackgroundTitle, "mini player", "background", "frosted", "gradient", "glow") {
-                SettingsRow(
-                    icon = SfIcons.Gradient,
-                    title = miniPlayerBackgroundTitle,
-                    value = miniPlayerBackgroundStyle.localizedLabel(),
-                    trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.MINI_PLAYER_BACKGROUND) },
-                )
-            }
-            // Ported from ArchiveTune: the sleeve goes, leaving the backdrop
-            // and the controls.
-            val hideThumbnailTitle = stringResource(R.string.hide_player_thumbnail)
-            row(hideThumbnailTitle, "artwork", "sleeve", "cover", "player") {
-                SettingsRow(
-                    icon = SfIcons.VisibilityOff,
-                    title = hideThumbnailTitle,
-                    subtitle = stringResource(R.string.hide_player_thumbnail_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = hidePlayerThumbnail,
-                            onCheckedChange = AppSettings::setHidePlayerThumbnail,
-                        )
-                    },
-                    onClick = { AppSettings.setHidePlayerThumbnail(!hidePlayerThumbnail) },
-                )
-            }
-            // Ported from ArchiveTune's thumbnail corner radius: 8 is the
-            // corner the app has always drawn.
-            val cornerRadiusTitle = stringResource(R.string.thumbnail_corner_radius)
-            row(cornerRadiusTitle, "corner", "radius", "artwork", "sleeve") {
-                SliderRow(
-                    icon = SfIcons.Tune,
-                    title = cornerRadiusTitle,
-                    subtitle = stringResource(R.string.thumbnail_corner_radius_subtitle),
-                    value = stringResource(R.string.thumbnail_corner_radius_value, thumbnailCornerRadius.roundToInt()),
-                    sliderValue = thumbnailCornerRadius,
-                    onSliderValue = { AppSettings.setThumbnailCornerRadius(it.roundToInt().toFloat()) },
-                    valueRange = 0f..AppSettings.MAX_THUMBNAIL_CORNER_RADIUS,
-                    steps = 27,
-                )
             }
         }
 
@@ -1641,23 +1734,6 @@ fun SettingsScreen(
 
         // ---- The ported Misc group ----
         if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.misc)) {
-            // Ported from ArchiveTune's tablet mode: the player drawn as a
-            // tablet-sized window gets it, whatever this window is.
-            val tabletModeTitle = stringResource(R.string.tablet_mode)
-            row(tabletModeTitle, "tablet", "dual", "layout", "player") {
-                SettingsRow(
-                    icon = SfIcons.Fullscreen,
-                    title = tabletModeTitle,
-                    subtitle = stringResource(R.string.tablet_mode_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = tabletMode,
-                            onCheckedChange = AppSettings::setTabletMode,
-                        )
-                    },
-                    onClick = { AppSettings.setTabletMode(!tabletMode) },
-                )
-            }
             // Ported from ArchiveTune's navigation bar settings.
             val navBarTitle = stringResource(R.string.navigation_bar_settings_title)
             row(navBarTitle, "navigation", "bar", "labels", "tabs") {
@@ -1667,17 +1743,6 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.navigation_bar_settings_subtitle),
                     trailing = { Chevron() },
                     onClick = { onOpenChoice(SettingsChoiceKind.NAVIGATION_BAR) },
-                )
-            }
-            // Ported from ArchiveTune's back animation style.
-            val backAnimationTitle = stringResource(R.string.back_animation_style)
-            row(backAnimationTitle, "back", "gesture", "animation", "predictive") {
-                SettingsRow(icon = SfIcons.ArrowBack, title = backAnimationTitle)
-                SegmentedControl(
-                    options = BackAnimationStyle.entries.map { it.localizedLabel() },
-                    selectedIndex = BackAnimationStyle.entries.indexOf(backAnimationStyle),
-                    onSelect = { AppSettings.setBackAnimationStyle(BackAnimationStyle.entries[it]) },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 10.dp, bottom = 14.dp),
                 )
             }
         }
@@ -1696,117 +1761,237 @@ fun SettingsScreen(
             }
         }
 
-        // ---- Behavior: how the app moves and responds, rather than how it looks ----
-        if (shows(SettingsCategory.BEHAVIOR)) SearchableSettingsGroup(search, header = stringResource(R.string.behavior)) {
-            // The three reduce switches live a page deep, as one Performance
-            // group: they are the app's concessions to a slow device, read
-            // together rather than beside a theme or a font.
-            val performanceTitle = stringResource(R.string.performance)
-            row(
-                performanceTitle,
-                "performance", "reduce", "animation", "blur", "blend", "effects", "motion", "lag",
-            ) {
+        // Its own group rather than rows bolted onto the cache below it,
+        // because a download is not a kind of cache. The cache answers "how much
+        // room"; these answer "what am I keeping, and when may it be fetched"
+        // — and keeping is the whole subject of the page they sit on now.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.downloads)) {
+            val downloadQualityTitle = stringResource(R.string.download_quality)
+            row(downloadQualityTitle, "offline", "lossless") {
                 SettingsRow(
-                    icon = SfIcons.Performance,
-                    title = performanceTitle,
-                    subtitle = stringResource(R.string.behavior_performance_subtitle),
+                    icon = SfIcons.Download,
+                    title = downloadQualityTitle,
+                    subtitle = stringResource(R.string.download_quality_subtitle, downloadQuality.perTrack),
+                    value = downloadQuality.localizedLabel(),
+                    onClick = { onOpenChoice(SettingsChoiceKind.DOWNLOAD_QUALITY) },
+                )
+            }
+            // Reads as part of Download quality above it, not as a setting
+            // of its own — same treatment as Play animated cover over
+            // cellular gets under Animated cover art.
+            val downloadWifiOnlyTitle = stringResource(R.string.download_wifi_only)
+            row(downloadWifiOnlyTitle, "wi-fi", "cellular", divided = false) {
+                SettingsSubRow(
+                    title = downloadWifiOnlyTitle,
+                    checked = wifiOnlyDownloads,
+                    onCheckedChange = AppSettings::setWifiOnlyDownloads,
+                    badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
+                )
+            }
+            // Ported from ArchiveTune's auto download on like: the moment a
+            // like lands is the moment the download is queued. The Wi-Fi gate
+            // above still applies — it is [Downloads.enqueue]'s, not this row's.
+            val autoDownloadOnLikeTitle = stringResource(R.string.auto_download_on_like)
+            row(autoDownloadOnLikeTitle, "like", "heart", "favorite", "automatic") {
+                SettingsRow(
+                    icon = SfIcons.Heart,
+                    title = autoDownloadOnLikeTitle,
+                    subtitle = stringResource(R.string.auto_download_on_like_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = autoDownloadOnLike,
+                            onCheckedChange = AppSettings::setAutoDownloadOnLike,
+                        )
+                    },
+                    onClick = { AppSettings.setAutoDownloadOnLike(!autoDownloadOnLike) },
+                )
+            }
+            // The order a download walks the sources in, live from the same
+            // walk that answers it — the Sources page it opens is the one that
+            // reorders the ranks this subtitle spells out.
+            val downloadSourcePriorityTitle = stringResource(R.string.download_source_priority)
+            row(downloadSourcePriorityTitle, "sources", "priority", "order", "rank") {
+                SettingsRow(
+                    icon = SfIcons.Tune,
+                    title = downloadSourcePriorityTitle,
+                    subtitle = downloadSourceOrder,
                     trailing = { Chevron() },
-                    onClick = { onOpenChoice(SettingsChoiceKind.BEHAVIOR_PERFORMANCE) },
+                    onClick = onSources,
+                )
+            }
+            val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)
+            row(exportDownloadsTitle, "music folder") {
+                SettingsSubRow(
+                    title = exportDownloadsTitle,
+                    checked = exportDownloads,
+                    onCheckedChange = AppSettings::setExportDownloads,
+                    subtitle = "Music/BitChord".takeIf { exportDownloads },
+                )
+            }
+            val syncPlaylistsTitle = stringResource(R.string.sync_downloaded_playlists)
+            row(syncPlaylistsTitle, "playlist", "new songs", "background", "automatic") {
+                SettingsSubRow(
+                    title = syncPlaylistsTitle,
+                    checked = syncDownloadedPlaylists,
+                    onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
+                    subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
                 )
             }
         }
 
-        if (shows(SettingsCategory.PERFORMANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
-            val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
-            row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
+        // The finished downloads themselves, rather than the rules above about
+        // when one may be fetched: what they are holding, and the way out with
+        // a copy. Ported from ArchiveTune's Storage page, whose clear and export
+        // rows sit under the downloads rules the same way.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.downloaded_songs_section),
+        ) {
+            val clearDownloadsTitle = stringResource(R.string.clear_all_downloads)
+            row(clearDownloadsTitle, "delete", "storage", "free space") {
                 SettingsRow(
-                    icon = SfIcons.Performance,
-                    title = highPerformanceModeTitle,
-                    subtitle = if (highPerformanceMode) {
-                        stringResource(R.string.high_performance_active, selectedPerformanceRefreshRate)
-                    } else {
-                        stringResource(R.string.high_performance_subtitle)
+                    icon = SfIcons.DeleteSweep,
+                    title = clearDownloadsTitle,
+                    subtitle = downloadsBytes?.let {
+                        stringResource(R.string.downloaded_songs_size, formatMb(it))
                     },
+                    onClick = { confirmClearDownloads = true },
+                )
+            }
+            val exportDownloadsCopyTitle = stringResource(R.string.export_downloads)
+            row(exportDownloadsCopyTitle, "export", "copy", "folder", "saf") {
+                SettingsRow(
+                    icon = SfIcons.Share,
+                    title = exportDownloadsCopyTitle,
+                    subtitle = downloadsExportStatus ?: stringResource(R.string.export_downloads_subtitle),
+                    onClick = { downloadsExportLauncher.launch(null) },
+                )
+            }
+        }
+
+        // Ported from ArchiveTune's external downloader: a YouTube track's
+        // download can be handed to another app, named by package. Nothing here
+        // fetches anything — the launch happens where a download is asked for.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.external_downloader),
+        ) {
+            val externalDownloaderTitle = stringResource(R.string.external_downloader)
+            row(externalDownloaderTitle, "youtube", "ytdl", "package") {
+                SettingsRow(
+                    icon = SfIcons.Apps,
+                    title = externalDownloaderTitle,
+                    subtitle = stringResource(R.string.external_downloader_subtitle),
                     trailing = {
                         IosSwitch(
-                            checked = highPerformanceMode,
-                            onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    showPerformanceWarning = true
-                                } else {
-                                    AppSettings.setHighPerformanceMode(false)
-                                }
-                            },
+                            checked = externalDownloaderEnabled,
+                            onCheckedChange = AppSettings::setExternalDownloaderEnabled,
                         )
                     },
-                    onClick = {
-                        if (highPerformanceMode) {
-                            AppSettings.setHighPerformanceMode(false)
-                        } else {
-                            showPerformanceWarning = true
+                    onClick = { AppSettings.setExternalDownloaderEnabled(!externalDownloaderEnabled) },
+                )
+            }
+            val packageTitle = stringResource(R.string.external_downloader_package)
+            row(packageTitle, "package", "app", "ytdl", divided = false) {
+                SettingsRow(
+                    icon = SfIcons.Pencil,
+                    title = packageTitle,
+                    subtitle = stringResource(R.string.external_downloader_package_subtitle),
+                    value = externalDownloaderPackage.ifBlank { null },
+                    enabled = externalDownloaderEnabled,
+                    onClick = { showExternalDownloaderPackageDialog = true },
+                )
+            }
+        }
+
+        // The clips the canvas player loops, with a ceiling of their own —
+        // see [CanvasCache], whose evictor takes a change here at once.
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.canvas_cache_section),
+        ) {
+            val canvasCacheOff = maxCanvasCacheSizeMb == 0
+            val canvasCacheUnlimited = maxCanvasCacheSizeMb == AppSettings.UNLIMITED_CANVAS_CACHE_MB
+            val canvasCacheLimitLabel = when {
+                canvasCacheOff -> stringResource(R.string.canvas_cache_off)
+                canvasCacheUnlimited -> stringResource(R.string.canvas_cache_unlimited)
+                else -> formatCacheSize(maxCanvasCacheSizeMb)
+            }
+            val maxCanvasCacheSizeTitle = stringResource(R.string.max_canvas_cache_size)
+            row(maxCanvasCacheSizeTitle, "cache", "limit", "space", "unlimited") {
+                SettingsRow(
+                    icon = SfIcons.Storage,
+                    title = maxCanvasCacheSizeTitle,
+                    value = canvasCacheLimitLabel,
+                    onClick = { showCanvasCacheDialog = true },
+                )
+            }
+            val canvasCacheUsageTitle = stringResource(R.string.canvas_cache_usage)
+            row(canvasCacheUsageTitle, "cache", "usage", "disk", divided = false) {
+                SettingsRow(
+                    icon = SfIcons.Cached,
+                    title = canvasCacheUsageTitle,
+                    subtitleContent = {
+                        Column {
+                            Text(
+                                text = when {
+                                    canvasCacheUnlimited -> stringResource(
+                                        R.string.canvas_cache_usage_unlimited,
+                                        formatMb(canvasCacheBytes),
+                                    )
+                                    canvasCacheOff -> stringResource(
+                                        R.string.canvas_cache_usage_off,
+                                        formatMb(canvasCacheBytes),
+                                    )
+                                    else -> stringResource(
+                                        R.string.canvas_cache_usage_limited,
+                                        formatMb(canvasCacheBytes),
+                                        canvasCacheLimitLabel,
+                                        ((canvasCacheBytes * 100) / (maxCanvasCacheSizeMb.toLong() * 1024 * 1024))
+                                            .toInt().coerceIn(0, 100),
+                                    )
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (!canvasCacheOff && !canvasCacheUnlimited) {
+                                LinearProgressIndicator(
+                                    progress = {
+                                        (canvasCacheBytes.toFloat() /
+                                            (maxCanvasCacheSizeMb * 1024f * 1024f)).coerceIn(0f, 1f)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 6.dp),
+                                )
+                            }
                         }
                     },
                 )
             }
-            if (highPerformanceMode) {
-                val refreshRateTitle = stringResource(R.string.refresh_rate)
-                row(refreshRateTitle, "hz", "frame rate") {
-                    SettingsRow(
-                        icon = SfIcons.FrameRate,
-                        title = refreshRateTitle,
-                    )
-                    SegmentedControl(
-                        options = supportedRefreshRates.map { "$it Hz" },
-                        selectedIndex = supportedRefreshRates.indexOf(selectedPerformanceRefreshRate),
-                        onSelect = { index ->
-                            AppSettings.setPerformanceRefreshRate(supportedRefreshRates[index])
-                        },
-                        modifier = Modifier.padding(
-                            start = TEXT_INSET,
-                            end = ROW_INSET,
-                            top = 10.dp,
-                            bottom = 14.dp,
-                        ),
-                    )
-                }
+            val clearCanvasCacheTitle = stringResource(R.string.clear_canvas_cache)
+            row(clearCanvasCacheTitle, "cache", "clips", "free space") {
+                SettingsRow(
+                    icon = SfIcons.DeleteSweep,
+                    title = clearCanvasCacheTitle,
+                    onClick = { confirmClearCanvasCache = true },
+                )
             }
         }
 
-        if (shows(SettingsCategory.LOCAL_MUSIC)) SearchableSettingsGroup(search, header = stringResource(R.string.local_music)) {
-            val localMusicFolderTitle = stringResource(R.string.local_music_folder)
-            row(localMusicFolderTitle, "folder", "offline", "files") {
+        // The translations and romanizations the lyrics screen keeps, ready
+        // for the next play of the same song — the only lyrics this app ever
+        // writes to disk. See [LyricsTranslation].
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(
+            search,
+            header = stringResource(R.string.lyrics_cache_section),
+        ) {
+            val clearLyricsTitle = stringResource(R.string.clear_lyrics_cache)
+            row(clearLyricsTitle, "lyrics", "translation", "free space") {
                 SettingsRow(
-                    icon = SfIcons.Folder,
-                    title = localMusicFolderTitle,
-                    subtitle = LocalMediaRepository.selectedFolderLabel(localMusicFolderUri)
-                        ?: stringResource(R.string.all_audio_folders),
-                    onClick = { localMusicFolderPicker.launch(null) },
-                )
-            }
-            if (localMusicFolderUri.isNotBlank()) {
-                val useAllAudioFoldersTitle = stringResource(R.string.use_all_audio_folders)
-                row(useAllAudioFoldersTitle, "folder") {
-                    SettingsRow(
-                        icon = SfIcons.LibraryMusic,
-                        title = useAllAudioFoldersTitle,
-                        subtitle = stringResource(R.string.use_all_audio_folders_subtitle),
-                        onClick = { AppSettings.setLocalMusicFolderUri("") },
-                    )
-                }
-            }
-            val filterNonMusicAudioTitle = stringResource(R.string.filter_non_music_audio)
-            row(filterNonMusicAudioTitle, "podcast", "recording") {
-                SettingsRow(
-                    icon = SfIcons.FilterAlt,
-                    title = filterNonMusicAudioTitle,
-                    subtitle = stringResource(R.string.filter_non_music_audio_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = filterNonMusicAudio,
-                            onCheckedChange = AppSettings::setFilterNonMusicAudio,
-                        )
-                    },
-                    onClick = { AppSettings.setFilterNonMusicAudio(!filterNonMusicAudio) },
+                    icon = SfIcons.DeleteSweep,
+                    title = clearLyricsTitle,
+                    onClick = { confirmClearLyricsCache = true },
                 )
             }
         }
@@ -1831,6 +2016,24 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setShowCacheFolder(!showCacheFolder) },
+                )
+            }
+            // Ported from ArchiveTune's smart trimmer: the once-per-launch pass
+            // that prunes both caches to their limits — see BitChordApplication,
+            // which runs it, and whose trimmer this row turns on.
+            val smartTrimmerTitle = stringResource(R.string.smart_trimmer)
+            row(smartTrimmerTitle, "cache", "trim", "prune", "disk", "space") {
+                SettingsRow(
+                    icon = SfIcons.AutoAwesome,
+                    title = smartTrimmerTitle,
+                    subtitle = stringResource(R.string.smart_trimmer_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = smartTrimmer,
+                            onCheckedChange = AppSettings::setSmartTrimmer,
+                        )
+                    },
+                    onClick = { AppSettings.setSmartTrimmer(!smartTrimmer) },
                 )
             }
             val songCacheLimitTitle = stringResource(R.string.song_cache_limit)
@@ -1879,62 +2082,265 @@ fun SettingsScreen(
             }
         }
 
-        // Only in a build that carries the watch app — see app/build.gradle.kts.
-        // On the main page it is listed with the categories; here it answers
-        // a search.
-        if (searching && watchAvailable) {
-            SearchableSettingsGroup(search) {
-                row(stringResource(R.string.wear_os_section), "watch", "wear os", "galaxy watch", "pixel watch", "install") {
-                    WearOsSettingsRow(onClick = onWearOs)
-                }
-            }
+        val backupFrequencyValue = scheduledFrequencyLabel(scheduledBackupFrequency)
+        val backupCustomDateLabel = scheduledBackupCustomDateEpochDay?.let { epochDay ->
+            LocalDate.ofEpochDay(epochDay).format(
+                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()),
+            )
+        }
+        val backupScheduleSubtitle = if (scheduledBackupFrequency == ScheduledBackupFrequency.CUSTOM && backupCustomDateLabel != null) {
+            stringResource(R.string.backup_schedule_custom_next, backupCustomDateLabel)
+        } else {
+            stringResource(R.string.backup_schedule_subtitle)
         }
 
-        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.your_data)) {
-            val replayTitle = stringResource(R.string.replay)
-            row(replayTitle, "stats", "history", "wrapped") {
+        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.backup_scheduled_section)) {
+            val scheduledEnabledTitle = stringResource(R.string.backup_scheduled_enabled)
+            row(scheduledEnabledTitle, "backup", "schedule", "automatic") {
                 SettingsRow(
-                    icon = SfIcons.BarChart,
-                    title = replayTitle,
-                    subtitle = stringResource(R.string.replay_subtitle),
-                    onClick = onOpenReplay,
-                )
-            }
-            val workOutGenresTitle = stringResource(R.string.work_out_genres)
-            row(workOutGenresTitle, "genre", "replay") {
-                SettingsRow(
-                    icon = SfIcons.LocalOffer,
-                    title = workOutGenresTitle,
-                    subtitle = if (replayGenres) {
-                        stringResource(R.string.replay_genres_enabled_subtitle)
+                    icon = SfIcons.Clock,
+                    title = scheduledEnabledTitle,
+                    subtitle = if (scheduledBackupEnabled) {
+                        stringResource(R.string.backup_scheduled_running)
                     } else {
-                        stringResource(R.string.replay_genres_disabled_subtitle)
+                        stringResource(R.string.backup_scheduled_paused)
                     },
                     trailing = {
                         IosSwitch(
-                            checked = replayGenres,
-                            onCheckedChange = AppSettings::setReplayGenres,
+                            checked = scheduledBackupEnabled,
+                            onCheckedChange = { enabled ->
+                                AppSettings.setScheduledBackupEnabled(enabled)
+                                ScheduledBackup.reschedule(context)
+                            },
                         )
                     },
-                    onClick = { AppSettings.setReplayGenres(!replayGenres) },
+                    onClick = {
+                        AppSettings.setScheduledBackupEnabled(!scheduledBackupEnabled)
+                        ScheduledBackup.reschedule(context)
+                    },
                 )
             }
-            val exportDataTitle = stringResource(R.string.export_data)
-            row(exportDataTitle, "backup") {
+            val backupScheduleTitle = stringResource(R.string.backup_schedule)
+            row(backupScheduleTitle, "backup", "schedule", "frequency", "daily", "weekly", "monthly", "custom") {
+                SettingsRow(
+                    icon = SfIcons.Cached,
+                    title = backupScheduleTitle,
+                    subtitle = backupScheduleSubtitle,
+                    value = backupFrequencyValue,
+                    onClick = { showFrequencyDialog = true },
+                )
+            }
+            val backupDirectoryTitle = stringResource(R.string.backup_directory)
+            row(backupDirectoryTitle, "backup", "folder", "directory") {
+                SettingsRow(
+                    icon = SfIcons.Folder,
+                    title = backupDirectoryTitle,
+                    subtitle = scheduledBackupDirectoryName.ifBlank {
+                        stringResource(R.string.backup_directory_unset)
+                    },
+                    onClick = { backupDirectoryLauncher.launch(null) },
+                )
+            }
+            val backupOverwriteTitle = stringResource(R.string.backup_overwrite)
+            row(backupOverwriteTitle, "backup", "history", "versions") {
+                SettingsRow(
+                    icon = SfIcons.Storage,
+                    title = backupOverwriteTitle,
+                    subtitle = stringResource(R.string.backup_overwrite_subtitle),
+                    enabled = scheduledBackupDirectoryUri.isNotBlank(),
+                    trailing = {
+                        IosSwitch(
+                            checked = scheduledBackupOverwriteExisting,
+                            onCheckedChange = AppSettings::setScheduledBackupOverwriteExisting,
+                            enabled = scheduledBackupDirectoryUri.isNotBlank(),
+                        )
+                    },
+                    onClick = {
+                        AppSettings.setScheduledBackupOverwriteExisting(!scheduledBackupOverwriteExisting)
+                    },
+                )
+            }
+        }
+
+        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.backup_cloud_section)) {
+            row("cloud", "drive", "dropbox", "nextcloud", "onedrive") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = ROW_INSET, vertical = 12.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Icon(
+                        imageVector = SfIcons.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(ICON_SIZE),
+                    )
+                    Spacer(Modifier.width(ICON_GAP))
+                    Text(
+                        text = stringResource(R.string.backup_cloud_info),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            val cloudFolderTitle = stringResource(R.string.backup_cloud_folder)
+            row(cloudFolderTitle, "cloud", "drive", "folder") {
+                SettingsRow(
+                    icon = SfIcons.Folder,
+                    title = cloudFolderTitle,
+                    subtitle = cloudSyncFolderName.ifBlank {
+                        stringResource(R.string.backup_cloud_folder_unset)
+                    },
+                    onClick = { cloudFolderLauncher.launch(null) },
+                )
+            }
+            val cloudEnabledTitle = stringResource(R.string.backup_cloud_enabled)
+            row(cloudEnabledTitle, "cloud", "sync", "drive", "backup") {
+                SettingsRow(
+                    icon = SfIcons.Cloud,
+                    title = cloudEnabledTitle,
+                    subtitle = if (cloudSyncEnabled && cloudSyncFolderUri.isNotBlank()) {
+                        stringResource(R.string.backup_cloud_running)
+                    } else {
+                        stringResource(R.string.backup_cloud_paused)
+                    },
+                    trailing = {
+                        IosSwitch(
+                            checked = cloudSyncEnabled,
+                            onCheckedChange = { enabled ->
+                                AppSettings.setCloudSyncEnabled(enabled)
+                                ScheduledBackup.reschedule(context)
+                            },
+                        )
+                    },
+                    onClick = {
+                        AppSettings.setCloudSyncEnabled(!cloudSyncEnabled)
+                        ScheduledBackup.reschedule(context)
+                    },
+                )
+            }
+            val cloudScheduleTitle = stringResource(R.string.backup_schedule)
+            row(cloudScheduleTitle, "cloud", "schedule", "frequency") {
+                SettingsRow(
+                    icon = SfIcons.Cached,
+                    title = cloudScheduleTitle,
+                    subtitle = if (cloudSyncFolderUri.isBlank()) {
+                        stringResource(R.string.backup_cloud_schedule_hint)
+                    } else {
+                        backupScheduleSubtitle
+                    },
+                    value = backupFrequencyValue,
+                    enabled = cloudSyncFolderUri.isNotBlank(),
+                    onClick = { showFrequencyDialog = true },
+                )
+            }
+            val cloudOverwriteTitle = stringResource(R.string.backup_cloud_overwrite)
+            row(cloudOverwriteTitle, "cloud", "overwrite", "history") {
+                SettingsRow(
+                    icon = SfIcons.CloudDone,
+                    title = cloudOverwriteTitle,
+                    subtitle = stringResource(R.string.backup_overwrite_subtitle),
+                    enabled = cloudSyncFolderUri.isNotBlank(),
+                    trailing = {
+                        IosSwitch(
+                            checked = cloudSyncOverwriteExisting,
+                            onCheckedChange = AppSettings::setCloudSyncOverwriteExisting,
+                            enabled = cloudSyncFolderUri.isNotBlank(),
+                        )
+                    },
+                    onClick = {
+                        AppSettings.setCloudSyncOverwriteExisting(!cloudSyncOverwriteExisting)
+                    },
+                )
+            }
+            val syncNowTitle = stringResource(R.string.backup_cloud_sync_now)
+            row(syncNowTitle, "cloud", "sync", "now", "drive", "backup") {
+                val lastSyncLabel = if (cloudSyncLastRunAt > 0L) {
+                    stringResource(
+                        R.string.backup_cloud_last_sync,
+                        DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+                            .format(Instant.ofEpochMilli(cloudSyncLastRunAt).atZone(ZoneId.systemDefault())),
+                    )
+                } else {
+                    stringResource(R.string.backup_cloud_last_sync_never)
+                }
+                SettingsRow(
+                    icon = SfIcons.Upload,
+                    title = syncNowTitle,
+                    subtitle = syncStatus ?: lastSyncLabel,
+                    enabled = cloudSyncFolderUri.isNotBlank(),
+                    onClick = {
+                        backupScope.launch {
+                            syncStatus = ScheduledBackup.syncNow(context).fold(
+                                onSuccess = { context.getString(R.string.backup_sync_done) },
+                                onFailure = {
+                                    context.getString(
+                                        R.string.backup_sync_failed,
+                                        it.message ?: context.getString(R.string.unknown_error),
+                                    )
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+        }
+
+        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.backup_internal_section)) {
+            val backupActionTitle = stringResource(R.string.backup_action_backup)
+            row(backupActionTitle, "backup", "export", "archive") {
                 SettingsRow(
                     icon = SfIcons.FileUpload,
-                    title = exportDataTitle,
-                    subtitle = exportStatus ?: stringResource(R.string.export_data_subtitle),
-                    onClick = { exportPicker.launch(Backup.suggestedName()) },
+                    title = backupActionTitle,
+                    subtitle = backupStatus ?: stringResource(R.string.backup_action_backup_desc),
+                    onClick = { backupFileLauncher.launch(BackupArchive.suggestedName(context)) },
                 )
             }
-            val importDataTitle = stringResource(R.string.import_data)
-            row(importDataTitle, "backup", "restore") {
+            val restoreActionTitle = stringResource(R.string.backup_action_restore)
+            row(restoreActionTitle, "restore", "import", "backup") {
                 SettingsRow(
                     icon = SfIcons.FileDownload,
-                    title = importDataTitle,
-                    subtitle = importStatus ?: stringResource(R.string.import_data_subtitle),
-                    onClick = { confirmImport = true },
+                    title = restoreActionTitle,
+                    subtitle = restoreStatus ?: stringResource(R.string.backup_action_restore_desc),
+                    onClick = {
+                        restoreFileLauncher.launch(
+                            arrayOf("application/octet-stream", "application/zip", "application/json", "text/plain", "*/*"),
+                        )
+                    },
+                )
+            }
+            val importM3uTitle = stringResource(R.string.backup_import_m3u)
+            row(importM3uTitle, "m3u", "playlist", "import", "backup") {
+                SettingsRow(
+                    icon = SfIcons.PlaylistPlay,
+                    title = importM3uTitle,
+                    subtitle = playlistImportStatus ?: stringResource(R.string.backup_import_m3u_desc),
+                    onClick = { importM3uLauncher.launch(arrayOf("audio/*")) },
+                )
+            }
+            val importCsvTitle = stringResource(R.string.backup_import_csv)
+            row(importCsvTitle, "csv", "playlist", "import", "backup") {
+                SettingsRow(
+                    icon = SfIcons.AddToPlaylist,
+                    title = importCsvTitle,
+                    subtitle = playlistImportStatus ?: stringResource(R.string.backup_import_csv_desc),
+                    onClick = { importCsvLauncher.launch(PlaylistTransfer.CSV_MIME_TYPES) },
+                )
+            }
+            val exportCsvTitle = stringResource(R.string.backup_export_csv)
+            row(exportCsvTitle, "csv", "playlist", "export", "backup") {
+                SettingsRow(
+                    icon = SfIcons.Share,
+                    title = exportCsvTitle,
+                    subtitle = playlistExportStatus ?: stringResource(R.string.backup_export_csv_desc),
+                    onClick = {
+                        if (LocalPlaylistStore.playlists.value.any { it.songs.isNotEmpty() }) {
+                            showPlaylistPicker = true
+                        } else {
+                            playlistExportStatus = context.getString(R.string.backup_export_none)
+                        }
+                    },
                 )
             }
         }
@@ -2100,7 +2506,7 @@ fun SettingsScreen(
             // belongs to — it moved there with the rest of the look settings.
         }
 
-        if (shows(SettingsCategory.LANGUAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
             val appLanguageTitle = stringResource(R.string.app_language)
             row(appLanguageTitle, "locale", "translate") {
                 val selectedLanguage = AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag()
@@ -2111,6 +2517,92 @@ fun SettingsScreen(
                     subtitle = stringResource(languageDisplayNameRes(selectedLanguage)),
                     onClick = onAppLanguage,
                 )
+            }
+        }
+
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
+            val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
+            row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = highPerformanceModeTitle,
+                    subtitle = if (highPerformanceMode) {
+                        stringResource(R.string.high_performance_active, selectedPerformanceRefreshRate)
+                    } else {
+                        stringResource(R.string.high_performance_subtitle)
+                    },
+                    trailing = {
+                        IosSwitch(
+                            checked = highPerformanceMode,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    showPerformanceWarning = true
+                                } else {
+                                    AppSettings.setHighPerformanceMode(false)
+                                }
+                            },
+                        )
+                    },
+                    onClick = {
+                        if (highPerformanceMode) {
+                            AppSettings.setHighPerformanceMode(false)
+                        } else {
+                            showPerformanceWarning = true
+                        }
+                    },
+                )
+            }
+            if (highPerformanceMode) {
+                val refreshRateTitle = stringResource(R.string.refresh_rate)
+                row(refreshRateTitle, "hz", "frame rate") {
+                    SettingsRow(
+                        icon = SfIcons.FrameRate,
+                        title = refreshRateTitle,
+                    )
+                    SegmentedControl(
+                        options = supportedRefreshRates.map { "$it Hz" },
+                        selectedIndex = supportedRefreshRates.indexOf(selectedPerformanceRefreshRate),
+                        onSelect = { index ->
+                            AppSettings.setPerformanceRefreshRate(supportedRefreshRates[index])
+                        },
+                        modifier = Modifier.padding(
+                            start = TEXT_INSET,
+                            end = ROW_INSET,
+                            top = 10.dp,
+                            bottom = 14.dp,
+                        ),
+                    )
+                }
+            }
+        }
+
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.behavior)) {
+            // The three reduce switches live a page deep, as one Performance
+            // group: they are the app's concessions to a slow device, read
+            // together rather than beside the odds and ends around them.
+            val performanceTitle = stringResource(R.string.performance)
+            row(
+                performanceTitle,
+                "performance", "reduce", "animation", "blur", "blend", "effects", "motion", "lag",
+            ) {
+                SettingsRow(
+                    icon = SfIcons.Performance,
+                    title = performanceTitle,
+                    subtitle = stringResource(R.string.behavior_performance_subtitle),
+                    trailing = { Chevron() },
+                    onClick = { onOpenChoice(SettingsChoiceKind.BEHAVIOR_PERFORMANCE) },
+                )
+            }
+        }
+
+        // Only in a build that carries the watch app — see app/build.gradle.kts.
+        // It is one of this page's rows now, and answers a search like the rest
+        // of them.
+        if (shows(SettingsCategory.MISCELLANEOUS) && watchAvailable) {
+            SearchableSettingsGroup(search) {
+                row(stringResource(R.string.wear_os_section), "watch", "wear os", "galaxy watch", "pixel watch", "install") {
+                    WearOsSettingsRow(onClick = onWearOs)
+                }
             }
         }
 
@@ -2161,7 +2653,7 @@ fun SettingsScreen(
 
     // Everything in the Cached songs folder goes with it, so say so first.
     if (confirmClearSongCache) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { confirmClearSongCache = false },
             title = { Text(stringResource(R.string.clear_song_cache_title)) },
             text = { Text(stringResource(R.string.clear_song_cache_warning)) },
@@ -2183,26 +2675,417 @@ fun SettingsScreen(
         )
     }
 
-    // Asked before the picker opens rather than after a file is chosen: the
-    // thing being confirmed is that this device's own history is about to be
-    // thrown away, and that is true whichever file gets picked.
-    if (confirmImport) {
-        AlertDialog(
-            onDismissRequest = { confirmImport = false },
-            title = { Text(stringResource(R.string.import_backup_title)) },
-            text = {
-                Text(stringResource(R.string.import_backup_warning))
-            },
+    // Downloads.clearAll is the destructive one that leaves the queue alone —
+    // the row above says what it is holding so the number, not the warning,
+    // is what gets tapped.
+    if (confirmClearDownloads) {
+        GlassAlertDialog(
+            onDismissRequest = { confirmClearDownloads = false },
+            title = { Text(stringResource(R.string.clear_all_downloads)) },
+            text = { Text(stringResource(R.string.clear_downloads_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
-                    confirmImport = false
-                    importPicker.launch(arrayOf("application/json", "text/plain", "*/*"))
+                    confirmClearDownloads = false
+                    backupScope.launch {
+                        Downloads.clearAll(context)
+                        downloadsExportStatus = null
+                        Toast.makeText(context, context.getString(R.string.downloads_cleared), Toast.LENGTH_SHORT).show()
+                    }
                 }) {
-                    Text(stringResource(R.string.choose_file))
+                    Text(stringResource(R.string.clear))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmImport = false }) {
+                TextButton(onClick = { confirmClearDownloads = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showCanvasCacheDialog) {
+        GlassAlertDialog(
+            onDismissRequest = { showCanvasCacheDialog = false },
+            title = { Text(stringResource(R.string.max_canvas_cache_size)) },
+            text = {
+                Column {
+                    CANVAS_CACHE_CHOICES.forEach { mb ->
+                        val sizeLabel = when (mb) {
+                            0 -> context.getString(R.string.canvas_cache_off)
+                            AppSettings.UNLIMITED_CANVAS_CACHE_MB -> context.getString(R.string.canvas_cache_unlimited)
+                            else -> formatCacheSize(mb)
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    AppSettings.setMaxCanvasCacheSizeMb(mb)
+                                    showCanvasCacheDialog = false
+                                }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = sizeLabel,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (mb == maxCanvasCacheSizeMb) {
+                                Icon(
+                                    imageVector = SfIcons.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCanvasCacheDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmClearCanvasCache) {
+        GlassAlertDialog(
+            onDismissRequest = { confirmClearCanvasCache = false },
+            title = { Text(stringResource(R.string.clear_canvas_cache)) },
+            text = { Text(stringResource(R.string.clear_canvas_cache_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClearCanvasCache = false
+                    CanvasCache.clear { canvasCacheBytes = CanvasCache.sizeBytes() }
+                    Toast.makeText(context, context.getString(R.string.canvas_cache_cleared), Toast.LENGTH_SHORT).show()
+                }) {
+                    Text(stringResource(R.string.clear))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearCanvasCache = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmClearLyricsCache) {
+        GlassAlertDialog(
+            onDismissRequest = { confirmClearLyricsCache = false },
+            title = { Text(stringResource(R.string.clear_lyrics_cache)) },
+            text = { Text(stringResource(R.string.clear_lyrics_cache_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClearLyricsCache = false
+                    backupScope.launch {
+                        LyricsTranslation.clearCache()
+                        Toast.makeText(context, context.getString(R.string.lyrics_cache_cleared), Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text(stringResource(R.string.clear))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearLyricsCache = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showExternalDownloaderPackageDialog) {
+        var packageInput by remember { mutableStateOf(externalDownloaderPackage) }
+        GlassAlertDialog(
+            onDismissRequest = { showExternalDownloaderPackageDialog = false },
+            title = { Text(stringResource(R.string.external_downloader_package)) },
+            text = {
+                OutlinedTextField(
+                    value = packageInput,
+                    onValueChange = { packageInput = it },
+                    label = { Text(stringResource(R.string.external_downloader_package)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    AppSettings.setExternalDownloaderPackage(packageInput)
+                    showExternalDownloaderPackageDialog = false
+                }) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExternalDownloaderPackageDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showFrequencyDialog) {
+        GlassAlertDialog(
+            onDismissRequest = { showFrequencyDialog = false },
+            title = { Text(stringResource(R.string.backup_schedule)) },
+            text = {
+                Column {
+                    ScheduledBackupFrequency.entries.forEach { frequency ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showFrequencyDialog = false
+                                    if (frequency == ScheduledBackupFrequency.CUSTOM) {
+                                        showCustomDatePicker = true
+                                    } else {
+                                        AppSettings.setScheduledBackupFrequency(frequency)
+                                        ScheduledBackup.reschedule(context)
+                                    }
+                                }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = scheduledFrequencyLabel(frequency),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (frequency == scheduledBackupFrequency) {
+                                Icon(
+                                    imageVector = SfIcons.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFrequencyDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showCustomDatePicker) {
+        val todayEpochDay = remember { LocalDate.now().toEpochDay() }
+        val initialEpochDay = scheduledBackupCustomDateEpochDay?.coerceAtLeast(todayEpochDay) ?: todayEpochDay + 1
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = LocalDate
+                .ofEpochDay(initialEpochDay)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli(),
+            selectableDates = remember(todayEpochDay) {
+                object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                        Instant
+                            .ofEpochMilli(utcTimeMillis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toEpochDay() >= todayEpochDay
+                }
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showCustomDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selectedMillis = datePickerState.selectedDateMillis ?: return@TextButton
+                        val epochDay = Instant
+                            .ofEpochMilli(selectedMillis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toEpochDay()
+                        showCustomDatePicker = false
+                        AppSettings.setScheduledBackupCustomDate(epochDay)
+                        ScheduledBackup.reschedule(context)
+                    },
+                    enabled = datePickerState.selectedDateMillis != null,
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomDatePicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        ) {
+            DatePicker(
+                state = datePickerState,
+                title = { Text(stringResource(R.string.backup_custom_date_title)) },
+                showModeToggle = false,
+            )
+        }
+    }
+
+    // Asked after the file is chosen and read: the thing being confirmed is
+    // that this device's own history is about to be replaced by what that
+    // file holds, which the picker alone could not have said.
+    if (showRestoreConfirm) {
+        val source = pendingRestore
+        val info = pendingRestoreInfo
+        if (source != null && info.isValid) {
+            val madeAtLabel = remember(info) {
+                runCatching {
+                    DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+                        .format(Instant.parse(info.madeAt).atZone(ZoneId.systemDefault()))
+                }.getOrNull() ?: info.madeAt.orEmpty()
+            }
+            GlassAlertDialog(
+                onDismissRequest = {
+                    showRestoreConfirm = false
+                    pendingRestore = null
+                },
+                title = { Text(stringResource(R.string.backup_restore_confirm_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.import_backup_warning))
+                        val metaLine = when {
+                            info.legacy -> stringResource(R.string.backup_restore_legacy)
+                            !info.madeAt.isNullOrEmpty() && !info.appVersion.isNullOrEmpty() ->
+                                stringResource(R.string.backup_restore_meta, madeAtLabel, info.appVersion)
+                            else -> null
+                        }
+                        if (metaLine != null) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = metaLine,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showRestoreConfirm = false
+                            pendingRestore = null
+                            backupScope.launch {
+                                restoreStatus = BackupArchive.restore(context, source).fold(
+                                    onSuccess = { restored ->
+                                        context.getString(
+                                            R.string.backup_restored,
+                                            context.countOfMonths(restored.months),
+                                            restored.versionName,
+                                        )
+                                    },
+                                    onFailure = {
+                                        context.getString(
+                                            R.string.backup_restore_failed,
+                                            it.message ?: context.getString(R.string.unknown_error),
+                                        )
+                                    },
+                                )
+                                // A restore rewrites the schedule's own
+                                // settings, so the work on record is re-armed
+                                // from whatever the file left behind.
+                                ScheduledBackup.reschedule(context)
+                            }
+                        },
+                    ) {
+                        Text(stringResource(R.string.backup_action_restore))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showRestoreConfirm = false
+                            pendingRestore = null
+                        },
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                },
+            )
+        }
+    }
+
+    if (showRestoreInvalid) {
+        GlassAlertDialog(
+            onDismissRequest = { showRestoreInvalid = false },
+            title = { Text(stringResource(R.string.backup_restore_failed_title)) },
+            text = { Text(restoreError) },
+            confirmButton = {
+                TextButton(onClick = { showRestoreInvalid = false }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+        )
+    }
+
+    if (showPlaylistPicker) {
+        val playlists by LocalPlaylistStore.playlists.collectAsStateWithLifecycle()
+        GlassAlertDialog(
+            onDismissRequest = { showPlaylistPicker = false },
+            title = { Text(stringResource(R.string.backup_export_picker_title)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    playlists
+                        .filter { it.songs.isNotEmpty() }
+                        .asReversed()
+                        .forEach { playlist ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showPlaylistPicker = false
+                                        pendingExportPlaylist = playlist
+                                        exportCsvLauncher.launch(PlaylistTransfer.suggestedCsvName(playlist.title))
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = playlist.title,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = pluralStringResource(
+                                            R.plurals.backup_playlist_song_count,
+                                            playlist.songs.size,
+                                            playlist.songs.size,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Icon(
+                                    imageVector = SfIcons.Share,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPlaylistPicker = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
@@ -2210,7 +3093,7 @@ fun SettingsScreen(
     }
 
     if (showPerformanceWarning) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showPerformanceWarning = false },
             title = { Text(stringResource(R.string.high_performance_before_enabling)) },
             text = { Text(stringResource(R.string.high_performance_battery_warning)) },
@@ -2239,7 +3122,7 @@ fun SettingsScreen(
     }
 
     if (showPerformanceConfirmation) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showPerformanceConfirmation = false },
             title = { Text(stringResource(R.string.enable_high_performance_title)) },
             text = { Text(stringResource(R.string.enable_high_performance_confirmation)) },
@@ -2263,7 +3146,7 @@ fun SettingsScreen(
 
     if (showListenBrainzTokenDialog) {
         var tokenInput by remember { mutableStateOf(listenBrainzToken) }
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showListenBrainzTokenDialog = false },
             title = { Text(stringResource(R.string.listenbrainz_token)) },
             text = {
@@ -2296,7 +3179,7 @@ fun SettingsScreen(
         var passwordInput by remember { mutableStateOf("") }
         var lastfmError by remember { mutableStateOf<String?>(null) }
         var lastfmLoading by remember { mutableStateOf(false) }
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { if (!lastfmLoading) showLastfmLoginDialog = false },
             title = { Text(stringResource(R.string.lastfm_login)) },
             text = {
@@ -2377,8 +3260,19 @@ private fun Context.countOfMonths(months: Int): String = if (months == 0) {
     resources.getQuantityString(R.plurals.listening_month_count, months, months)
 }
 
+/** The word the Backup schedule rows and their dialog say for each frequency. */
 @Composable
-private fun AudioQuality.localizedLabel(): String = stringResource(
+private fun scheduledFrequencyLabel(frequency: ScheduledBackupFrequency): String = stringResource(
+    when (frequency) {
+        ScheduledBackupFrequency.DAILY -> R.string.backup_frequency_daily
+        ScheduledBackupFrequency.WEEKLY -> R.string.backup_frequency_weekly
+        ScheduledBackupFrequency.MONTHLY -> R.string.backup_frequency_monthly
+        ScheduledBackupFrequency.CUSTOM -> R.string.backup_frequency_custom
+    },
+)
+
+@Composable
+internal fun AudioQuality.localizedLabel(): String = stringResource(
     when (this) {
         AudioQuality.LOW -> R.string.low
         AudioQuality.MEDIUM -> R.string.medium
@@ -2418,21 +3312,11 @@ private fun PlayerTheme.localizedLabel(): String = stringResource(
 
 /**
  * The design styles that stand on a picked background, ported from
- * ArchiveTune's isPlayerStyleCustomizationEnabled: V4 and V5 there, which here
- * are the app's own player, Cinematic and Little.
+ * ArchiveTune's isPlayerStyleCustomizationEnabled — now only the app's own
+ * player, after the legacy styles went.
  */
 private fun PlayerDesignStyle.customizesBackground(): Boolean =
-    this == PlayerDesignStyle.BITCHORD ||
-        this == PlayerDesignStyle.CINEMATIC ||
-        this == PlayerDesignStyle.LITTLE
-
-/** The same styles take the picked buttons and slider, as ArchiveTune gates them. */
-private fun PlayerDesignStyle.customizesControls(): Boolean = customizesBackground()
-
-/** The styles whose lyrics run on the shared background, rather than their own. */
-private fun PlayerDesignStyle.customizesLyricsBackground(): Boolean =
-    !(this == PlayerDesignStyle.APPLE_MUSIC || this == PlayerDesignStyle.TIKTOK ||
-        this == PlayerDesignStyle.SPATIALFLOW || this == PlayerDesignStyle.SIMPMUSIC)
+    this == PlayerDesignStyle.BITCHORD
 
 @Composable
 private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes())
@@ -2442,32 +3326,16 @@ private fun PlayerDesignStyle.localizedLabel(): String = stringResource(labelRes
 internal fun PlayerDesignStyle.labelRes(): Int =
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord
-        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic
-        PlayerDesignStyle.LITTLE -> R.string.player_design_little
-        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive
-        PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended
-        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok
-        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic
-        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow
-        PlayerDesignStyle.LOOPER -> R.string.player_design_looper
     }
 
 @Composable
 private fun PlayerDesignStyle.localizedDetail(): String = stringResource(
     when (this) {
         PlayerDesignStyle.BITCHORD -> R.string.player_design_bitchord_detail
-        PlayerDesignStyle.CINEMATIC -> R.string.player_design_cinematic_detail
-        PlayerDesignStyle.LITTLE -> R.string.player_design_little_detail
-        PlayerDesignStyle.IMMERSIVE -> R.string.player_design_immersive_detail
-        PlayerDesignStyle.MATERIAL_EXTENDED -> R.string.player_design_material_extended_detail
-        PlayerDesignStyle.EDITORIAL -> R.string.player_design_editorial_detail
         PlayerDesignStyle.APPLE_MUSIC -> R.string.player_design_apple_music_detail
         PlayerDesignStyle.TIKTOK -> R.string.player_design_tiktok_detail
-        PlayerDesignStyle.SIMPMUSIC -> R.string.player_design_simpmusic_detail
-        PlayerDesignStyle.SPATIALFLOW -> R.string.player_design_spatialflow_detail
-        PlayerDesignStyle.LOOPER -> R.string.player_design_looper_detail
     },
 )
 
@@ -2504,91 +3372,11 @@ private fun AppFont.description(): String = stringResource(
 )
 
 @Composable
-private fun PlayerButtonsStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        PlayerButtonsStyle.DEFAULT -> R.string.player_buttons_style_default
-        PlayerButtonsStyle.SECONDARY -> R.string.player_buttons_style_secondary
-    },
-)
-
-@Composable
-private fun PlayerSliderStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard
-        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy
-        PlayerSliderStyle.THICK -> R.string.slider_style_thick
-        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular
-        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple
-    },
-)
-
-@Composable
-private fun PlayerSliderStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        PlayerSliderStyle.STANDARD -> R.string.slider_style_standard_detail
-        PlayerSliderStyle.WAVY -> R.string.slider_style_wavy_detail
-        PlayerSliderStyle.THICK -> R.string.slider_style_thick_detail
-        PlayerSliderStyle.CIRCULAR -> R.string.slider_style_circular_detail
-        PlayerSliderStyle.SIMPLE -> R.string.slider_style_simple_detail
-    },
-)
-
-@Composable
-private fun LyricsBackgroundStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default
-        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.follow_theme
-        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring
-        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur
-    },
-)
-
-@Composable
-private fun LyricsBackgroundStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        LyricsBackgroundStyle.DEFAULT -> R.string.lyrics_background_default_detail
-        LyricsBackgroundStyle.FOLLOW_THEME -> R.string.lyrics_background_follow_theme_detail
-        LyricsBackgroundStyle.COLORING -> R.string.lyrics_background_coloring_detail
-        LyricsBackgroundStyle.MOVING_BLUR -> R.string.lyrics_background_moving_blur_detail
-    },
-)
-
-@Composable
-private fun MiniPlayerBackgroundStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted
-        MiniPlayerBackgroundStyle.THEME -> R.string.follow_theme
-        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient
-        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.liquid_glass
-    },
-)
-
-@Composable
-private fun MiniPlayerBackgroundStyle.localizedDetail(): String = stringResource(
-    when (this) {
-        MiniPlayerBackgroundStyle.FROSTED -> R.string.mini_player_background_frosted_detail
-        MiniPlayerBackgroundStyle.THEME -> R.string.mini_player_background_theme_detail
-        MiniPlayerBackgroundStyle.GRADIENT -> R.string.mini_player_background_gradient_detail
-        MiniPlayerBackgroundStyle.GLOW -> R.string.mini_player_background_glow_detail
-        MiniPlayerBackgroundStyle.LIQUID_GLASS -> R.string.mini_player_background_liquid_glass_detail
-    },
-)
-
-@Composable
 private fun DefaultOpenTab.localizedLabel(): String = stringResource(
     when (this) {
         DefaultOpenTab.HOME -> R.string.home
         DefaultOpenTab.SEARCH -> R.string.search
         DefaultOpenTab.LIBRARY -> R.string.library
-    },
-)
-
-@Composable
-private fun BackAnimationStyle.localizedLabel(): String = stringResource(
-    when (this) {
-        BackAnimationStyle.DEFAULT -> R.string.back_animation_style_default
-        BackAnimationStyle.PREDICTIVE -> R.string.back_animation_style_predictive
     },
 )
 
@@ -2633,6 +3421,19 @@ private fun formatCacheSize(mb: Int): String {
     val gb = mb / 1024f
     return if (gb == gb.toInt().toFloat()) "${gb.toInt()} GB" else "%.1f GB".format(Locale.ROOT, gb)
 }
+
+/** The canvas cache's size row, measured off bytes rather than whole megabytes. */
+private fun formatMb(bytes: Long): String {
+    val mb = bytes / (1024f * 1024f)
+    return if (mb >= 10f) "%.0f MB".format(Locale.ROOT, mb) else "%.1f MB".format(Locale.ROOT, mb)
+}
+
+/**
+ * The canvas cache's ceiling choices, in the order the dialog lists them: off,
+ * the fixed sizes, then no ceiling at all. Everything here survives
+ * [AppSettings.setMaxCanvasCacheSizeMb]'s clamp unchanged.
+ */
+private val CANVAS_CACHE_CHOICES = listOf(0, 64, 128, 256, 512, 1024, 2048, AppSettings.UNLIMITED_CANVAS_CACHE_MB)
 
 /** Who you're signed in as, straight from YouTube Music's account menu. */
 @Composable
@@ -3257,25 +4058,53 @@ internal fun SliderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Slider(
-            value = sliderValue,
-            onValueChange = onSliderValue,
-            enabled = enabled,
-            valueRange = valueRange,
-            steps = steps,
-            colors = colors,
-            // Bare track: the step ticks and the end-stop dot are noise when the
-            // value is already spelled out on the line above.
-            track = { state ->
-                SliderDefaults.Track(
-                    sliderState = state,
-                    colors = colors,
-                    drawStopIndicator = null,
-                    drawTick = { _, _ -> },
-                )
-            },
-            modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
-        )
+        if (LocalLiquidGlassEnabled.current && isGlassSupported()) {
+            // The glass slider, ported from Glasmio: the 40dp capsule track
+            // with the accent fill and the 37×24 thumb as a real glass lens
+            // that lifts and enlarges under the finger. The discrete rows
+            // keep their M3 snapping — the drag is quantised to the same
+            // steps + 1 intervals M3's own slider used, so every writer of
+            // these settings sees the values it always did.
+            val span = valueRange.endInclusive - valueRange.start
+            val step = if (steps > 0 && span > 0f) span / (steps + 1) else 0f
+            GlasmioSlider(
+                value = sliderValue.coerceIn(valueRange),
+                onValueChange = { raw ->
+                    if (step > 0f) {
+                        val snapped = valueRange.start +
+                            ((raw - valueRange.start) / step).roundToInt() * step
+                        onSliderValue(snapped.coerceIn(valueRange))
+                    } else {
+                        onSliderValue(raw)
+                    }
+                },
+                modifier = Modifier
+                    .padding(start = ICON_SIZE + ICON_GAP)
+                    .fillMaxWidth(),
+                valueRange = valueRange,
+                enabled = enabled,
+            )
+        } else {
+            Slider(
+                value = sliderValue,
+                onValueChange = onSliderValue,
+                enabled = enabled,
+                valueRange = valueRange,
+                steps = steps,
+                colors = colors,
+                // Bare track: the step ticks and the end-stop dot are noise when the
+                // value is already spelled out on the line above.
+                track = { state ->
+                    SliderDefaults.Track(
+                        sliderState = state,
+                        colors = colors,
+                        drawStopIndicator = null,
+                        drawTick = { _, _ -> },
+                    )
+                },
+                modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
+            )
+        }
     }
 }
 
@@ -3320,36 +4149,27 @@ internal fun SegmentedControl(
 
 /**
  * The groups of Settings that are pages of their own, in the order the main
- * page lists them. Account, Listen Together and Audio quality aren't here:
- * they stay on the main page, where they always were.
+ * page lists them. Account, Listen Together and Replay aren't here: they stay
+ * on the main page, where they always were. The audio-quality ceilings live
+ * under Internet now, and everything the pages below shed — downloads,
+ * content preferences, local music, language, performance, behavior — rides
+ * with the page whose subject it is.
  */
 enum class SettingsCategory(@param:StringRes val title: Int) {
-    DOWNLOADS(R.string.downloads),
     PLAYBACK(R.string.playback),
-    CONTENT_PREFERENCES(R.string.content_preferences),
     APPEARANCE(R.string.appearance),
-    BEHAVIOR(R.string.behavior),
-    PERFORMANCE(R.string.performance),
-    LOCAL_MUSIC(R.string.local_music),
     STORAGE(R.string.storage),
     YOUR_DATA(R.string.your_data),
     MISCELLANEOUS(R.string.miscellaneous),
-    LANGUAGE(R.string.language),
     ;
 
     val icon: ImageVector
         get() = when (this) {
-            DOWNLOADS -> SfIcons.Download
             PLAYBACK -> SfIcons.PlayCircle
-            CONTENT_PREFERENCES -> SfIcons.Video
             APPEARANCE -> SfIcons.Appearance
-            BEHAVIOR -> SfIcons.SmartButton
-            PERFORMANCE -> SfIcons.Performance
-            LOCAL_MUSIC -> SfIcons.LibraryMusic
             STORAGE -> SfIcons.Storage
             YOUR_DATA -> SfIcons.YourData
             MISCELLANEOUS -> SfIcons.Miscellaneous
-            LANGUAGE -> SfIcons.Language
         }
 }
 
@@ -3367,12 +4187,6 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
     SF_PRO_FONTS(R.string.sf_pro_fonts),
     /** What the player stands on, below the artwork. */
     PLAYER_BACKGROUND(R.string.player_background_style),
-    /** The seek bar's shape, each option with a live preview. */
-    PLAYER_SLIDER(R.string.player_slider_style),
-    /** What stands behind the lyrics. */
-    LYRICS_BACKGROUND(R.string.lyrics_background_style),
-    /** The mini player's surface. */
-    MINI_PLAYER_BACKGROUND(R.string.mini_player_background_style),
     /** The always-on playing screen's own settings. */
     AOD(R.string.aod_customize_title),
     /** The bottom bar's own settings. */
@@ -3383,6 +4197,8 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
     BEHAVIOR_PERFORMANCE(R.string.performance),
     /** The player's own design — the whole layout of the now-playing screen. */
     PLAYER_DESIGN(R.string.player_design_style),
+    /** The country YouTube Music requests pin themselves to — the Internet page's picker. */
+    YT_MUSIC_REGION(R.string.youtube_music_region),
 }
 
 /** The main page's list of categories: a glyph and a name each, and a chevron into it. */
@@ -3535,37 +4351,38 @@ fun SettingsChoicePage(
                 }
             }
 
-            SettingsChoiceKind.PLAYER_SLIDER -> PlayerSliderStylePage()
-
-            SettingsChoiceKind.LYRICS_BACKGROUND -> {
-                val selected by AppSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
-                ChoiceGroup(
-                    options = LyricsBackgroundStyle.entries,
-                    selected = selected,
-                    label = { it.localizedLabel() },
-                    detail = { it.localizedDetail() },
-                    footer = stringResource(R.string.lyrics_background_style_footer),
-                ) { style ->
-                    AppSettings.setLyricsBackgroundStyle(style)
-                    onChosen()
-                }
-            }
-
-            SettingsChoiceKind.MINI_PLAYER_BACKGROUND -> {
-                val selected by AppSettings.miniPlayerBackgroundStyle.collectAsStateWithLifecycle()
-                ChoiceGroup(
-                    options = MiniPlayerBackgroundStyle.entries,
-                    selected = selected,
-                    label = { it.localizedLabel() },
-                    detail = { it.localizedDetail() },
-                    footer = stringResource(R.string.mini_player_background_style_footer),
-                ) { style ->
-                    AppSettings.setMiniPlayerBackgroundStyle(style)
-                    onChosen()
-                }
-            }
-
             SettingsChoiceKind.AOD -> AodSettingsPage()
+
+            // The Internet page's region picker — a page rather than upstream's
+            // dialog, because thirty-six countries is a list to scroll, not an
+            // alert to fit. A pick restarts the app: the visitor data and every
+            // cached response belong to the region they were minted in.
+            SettingsChoiceKind.YT_MUSIC_REGION -> {
+                val selected by AppSettings.ytMusicRegion.collectAsStateWithLifecycle()
+                val context = LocalContext.current
+                val scope = rememberCoroutineScope()
+                ChoiceGroup(
+                    options = listOf(NetPolicy.SYSTEM_DEFAULT) + YT_MUSIC_REGIONS.keys.toList(),
+                    selected = selected,
+                    label = { code ->
+                        if (code == NetPolicy.SYSTEM_DEFAULT) {
+                            stringResource(R.string.system_default)
+                        } else {
+                            YT_MUSIC_REGIONS[code] ?: code
+                        }
+                    },
+                    footer = stringResource(R.string.youtube_music_region_desc),
+                ) { code ->
+                    AppSettings.setYtMusicRegion(code)
+                    onChosen()
+                    scope.launch {
+                        // Long enough for the pick to land and the page to settle
+                        // under the toast that says why the app is about to go.
+                        delay(400)
+                        restartForRegionChange(context)
+                    }
+                }
+            }
 
             SettingsChoiceKind.NAVIGATION_BAR -> NavigationBarSettingsPage()
 
@@ -4043,61 +4860,6 @@ private fun SfProFontRow(
 }
 
 /**
- * The player slider style, ported from ArchiveTune: five shapes for the seek
- * bar, each drawn as the live bar it picks rather than described, so the
- * choice is made against the thing itself.
- */
-@Composable
-private fun PlayerSliderStylePage() {
-    val selected by AppSettings.playerSliderStyle.collectAsStateWithLifecycle()
-    SettingsGroup(topSpacing = 0.dp) {
-        PlayerSliderStyle.entries.forEachIndexed { index, style ->
-            if (index > 0) RowDivider()
-            var previewValue by remember { mutableFloatStateOf(0.4f) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { AppSettings.setPlayerSliderStyle(style) }
-                    .padding(horizontal = ROW_INSET, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = style.localizedLabel(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = style.localizedDetail(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                    // The bar itself, drawn in the style the row picks. Played
-                    // flat — the wave moves in the player, with the track.
-                    ThinSlider(
-                        value = previewValue,
-                        onValueChange = { previewValue = it },
-                        style = style,
-                        animated = false,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-                if (style == selected) {
-                    Spacer(Modifier.width(12.dp))
-                    Icon(
-                        imageVector = SfIcons.Check,
-                        contentDescription = stringResource(R.string.selected),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
  * The always-on playing screen's own settings, ported from ArchiveTune's AOD
  * customized page: the master switch, what appears on the screen, and how the
  * screen itself behaves.
@@ -4232,21 +4994,14 @@ private fun AodSettingsPage() {
 
 /**
  * The bottom bar's own settings, ported from ArchiveTune's navigation bar
- * page: what the mini player and bar do on scroll, the three surfaces the
- * standard bar can wear — frosted, tint, Liquid Glass, one at a time — the
- * glass glow with its strength, the labels, and the six dimension dials with
- * their reset. The BitChord and SukiSU bars of ArchiveTune's page stay
- * unported, as asked.
+ * page: what the mini player and bar do on scroll, the glass glow with its
+ * strength, the labels, and the six dimension dials with their reset. The
+ * BitChord and SukiSU bars of ArchiveTune's page stay unported, as asked.
  */
 @Composable
 private fun NavigationBarSettingsPage() {
     val showLabels by AppSettings.navBarShowLabels.collectAsStateWithLifecycle()
-    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
-    val glassSupported = isGlassSupported()
     val behavior by AppSettings.miniPlayerBarBehavior.collectAsStateWithLifecycle()
-    val navBarFrosted by AppSettings.navBarFrosted.collectAsStateWithLifecycle()
-    val navBarTint by AppSettings.navBarTint.collectAsStateWithLifecycle()
-    val liquidGlassNavBar by AppSettings.liquidGlassNavBar.collectAsStateWithLifecycle()
     val navBarGlassGlow by AppSettings.navBarGlassGlow.collectAsStateWithLifecycle()
     val navBarGlassGlowIntensity by AppSettings.navBarGlassGlowIntensity.collectAsStateWithLifecycle()
     val navBarWidth by AppSettings.navBarWidth.collectAsStateWithLifecycle()
@@ -4257,10 +5012,6 @@ private fun NavigationBarSettingsPage() {
     val navBarCornerRadius by AppSettings.navBarCornerRadius.collectAsStateWithLifecycle()
     val dimensionsAtDefault = navBarWidth == 1.0f && navBarHeight == 1.0f && navBarOpacity == 1.0f &&
         navBarTransparency == 0f && navBarLabelSpacing == 1f && navBarCornerRadius == 28f
-
-    // The glass bar claims the standard bar's geometry as its own, so the
-    // dials stand down while it is in force — ported from ArchiveTune.
-    val dimensionsEnabled = !liquidGlassNavBar
 
     SettingsGroup(
         header = stringResource(R.string.navigation_bar_compact_behavior),
@@ -4283,43 +5034,6 @@ private fun NavigationBarSettingsPage() {
         header = stringResource(R.string.general),
         footer = stringResource(R.string.navigation_bar_footer),
     ) {
-        val frostedTitle = stringResource(R.string.navigation_bar_frosted_blur)
-        SettingsRow(
-            title = frostedTitle,
-            subtitle = stringResource(R.string.navigation_bar_frosted_blur_desc),
-            trailing = { IosSwitch(checked = navBarFrosted, onCheckedChange = AppSettings::setNavBarFrosted) },
-            onClick = { AppSettings.setNavBarFrosted(!navBarFrosted) },
-        )
-        RowDivider()
-        val tintTitle = stringResource(R.string.navigation_bar_tint_frosted_blur)
-        SettingsRow(
-            title = tintTitle,
-            subtitle = stringResource(R.string.navigation_bar_tint_frosted_blur_desc),
-            trailing = { IosSwitch(checked = navBarTint, onCheckedChange = AppSettings::setNavBarTint) },
-            onClick = { AppSettings.setNavBarTint(!navBarTint) },
-        )
-        RowDivider()
-        val glassNavBarTitle = stringResource(R.string.liquid_glass_nav_bar)
-        SettingsRow(
-            title = glassNavBarTitle,
-            subtitle = stringResource(
-                when {
-                    !glassSupported -> R.string.liquid_glass_unavailable
-                    !liquidGlass -> R.string.liquid_glass_nav_bar_disabled
-                    else -> R.string.liquid_glass_nav_bar_desc
-                },
-            ),
-            enabled = glassSupported && liquidGlass,
-            trailing = {
-                IosSwitch(
-                    checked = liquidGlassNavBar,
-                    onCheckedChange = AppSettings::setLiquidGlassNavBar,
-                    enabled = glassSupported && liquidGlass,
-                )
-            },
-            onClick = { AppSettings.setLiquidGlassNavBar(!liquidGlassNavBar) },
-        )
-        RowDivider()
         val glassGlowTitle = stringResource(R.string.navigation_bar_glass_glow)
         SettingsRow(
             title = glassGlowTitle,
@@ -4366,7 +5080,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarWidth((it * 100f).roundToInt() / 100f) },
             valueRange = 0.5f..1f,
             steps = 9,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4377,7 +5090,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarHeight((it * 100f).roundToInt() / 100f) },
             valueRange = 0.8f..1.4f,
             steps = 11,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4388,7 +5100,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarOpacity((it * 100f).roundToInt() / 100f) },
             valueRange = 0.2f..1f,
             steps = 15,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4399,7 +5110,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarTransparency((it * 100f).roundToInt() / 100f) },
             valueRange = 0f..0.95f,
             steps = 18,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4410,7 +5120,6 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarLabelSpacing((it * 16f).roundToInt().toFloat()) },
             valueRange = 0f..1f,
             steps = 15,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SliderRow(
@@ -4421,33 +5130,20 @@ private fun NavigationBarSettingsPage() {
             onSliderValue = { AppSettings.setNavBarCornerRadius((it * 48f).roundToInt().toFloat()) },
             valueRange = 0f..1f,
             steps = 47,
-            enabled = dimensionsEnabled,
         )
         RowDivider()
         SettingsRow(
             icon = SfIcons.Revert,
             title = stringResource(R.string.navigation_bar_reset_dimensions),
-            enabled = dimensionsEnabled && !dimensionsAtDefault,
+            enabled = !dimensionsAtDefault,
             onClick = { AppSettings.resetNavBarDimensions() },
         )
     }
 
-    // The one thing worth saying while the glass bar is the bar in force: its
-    // shape is the glass's own and not the dials' to take.
-    if (liquidGlassNavBar) {
-        SettingsGroup {
-            Text(
-                text = stringResource(R.string.navigation_bar_glass_note),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = GROUP_INSET + 4.dp, vertical = 12.dp),
-            )
-        }
-    }
 }
 
 /**
- * The player design page, ported from ArchiveTune's picker: eleven whole
+ * The player design page, ported from ArchiveTune's picker: four whole
  * layouts of the now-playing screen, this app's own the default and first.
  * Whichever is in force, the extra switches it carries sit under the list —
  * the ones each style owns, as ArchiveTune's Appearance page hangs them off
@@ -4521,20 +5217,6 @@ private fun PlayerDesignStylePage() {
         }
     }
 
-    // The Immersive player is the one style with a volume bar of its own, as
-    // V7's is — the same shared switch, offered where it applies.
-    if (selected == PlayerDesignStyle.IMMERSIVE) {
-        SettingsGroup(header = stringResource(R.string.player_design_immersive_extras)) {
-            SettingsRow(
-                title = stringResource(R.string.player_design_show_volume_bar),
-                subtitle = stringResource(R.string.player_design_immersive_volume_subtitle),
-                trailing = {
-                    IosSwitch(checked = !hideVolumeBar, onCheckedChange = { AppSettings.setHideVolumeBar(!it) })
-                },
-                onClick = { AppSettings.setHideVolumeBar(hideVolumeBar) },
-            )
-        }
-    }
 }
 
 /**

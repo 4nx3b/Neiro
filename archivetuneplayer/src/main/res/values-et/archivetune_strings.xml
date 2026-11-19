@@ -23,7 +23,6 @@
   <string name="close">Sulge</string>
   <string name="minimum_volume">Minimaalne valjus</string>
   <string name="maximum_volume">Maksimaalne valjus</string>
-  <string name="hide_player_thumbnail">Peida pleieri pisipilt</string>
   <plurals name="n_element">
     <item quantity="one">%d element</item>
     <item quantity="other">%d elementi</item>

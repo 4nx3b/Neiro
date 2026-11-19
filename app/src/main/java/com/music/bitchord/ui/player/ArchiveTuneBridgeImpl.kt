@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.player
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.MediaItem
@@ -10,6 +11,7 @@ import androidx.media3.session.MediaController
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.download.Downloads
 import com.music.bitchord.playback.beginRadioQueue
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.toMediaItem
@@ -23,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import moe.rukamori.archivetune.bridge.ArchiveTuneHostBridge
 import moe.rukamori.archivetune.db.entities.LyricsEntity
 import moe.rukamori.archivetune.db.entities.PlaylistEntity
@@ -38,6 +41,7 @@ class ArchiveTuneBridgeImpl(
     private val controller: MediaController,
     private val viewModel: MainViewModel,
     @Suppress("unused") scope: CoroutineScope,
+    private val context: Context,
     private val onOpenArtist: (String) -> Unit,
     private val onOpenAlbum: (String) -> Unit,
     private val onOpenSearch: () -> Unit,
@@ -105,24 +109,36 @@ class ArchiveTuneBridgeImpl(
         // Follow the app's lyrics and re-emit them in ArchiveTune's format.
         // Collected on the controller's looper; the id comes from the
         // snapshot and the LRC is rendered off main, with no controller in
-        // sight of the background block.
+        // sight of the background block. lyricsChecked is watched too so a
+        // lookup that came back with nothing reads as the module's own
+        // "not found" marker instead of an endless shimmer.
         main.launch {
-            viewModel.lyrics.collect { lines ->
-                val id = currentItem?.mediaId
-                bridgedLyrics.value =
-                    if (lines == null || id == null) {
-                        null
-                    } else {
-                        val providerName = viewModel.lyricsSource.value?.label ?: ""
-                        val lrc = withContext(Dispatchers.Default) { lines.toArchiveTuneLrc() }
-                        LyricsEntity(
-                            id = id,
-                            lyrics = lrc,
-                            source = LyricsEntity.Source.REMOTE.value,
-                            providerName = providerName,
-                        )
-                    }
-            }
+            combine(viewModel.lyrics, viewModel.lyricsChecked) { lines, checked -> lines to checked }
+                .collect { (lines, checked) ->
+                    val id = currentItem?.mediaId
+                    bridgedLyrics.value =
+                        if (id == null) {
+                            null
+                        } else if (lines != null) {
+                            val providerName = viewModel.lyricsSource.value?.label ?: ""
+                            val lrc = withContext(Dispatchers.Default) { lines.toArchiveTuneLrc() }
+                            LyricsEntity(
+                                id = id,
+                                lyrics = lrc,
+                                source = LyricsEntity.Source.REMOTE.value,
+                                providerName = providerName,
+                            )
+                        } else if (checked) {
+                            LyricsEntity(
+                                id = id,
+                                lyrics = LyricsEntity.LYRICS_NOT_FOUND,
+                                source = LyricsEntity.Source.REMOTE.value,
+                                providerName = "",
+                            )
+                        } else {
+                            null
+                        }
+                }
         }
     }
 
@@ -177,11 +193,23 @@ class ArchiveTuneBridgeImpl(
     }
 
     override fun toggleLike() {
-        currentItem?.mediaId?.let(viewModel::toggleLike)
+        val item = currentItem ?: return
+        // The auto download on like setting answers here too — this heart is
+        // the ported player's, and a like through it is as much a like as one
+        // through the native player's (whose funnel is MainActivity's
+        // toggleLikeOf). Only a like that landed queues anything.
+        if (viewModel.toggleLike(item.mediaId) == LikeStatus.LIKE) {
+            Downloads.autoDownloadOnLike(context, item.toNeiroSong(), true)
+        }
     }
 
     override fun likeSong(mediaId: String, liked: Boolean) {
-        viewModel.toggleLike(mediaId)
+        if (viewModel.toggleLike(mediaId) == LikeStatus.LIKE) {
+            currentItem
+                ?.takeIf { it.mediaId == mediaId }
+                ?.toNeiroSong()
+                ?.let { Downloads.autoDownloadOnLike(context, it, true) }
+        }
     }
 
     override fun stopAndClearPlayback() {
@@ -277,6 +305,24 @@ private fun MediaMetadata.toNeiroSong(): Song =
  * The app's lyric lines rendered into the LRC dialect ArchiveTune's player
  * parses: `[mm:ss.xx]` per line, `<mm:ss.xx>` per word where the app has
  * word timings.
+ *
+ * The A2 convention the receiving parser keeps verbatim: a word's run
+ * carries its own trailing space (`<00:27.39>I `), so the reconstructed
+ * text keeps its inter-word gaps — a run without one is a syllable of the
+ * word before it, and serialising the app's trimmed words without them is
+ * what fused every line into "Ibeentrynacall". The last run is closed by a
+ * bare terminator stamp at the line's end, which the parser reads as the
+ * final word's end and nothing else, so the sweep stops where the line
+ * stops instead of drifting into the next one.
+ *
+ * A word stamp is angle brackets and *nothing else* — `<mm:ss.xx>`. The
+ * first port wrapped the time in the line stamp's square brackets too
+ * (`<[mm:ss.xx]>`), which matches neither the enhanced-LRC word regex nor
+ * any of the inline-timing cleaners, so the receiving parser fell through
+ * to the line-synced branch and drew every stamp as literal text: each word
+ * arrived on screen wearing its own `<[0:27.61]>`. Writing the bare time —
+ * the format the parser's own docs promise — is what makes the ported
+ * styles sweep word by word the way the app's own player does.
  */
 internal fun List<LyricLine>.toArchiveTuneLrc(): String =
     joinToString("\n") { line ->
@@ -284,11 +330,10 @@ internal fun List<LyricLine>.toArchiveTuneLrc(): String =
         if (line.words.isEmpty()) {
             "$stamp ${line.text}".trimEnd()
         } else {
-            val words =
-                line.words.joinToString("") { word ->
-                    "<${formatLrcTime(word.startMs)}>${word.text}"
-                }
-            "$stamp $words".trimEnd()
+            val runs = line.words.joinToString("") { word ->
+                "<${formatWordTime(word.startMs)}>${word.text} "
+            }
+            "$stamp $runs".trimEnd() + "<${formatWordTime(line.endMs)}>"
         }
     }
 
@@ -298,4 +343,13 @@ private fun formatLrcTime(ms: Long): String {
     val seconds = totalSeconds % 60
     val hundredths = (ms % 1000) / 10
     return "[%d:%02d.%02d]".format(minutes, seconds, hundredths)
+}
+
+/** The word stamp's own shape: the same time, bare, without the line stamp's square brackets. */
+private fun formatWordTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    val hundredths = (ms % 1000) / 10
+    return "%d:%02d.%02d".format(minutes, seconds, hundredths)
 }

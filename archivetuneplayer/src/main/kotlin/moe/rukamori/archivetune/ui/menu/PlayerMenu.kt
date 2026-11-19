@@ -580,7 +580,7 @@ fun PlayerMenu(
                     songTitleRaw = title,
                     artistNameRaw = artist,
                     storefront = storefront,
-                    requireVertical = playerDesignStyle == PlayerDesignStyle.V7,
+                    requireVertical = false,
                     forceRefresh = true,
                     strictIdentity = !isLocalMedia,
                     albumTitle = mediaMetadata.album?.title,
@@ -843,8 +843,7 @@ fun PlayerMenu(
                             if (
                                 !isLocalMedia &&
                                 isQueueTrigger != true &&
-                                (hasCanvasArtwork || canvasAvailable || songCanvasDisabledForCurrent) &&
-                                playerDesignStyle != PlayerDesignStyle.V5
+                                (hasCanvasArtwork || canvasAvailable || songCanvasDisabledForCurrent)
                             ) {
                                 add(
                                     NewAction(
@@ -891,7 +890,6 @@ fun PlayerMenu(
                                 isQueueTrigger != true &&
                                 archiveTuneCanvasEnabled &&
                                 !lowDataModeActive &&
-                                playerDesignStyle != PlayerDesignStyle.V5 &&
                                 hasCanvasArtwork &&
                                 !songCanvasDisabledForCurrent
                             ) {
@@ -915,7 +913,7 @@ fun PlayerMenu(
                                                 when (
                                                     playerConnection.refetchCanvasArtwork(
                                                         metadata = mediaMetadata,
-                                                        requireVertical = playerDesignStyle == PlayerDesignStyle.V7,
+                                                        requireVertical = false,
                                                     )
                                                 ) {
                                                     CanvasArtworkRefetchResult.Success -> onDismiss()
@@ -1037,7 +1035,6 @@ fun PlayerMenu(
             !isLocalMedia &&
             isQueueTrigger != true &&
             !lowDataModeActive &&
-            playerDesignStyle != PlayerDesignStyle.V5 &&
             canvasAvailable
         ) {
             item {
@@ -2322,16 +2319,7 @@ private fun SongSourceRow(
     }
 }
 
-private val OnScreenShareStyles =
-    setOf(PlayerDesignStyle.V4, PlayerDesignStyle.TIKTOK, PlayerDesignStyle.SPATIALFLOW)
-private val OnScreenAddToPlaylistStyles =
-    setOf(PlayerDesignStyle.V10, PlayerDesignStyle.TIKTOK, PlayerDesignStyle.SIMPMUSIC)
-private val OnScreenDetailsStyles =
-    setOf(PlayerDesignStyle.SIMPMUSIC, PlayerDesignStyle.APPLE_MUSIC)
-private val OnScreenSleepTimerStyles =
-    setOf(
-        PlayerDesignStyle.V5,
-        PlayerDesignStyle.V9,
-        PlayerDesignStyle.V10,
-        PlayerDesignStyle.APPLE_MUSIC,
-    )
+private val OnScreenShareStyles = setOf(PlayerDesignStyle.TIKTOK)
+private val OnScreenAddToPlaylistStyles = setOf(PlayerDesignStyle.TIKTOK)
+private val OnScreenDetailsStyles = setOf(PlayerDesignStyle.APPLE_MUSIC)
+private val OnScreenSleepTimerStyles = setOf(PlayerDesignStyle.APPLE_MUSIC)

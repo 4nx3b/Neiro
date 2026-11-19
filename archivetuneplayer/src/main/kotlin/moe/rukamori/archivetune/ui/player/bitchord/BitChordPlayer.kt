@@ -127,7 +127,6 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import moe.rukamori.archivetune.LocalStableSystemBarsTopPadding
-import moe.rukamori.archivetune.LocalDatabase
 import moe.rukamori.archivetune.db.entities.FormatEntity
 import moe.rukamori.archivetune.db.entities.LyricsEntity
 import moe.rukamori.archivetune.models.MediaMetadata
@@ -150,19 +149,14 @@ import moe.rukamori.archivetune.ui.utils.resize
 import moe.rukamori.archivetune.utils.rememberPreference
 import moe.rukamori.archivetune.viewmodels.LyricsMenuViewModel
 import moe.rukamori.archivetune.LocalAnimationsDisabled
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyle
-import moe.rukamori.archivetune.constants.LyricsBackgroundStyleKey
 import moe.rukamori.archivetune.constants.LyricsMode
 import moe.rukamori.archivetune.constants.LyricsModeKey
-import moe.rukamori.archivetune.constants.PlayerBackgroundStyle
-import moe.rukamori.archivetune.constants.PlayerBackgroundStyleKey
-import moe.rukamori.archivetune.ui.player.StyledLyricsBackground
+import moe.rukamori.archivetune.constants.LyricsSyncOffsetKey
 import moe.rukamori.archivetune.utils.rememberEnumPreference
 import moe.rukamori.archivetune.ui.component.LyricsEnhanced
 import moe.rukamori.archivetune.ui.component.LyricsV2
 import moe.rukamori.archivetune.ui.player.LosslessOrStats
 import androidx.compose.runtime.MutableFloatState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.navigation.NavController
 import androidx.compose.runtime.getValue
@@ -359,7 +353,6 @@ fun BitChordPlayerContent(
     val context = LocalContext.current
     val density = LocalDensity.current
     val haptics = rememberHaptics()
-    val database = LocalDatabase.current
     val player = playerConnection.player
 
     val automixOn by AutoMixUiState.enabled.collectAsStateWithLifecycle()
@@ -374,8 +367,13 @@ fun BitChordPlayerContent(
 
     val reduceAnimations = LocalAnimationsDisabled.current
 
-    val lyricsEntity by database.lyrics(mediaMetadata.id)
-        .collectAsStateWithLifecycle(initialValue = null)
+    // The live bridged lyrics, as the lyric page reads them — the module's
+    // own MusicDatabase is never seeded in this host, so its lyric row can
+    // never answer.
+    val bridgedLyricsEntity by playerConnection.currentLyrics.collectAsStateWithLifecycle(initialValue = null)
+    val lyricsEntity = remember(bridgedLyricsEntity, mediaMetadata.id) {
+        bridgedLyricsEntity?.takeIf { it.id == mediaMetadata.id }
+    }
     val parsedLyrics = remember(lyricsEntity?.lyrics, mediaMetadata.duration) {
         val raw = lyricsEntity?.lyrics
         if (raw == null || raw == LyricsEntityNotFound) {
@@ -460,9 +458,7 @@ fun BitChordPlayerContent(
     var lyricsOpen by remember { mutableStateOf(false) }
     LaunchedEffect(mediaMetadata.id) { lyricsOpen = false }
 
-    var lyricsSyncOffset by rememberSaveable(mediaMetadata.id) {
-        mutableIntStateOf(0)
-    }
+    var lyricsSyncOffset by rememberPreference(LyricsSyncOffsetKey, defaultValue = 0)
 
     BackHandler(enabled = lyricsOpen || queueOpen) {
         if (queueOpen) {
@@ -640,14 +636,8 @@ fun BitChordPlayerContent(
     var dismissBandBottom by remember { mutableFloatStateOf(0f) }
     val dismissBandSpace = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
-    val meshColors = rememberArtworkColors(artUrl)
     val artMesh = rememberArtworkMesh(artUrl)
     var meshSeamPx by remember { mutableFloatStateOf(0f) }
-
-    val lyricsBackgroundStylePref by rememberEnumPreference(LyricsBackgroundStyleKey, LyricsBackgroundStyle.DEFAULT)
-    val playerBackgroundStylePref by rememberEnumPreference(PlayerBackgroundStyleKey, PlayerBackgroundStyle.DEFAULT)
-    val resolvedLyricsBackground = lyricsBackgroundStylePref.resolveFor(playerBackgroundStylePref)
-    val lyricsUseStyledBackground = lyricsOpen && resolvedLyricsBackground != LyricsBackgroundStyle.DEFAULT
 
     val onPlayPause = {
         if (player.isPlaying) player.pause() else player.play()
@@ -662,20 +652,12 @@ fun BitChordPlayerContent(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (lyricsUseStyledBackground) {
-            StyledLyricsBackground(
-                style = resolvedLyricsBackground,
-                mediaMetadata = mediaMetadata,
-                gradientColors = meshColors.colors,
-            )
-        } else {
-            val meshSeam = with(density) { meshSeamPx.toDp() }
-            ArtworkMeshBackdrop(
-                mesh = artMesh,
-                seam = meshSeam,
-                reduceAnimation = reduceAnimations,
-            )
-        }
+        val meshSeam = with(density) { meshSeamPx.toDp() }
+        ArtworkMeshBackdrop(
+            mesh = artMesh,
+            seam = meshSeam,
+            reduceAnimation = reduceAnimations,
+        )
 
         if (heroHeight > 0.dp) {
             if (heroMode && (p < 0.5f || heroVisible > 0.001f)) {

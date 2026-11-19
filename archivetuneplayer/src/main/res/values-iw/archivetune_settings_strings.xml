@@ -6,7 +6,6 @@
     <string name="lyrics_line_blur">שורות מילים של טשטוש</string>
     <string name="manage_playlist_tags">תגיות פלייליסט</string>
     <string name="manage_playlist_tags_desc">יצירה וניהול של תגיות לארגון פלייליסטים</string>
-    <string name="hide_player_thumbnail_desc">החלפת עטיפת האלבום בלוגו של האפליקציה בנגן</string>
     <string name="crop_thumbnail_to_square">חיתוך תמונות ממוזערות לגודל 1:1</string>
     <string name="crop_thumbnail_to_square_desc">הצג תמונות ממוזערות של יוטיוב בפורמט ריבועי במקום בפורמט 16:9</string>
     <string name="show_home_category_chips">הצג שבבים בקטגוריית הבית</string>
@@ -16,21 +15,14 @@
     <string name="seek_seconds_addup">חיפוש מתקדם</string>
     <string name="seek_seconds_addup_description">אם מופעל, מוסיפים 5 שניות נוספות בהדרגה בכל דילוג חיפוש</string>
     <string name="player_background_style">סגנון רקע של הנגן</string>
-    <string name="mini_player_background_style">סגנון רקע של נגן מיני</string>
     <string name="follow_theme">עקוב אחר ערכת הנושא</string>
     <string name="gradient">מעבר צבע</string>
     <string name="player_design_style">סגנון עיצוב הנגן</string>
-    <string name="player_design_v4">קולנועי</string>
-    <string name="player_design_v5">קטנטן</string>
-    <string name="player_design_v7">סוחף</string>
     <string name="player_design_v9">Material (חומר)</string>
     <string name="player_background_blur">טשטוש</string>
     <string name="coloring">מלא צבעים</string>
     <string name="blur_gradient">טשטוש עם מעבר צבע</string>
     <string name="glow">זוהר</string>
-    <string name="player_buttons_style">צבעי כפתורי הנגן</string>
-    <string name="default_style">ברירת מחדל</string>
-    <string name="secondary_color_style">משני</string>
     <string name="enable_swipe_thumbnail">הפעל החלקה כדי לשנות שיר</string>
     <string name="swipe_song_to_add">החלק את השיר שמאלה כדי להוסיף אותו לתור או ימינה כדי להשמיע אותו הבא</string>
     <string name="lyrics_click_change">שנה מילים בלחיצה</string>
@@ -85,7 +77,6 @@
     <string name="font_preference_default">ברירת מחדל</string>
     <string name="disable_animations_desc">השבתת רוב ההנפשות של האפליקציה. מומלץ למכשירים עם חומרה בסיסה</string>
     <string name="palette_clay">חימר</string>
-    <string name="corner_radius">רדיוס פינה: %1$d</string>
     <string name="audio_offload_desc">אפשר למכשירים נתמכים להשמיע אודיו באמצעות פענוח חומרה בעל צריכת אנרגיה נמוכה. חלק מתכונות עיבוד השמע מושבתות.</string>
     <string name="font_preference_desc">בחירת מקור גופן האפליקציה</string>
     <string name="palette_spotify_green">ספוטיפיי</string>
@@ -113,7 +104,6 @@
     <string name="palette_arctic_blue">ארקטי</string>
     <string name="palette_golden_hour">זהב</string>
     <string name="archivetune_canvas_desc">הנפשת גרפיקת אלבום בזמן נגינה (מופעל על ידי BetterLyrics)</string>
-    <string name="custom_radius">התאמה אישית של רדיוס התמונה הממוזערת</string>
     <string name="player_and_audio">נגן ואודיו</string>
     <string name="palette_sand">חול</string>
     <string name="persistent_queue">תור מתמיד</string>
@@ -123,7 +113,6 @@
     <string name="contrast">ניגודיות</string>
     <string name="ok_button">אוקיי</string>
     <string name="enter_symbol">הכנסת סמל</string>
-    <string name="player_slider_style">סגנון חלון הנגן</string>
     <string name="customize_background_title">התאמה אישית של רקע</string>
     <string name="palette_ocean_blue">כחול אוקיינוס</string>
     <string name="palette_pastel_blue">כחול פסטל</string>
@@ -144,7 +133,7 @@
     <string name="stop_music_on_task_clear">עצירת מוזיקה עם סגירת האפליקציה</string>
     <string name="default_open_tab">כרטיסייה פתוחה כברירת מחדל</string>
     <string name="palette_tangerine_blast">מנדרינה</string>
-    <string name="player_background_style_v8_v9_desc">אינו זמין עם סגנונות נגן V8 וV9</string>
+    <string name="player_background_style_v8_v9_desc">Unavailable with the current player styles</string>
     <string name="palette_lavender_dream">לוונדר</string>
     <string name="pause_on_device_mute_desc">השהה בעוצמת קול אפס, הסבר על ניסיונות השמעה וחידוש השמעה כאשר עוצמת הקול עולה</string>
     <string name="palette_charcoal">פחם</string>

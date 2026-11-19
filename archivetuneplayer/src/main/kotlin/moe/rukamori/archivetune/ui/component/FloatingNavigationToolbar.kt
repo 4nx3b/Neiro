@@ -123,12 +123,12 @@ import moe.rukamori.archivetune.constants.NavigationBarTransparencyKey
 import moe.rukamori.archivetune.constants.NavigationBarWidthKey
 import moe.rukamori.archivetune.ui.screens.Screens
 import moe.rukamori.archivetune.utils.rememberPreference
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.colorControls
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.shadow.Shadow as KyantShadow
+import io.github.neoruaa.glasmio.glass.render.Backdrop
+import io.github.neoruaa.glasmio.glass.render.drawBackdrop
+import io.github.neoruaa.glasmio.glass.render.effects.blur
+import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
+import io.github.neoruaa.glasmio.glass.render.effects.lens
+import io.github.neoruaa.glasmio.glass.render.shadow.Shadow as GlassShadow
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
@@ -844,7 +844,7 @@ fun FloatingNavigationToolbar(
                             .drawBackdrop(
                                 backdrop = liquidGlassBackdrop,
                                 effects = {
-                                    colorControls(saturation = glassTuning.saturation)
+                                    vibrancy(saturation = glassTuning.saturation)
                                     blur((4f * glassTuning.blurFactor).dp.toPx())
                                     lens(
                                         refractionHeight = minOf(
@@ -857,7 +857,7 @@ fun FloatingNavigationToolbar(
                                     )
                                 },
 
-                                shadow = { if (isDark) KyantShadow.Default else null },
+                                shadow = { if (isDark) GlassShadow.Default else null },
                                 onDrawBackdrop = { drawBackdrop -> drawBackdrop() },
                                 shape = { pillShape },
 

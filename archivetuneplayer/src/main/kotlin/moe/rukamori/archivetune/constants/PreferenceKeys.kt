@@ -18,8 +18,6 @@ import java.time.ZoneOffset
 import java.util.Locale
 
 val DynamicThemeKey = booleanPreferencesKey("dynamicTheme")
-val CustomThemeColorKey = stringPreferencesKey("customThemeColor")
-val RandomThemeOnStartupKey = booleanPreferencesKey("randomThemeOnStartup")
 val DarkModeKey = stringPreferencesKey("darkMode")
 val PureBlackKey = booleanPreferencesKey("pureBlack")
 val DisableAnimationsKey = booleanPreferencesKey("disableAnimations")
@@ -29,7 +27,6 @@ val HideStatusBarKey = booleanPreferencesKey("hideStatusBar")
 
 val UiScaleFactorKey = floatPreferencesKey("uiScaleFactor")
 
-val TabletModeEnabledKey = booleanPreferencesKey("tabletModeEnabled")
 val EnableHapticFeedbackKey = booleanPreferencesKey("enableHapticFeedback")
 val UseSystemFontKey = booleanPreferencesKey("useSystemFont")
 val FontPreferenceKey = stringPreferencesKey("fontPreference")
@@ -37,12 +34,10 @@ val CustomFontUriKey = stringPreferencesKey("customFontUri")
 val CustomFontNameKey = stringPreferencesKey("customFontName")
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
-val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SwipeToSongKey = booleanPreferencesKey("SwipeToSong")
 val PlayerDesignStyleKey = stringPreferencesKey("playerDesignStyle")
 
 val ShowPlayerVolumeBarKey = booleanPreferencesKey("showPlayerVolumeBar")
-val HidePlayerThumbnailKey = booleanPreferencesKey("hidePlayerThumbnail")
 val ArchiveTuneCanvasKey = booleanPreferencesKey("archiveTuneCanvas")
 val SpotifyCanvasKey = booleanPreferencesKey("spotifyCanvas")
 val SongCanvasDisabledKey = stringPreferencesKey("songCanvasDisabled")
@@ -77,9 +72,7 @@ enum class ProceduralCanvasStyle {
     }
 }
 
-val ThumbnailCornerRadiusKey = floatPreferencesKey("thumbnailCornerRadius")
 val CropThumbnailToSquareKey = booleanPreferencesKey("cropThumbnailToSquare")
-
 val AodThumbnailShapeKey = stringPreferencesKey("aodThumbnailShape")
 val AodThumbnailSizeKey = floatPreferencesKey("aodThumbnailSize")
 val AodThumbnailShapeRotationKey = intPreferencesKey("aodThumbnailShapeRotation")
@@ -135,10 +128,8 @@ val BlurRadiusKey = floatPreferencesKey("blurRadius")
 val BackdropEnabledKey = booleanPreferencesKey("backdropEnabled")
 val BackdropBlurAmountKey = intPreferencesKey("backdropBlurAmount")
 val MiniPlayerLastAnchorKey = intPreferencesKey("miniPlayerLastAnchor")
-val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
 
 val LiquidGlassEnabledKey = booleanPreferencesKey("liquidGlassEnabled")
-val LiquidGlassNavBarEnabledKey = booleanPreferencesKey("liquidGlassNavBarEnabled")
 val NavigationBarBitchordKey = booleanPreferencesKey("navigationBarBitchord")
 val SukisuLiquidGlassNavBarKey = booleanPreferencesKey("sukisuLiquidGlassNavBar")
 
@@ -980,11 +971,6 @@ fun deserializeArtworkProviderOrder(orderStr: String?): List<PreferredArtworkPro
     return parsed + missing
 }
 
-enum class PlayerButtonsStyle {
-    DEFAULT,
-    SECONDARY,
-}
-
 enum class HomeSource {
     YOUTUBE,
     SPOTIFY,
@@ -993,18 +979,10 @@ enum class HomeSource {
 val HomeSourceKey = stringPreferencesKey("homeSource")
 
 enum class PlayerDesignStyle {
-    V4,
-    V5,
-    V7,
-    V9,
     APPLE_MUSIC,
-    V10,
 
     BITCHORD,
     TIKTOK,
-    SIMPMUSIC,
-    SPATIALFLOW,
-    LOOPER,
 }
 
 val FlamingoShowVolumeBarKey = booleanPreferencesKey("flamingoNowPlayingShowVolumeBar")
@@ -1022,32 +1000,7 @@ enum class PlayerBackgroundStyle {
     GLOW_ANIMATED,
 }
 
-enum class LyricsBackgroundStyle {
-    DEFAULT,
-    FOLLOW_THEME,
-    COLORING,
-    MOVING_BLUR,
-    CUSTOM;
 
-    fun resolveFor(playerBackgroundStyle: PlayerBackgroundStyle): LyricsBackgroundStyle =
-        when {
-            playerBackgroundStyle == PlayerBackgroundStyle.CUSTOM -> CUSTOM
-            this == CUSTOM -> DEFAULT
-            else -> this
-        }
-}
-
-enum class MiniPlayerBackgroundStyle {
-    THEME,
-    GRADIENT,
-    GLOW,
-    FROSTED,
-    LIQUID_GLASS,
-}
-
-val NavigationBarFrostedBlurKey = booleanPreferencesKey("navigationBarFrostedBlur")
-
-val NavigationBarTintFrostedBlurKey = booleanPreferencesKey("navigationBarTintFrostedBlur")
 val HideNavigationBarLabelsKey = booleanPreferencesKey("hideNavigationBarLabels")
 val AddToPlaylistSortKey = stringPreferencesKey("addToPlaylistSort")
 
@@ -1089,13 +1042,6 @@ val LyricsTextSizeKey = floatPreferencesKey("lyricsTextSize")
 val LyricsLineSpacingKey = floatPreferencesKey("lyricsLineSpacing")
 val LyricsLineBlurKey = booleanPreferencesKey("lyricsLineBlur")
 
-val EnhancedLyricsStyleKey = stringPreferencesKey("enhancedLyricsStyle")
-
-enum class EnhancedLyricsStyle(val displayName: String) {
-    ACCOMPANIST("Accompanist"),
-    SPICY_MOBILE("Spicy Mobile"),
-}
-
 val OverscrollStyleKey = stringPreferencesKey("overscrollStyle")
 
 enum class OverscrollStyle {
@@ -1129,9 +1075,7 @@ val PreloadSongsCountKey = intPreferencesKey("preloadSongsCount")
 
 const val DEFAULT_PRELOAD_SONGS_COUNT = 2
 
-val PlayerButtonsStyleKey = stringPreferencesKey("player_buttons_style")
 val PlayerBackgroundStyleKey = stringPreferencesKey("playerBackgroundStyle")
-val LyricsBackgroundStyleKey = stringPreferencesKey("lyricsBackgroundStyle")
 val ShowLyricsKey = booleanPreferencesKey("showLyrics")
 val LyricsTextPositionKey = stringPreferencesKey("lyricsTextPosition")
 val LyricsClickKey = booleanPreferencesKey("lyricsClick")
@@ -1142,6 +1086,7 @@ val LyricsRomanizeChineseKey = booleanPreferencesKey("lyricsRomanizeChinese")
 val LyricsRomanizeHindiKey = booleanPreferencesKey("lyricsRomanizeHindi")
 val LyricsRomanizeOtherLanguagesKey = booleanPreferencesKey("lyricsRomanizeOtherLanguages")
 val LyricsModeKey = stringPreferencesKey("lyricsMode")
+val LyricsSyncOffsetKey = intPreferencesKey("lyricsSyncOffset")
 val LyricsV2BounceFactorKey = floatPreferencesKey("lyricsV2BounceFactor")
 val LyricsV2GlowFactorKey = floatPreferencesKey("lyricsV2GlowFactor")
 val LyricsV2FillTransitionWidthKey = floatPreferencesKey("lyricsV2FillTransitionWidth")

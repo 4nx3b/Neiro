@@ -37,6 +37,9 @@ kotlin {
                 api("io.ktor:ktor-client-websockets:3.5.2")
                 api("io.ktor:ktor-client-content-negotiation:3.5.2")
                 api("io.ktor:ktor-serialization-kotlinx-json:3.5.2")
+                // DNS over HTTPS, from the Internet page — the same OkHttp line
+                // the client engine resolves, so the modules stay in step.
+                api("com.squareup.okhttp3:okhttp-dnsoverhttps:5.3.2")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
                 api("org.jsoup:jsoup:1.22.2")
@@ -65,5 +68,6 @@ kotlin {
 
 android {
     namespace = "com.music.bitchord.shared"
-    compileSdk = 36
+    // InnerTubeX's AAR requires compiling against 37; minSdk (behaviour) stays 26.
+    compileSdk = 37
 }

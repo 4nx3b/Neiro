@@ -35,23 +35,11 @@ val lastfmSecret: String = (
         ?: ""
     ).trim()
 
-/*
- * Where Listen Together's party server lives. Not a credential — it is a public
- * URL, and every device in a party has to be pointed at the same one — but it is
- * deployment-specific rather than a property of the source, which is what puts
- * it here beside the others instead of in a constant.
- *
- * Empty is a supported state, not a broken build: the field below is only the
- * *default* the address box on the Listen Together screen starts with, and
- * anything typed there wins and persists. So a fresh checkout without this line
- * builds and runs, and simply asks for an address the first time somebody opens
- * the screen. See ListenTogether.DEFAULT_SERVER.
- */
-val listenTogetherServer: String = (
-    localProps.getProperty("LISTEN_TOGETHER_SERVER")
-        ?: System.getenv("LISTEN_TOGETHER_SERVER")
-        ?: "https://bitchord-listen-together.onrender.com"
-    ).trim().trimEnd('/')
+val togetherBearerToken: String = (
+    localProps.getProperty("TOGETHER_BEARER_TOKEN")
+        ?: System.getenv("TOGETHER_BEARER_TOKEN")
+        ?: ""
+    ).trim()
 
 /*
  * The service that checks this app's hardware key attestation and issues addon
@@ -89,8 +77,8 @@ android {
         buildConfigField("String", "LASTFM_SECRET", "\"${lastfmSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField(
             "String",
-            "LISTEN_TOGETHER_SERVER",
-            "\"${listenTogetherServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+            "TOGETHER_BEARER_TOKEN",
+            "\"${togetherBearerToken.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
         buildConfigField(
             "String",
@@ -105,15 +93,25 @@ android {
 
     splits {
         abi {
-            // The release build is arm64-v8a only: the one APK every phone
-            // this app runs on is, and the only artifact the nightly carries —
-            // no universal, no other splits, nothing else to discard. The
-            // update checker already takes the per-ABI split when no
-            // universal is in the release, so in-app updates are unaffected.
+            // The ABI matrix answers one property: unset, the full split
+            // matrix every store listing wants; `bitchord.abis` (comma
+            // separated) narrows it for the arm64-v8a-only nightly pipeline
+            // without touching the wear module's outputs (never use
+            // android.injected.build.abi — see AGENTS.md).
             isEnable = true
             reset()
-            include("arm64-v8a")
-            isUniversalApk = false
+            val restrictedAbis = providers.gradleProperty("bitchord.abis").orNull
+                ?.split(',')
+                ?.map(String::trim)
+                ?.filter(String::isNotEmpty)
+                ?.takeIf { it.isNotEmpty() }
+            if (restrictedAbis == null) {
+                include("armeabi-v7a", "arm64-v8a", "x86_64")
+                isUniversalApk = true
+            } else {
+                include(*restrictedAbis.toTypedArray())
+                isUniversalApk = false
+            }
         }
     }
 
@@ -233,6 +231,9 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        // AGP 9 disables custom resource values by default; the flavors below
+        // set app_name with resValue().
+        resValues = true
     }
     testOptions {
         unitTests {
@@ -308,25 +309,28 @@ dependencies {
     implementation(project(":archivetuneplayer"))
 
     // ---- Compose (Material 3) ----
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    // The 1.12 line, whole. The old line (BOM 2024.12.01 with foundation
+    // pinned to 1.11.0-beta02 and material3 to 1.5.0-alpha18) resolved a
+    // split runtime: the JetBrains Compose plugin sharedUi rides (1.12.x)
+    // elevated androidx ui to 1.12.0 in the merged graph while the app's
+    // own pins held foundation back at 1.11.x and material3 at its
+    // 1.11-beta02-compiled alpha — a mix that crashed the release build on
+    // launch with the binary incompatibilities between those lines. The same
+    // line move is what the vendored Glasmio sources need (GlasmioSidebar
+    // MorphSurface's LayerOutsets arrived with ui 1.12), so the whole app
+    // rides upstream Glasmio's BOM now: ui/foundation 1.12.1, material3
+    // from the BOM overridden to the 1.5.0 line the ported player styles
+    // draw (their expressive widgets exist only from the 1.5 alphas on).
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
-    // Pinned above the BOM's 1.7.6: [IosOverscroll] uses OverscrollFactory,
-    // which that version doesn't have. Newer foundation alongside the BOM's
-    // older ui/material3 is a combination Compose supports deliberately —
-    // foundation depends on ui, not the reverse — and this exact pairing was
-    // already in effect (foundation was reaching 1.10.0 transitively through
-    // the liquid-glass library before that dependency was removed).
-    // 1.11.0-beta02 / material3 1.5.0-alpha18: the line the vendored
-    // ArchiveTune player stack (:archivetuneplayer) rides — its expressive
-    // widgets exist only in the 1.5 alphas, and those pull this foundation.
-    // The app shares the module's classpath, so it declares the same line
-    // outright rather than resolving it behind its back. The one flag the
-    // app read that this line retired (ComposeUiFlags.isAdaptiveRefreshRateEnabled) is now set through reflection in BitChordApplication.
-    implementation("androidx.compose.foundation:foundation:1.11.0-beta02")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha18")
+    // rc01 is the 1.5.0 line's pairing with ui 1.12: the alpha the app rode
+    // before (1.5.0-alpha18) was compiled against ui 1.11.0-beta02 and ran
+    // against the elevated 1.12.0. Same API surface the player styles use,
+    // linked against the line the app actually resolves.
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     // The bridge preferences the ported player's settings adapters carry in
     // their signatures (Preferences.Key), which the app's sources construct
     // and read.
@@ -336,12 +340,14 @@ dependencies {
     // Same coordinate :archivetuneplayer uses.
     implementation("com.jakewharton.timber:timber:5.0.1")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     // ProcessLifecycleOwner: whether the app is on screen, for the open-app count.
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    // Janky frames into the crash ring buffer (JankLog).
+    implementation("androidx.metrics:metrics-performance:1.0.0")
     // The scheduled check behind "Keep playlists updated"; see PlaylistSync.
     implementation("androidx.work:work-runtime-ktx:2.10.1")
     implementation("androidx.core:core-ktx:1.15.0")
@@ -399,6 +405,9 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.3.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
 
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-ui:v0.2.1")
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1")
+
     // ---- QR encoding, for the party invite ----
     // `core` only: the `android-core`/`zxing-android-embedded` artifacts bring
     // a camera scanner and an Activity with it, and nothing here reads a code —
@@ -425,6 +434,15 @@ dependencies {
 
     // ---- Discord Rich Presence: the gateway is a WebSocket, so Ktor needs the plugin ----
     implementation("io.ktor:ktor-client-websockets:3.5.2")
+
+    // ---- Music Together: the host IS the server, an embedded Ktor CIO engine ----
+    // The relay-shaped stack: `core` supplies routing and the embedded-server
+    // plumbing, `cio` the engine TogetherServer binds to 0.0.0.0 with, and
+    // `websockets` the /together upgrade both sides of a session speak. Held at
+    // the client's line so the whole Ktor set moves together.
+    implementation("io.ktor:ktor-server-core:3.5.2")
+    implementation("io.ktor:ktor-server-cio:3.5.2")
+    implementation("io.ktor:ktor-server-websockets:3.5.2")
 
     // ---- YouTube stream extraction: live-benchmarked client catalog + cipher tiers ----
     implementation("com.github.MetrolistGroup.innertubex:innertubex-android:v0.7.0")
@@ -494,6 +512,10 @@ dependencies {
     implementation("org.bouncycastle:bcpkix-jdk18on:1.85")
 
     testImplementation("junit:junit:4.13.2")
+    // The real org.json, whose classes the mockable android.jar stubs into
+    // no-ops on the unit-test classpath: the fork's ported sources parse their
+    // payloads with it, and their tests have to parse them for real.
+    testImplementation("org.json:json:20240303")
     // A real HTTP server for the addon tests. The addon protocol is entirely
     // "what does this app send, and what does it do with what comes back", and
     // a hand-rolled fake of the client would be a test of the fake. Pinned to

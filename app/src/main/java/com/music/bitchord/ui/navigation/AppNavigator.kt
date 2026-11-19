@@ -18,8 +18,36 @@ import com.music.bitchord.ui.screens.SettingsChoiceKind
 sealed interface AppRoute {
     data object Settings : AppRoute
     data object AccountScrobbling : AppRoute
+    /**
+     * The Integration page — the services this app talks to, ported from
+     * ArchiveTune's Integration screen. The account itself stays on
+     * [AccountScrobbling]: who is listening is not what the app talks to.
+     */
+    data object Integration : AppRoute
+    /** The Internet page — region, DNS over HTTPS and proxy, ported from ArchiveTune. */
+    data object Internet : AppRoute
     data object Sources : AppRoute
+    /**
+     * The Lyrics sub-setting page under Playback — where lyrics come from and
+     * what is done with them, ported from ArchiveTune's player settings
+     * categorization.
+     */
+    data object Lyrics : AppRoute
+    /**
+     * The Canvas sub-setting page under Playback — the looping artwork behind
+     * the sleeve and the headers, where it comes from and when it plays,
+     * ported from ArchiveTune's Canvas settings page.
+     */
+    data object Canvas : AppRoute
     data object ListenTogether : AppRoute
+    /**
+     * The Listen Together chat page — its own full-screen page with its own
+     * back, rather than a card on the room screen, so the keyboard and the
+     * message list get the whole window.
+     */
+    data object ListenTogetherChat : AppRoute
+    /** The Listen Together settings page under the room screen. */
+    data object ListenTogetherSettings : AppRoute
     data object WearOs : AppRoute
     data object Equalizer : AppRoute
     data object Replay : AppRoute

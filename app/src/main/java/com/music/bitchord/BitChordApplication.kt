@@ -51,6 +51,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.concurrent.thread
 import timber.log.Timber
+import java.io.File
 
 class BitChordApplication : Application(), SingletonImageLoader.Factory, Configuration.Provider {
 
@@ -114,6 +115,12 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // ArchiveTunePlayerHost starts the store itself before its stack
         // composes; this just gives the read a head start.
         PreferenceStore.start(this)
+        // Glasmio (the JitPack fork behind the app's glass controls and motion)
+        // picks its rendering tier from the device's SoC and RAM; detecting it
+        // here rather than at first glass composition avoids the tier's first
+        // frame landing mid-animation. Idempotent and cheap, and the config it
+        // installs is snapshot-observed, so later changes re-render glass.
+        runCatching { io.github.neoruaa.glasmio.core.GlasmioPerformance.configure(this) }
         // Compose re-votes the window's frame rate from dispatchDraw on every
         // frame (API 35+), and Samsung's View logs each vote together with a
         // stack walk of its caller: measured on an S22, 8,000 lines in two
@@ -145,6 +152,14 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // The per-app language picker, which YouTube Music's `hl` follows.
         // Full tag (zh-Hant / zh-Hans preserved); Innertube maps to hl/gl.
         Innertube.appLanguage = { AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag() }
+        // The Internet page's region pin, read per request so a change taken
+        // with the app restart that follows it is honoured from the first
+        // request after it. SYSTEM_DEFAULT, the sentinel, derives the region
+        // from the locale instead.
+        Innertube.regionOverride = {
+            AppSettings.ytMusicRegion.value
+                .takeUnless { it == com.music.bitchord.data.NetPolicy.SYSTEM_DEFAULT || it.isBlank() }
+        }
         migrateScriptOnlyAppLocale()
         LyricsTranslation.cacheDir = cacheDir
         // PlaybackService shares this process, so seeding the cookie here means
@@ -159,6 +174,14 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // nothing that runs after startup can see any of them half open.
         val backgroundInit = thread(name = "startup-init") {
             SourceRegistry.init(this)
+            // The Tidal source's manifest directory and session store: opened
+            // beside the registry's own encrypted store, after AuthStore, for
+            // the same master-key reason that thread exists at all.
+            com.music.bitchord.data.tidal.TidalService.init(this)
+            com.music.bitchord.data.tidal.TidalAccountStore.init(this)
+            com.music.bitchord.data.deezer.DeezerAccountStore.init(this)
+            com.music.bitchord.data.qobuz.QobuzAccountStore.init(this)
+            com.music.bitchord.data.soundcloud.SoundCloudAccountStore.init(this)
             AndroidStreamHooks.initInnerTubeX(this)
             // Its own directory: canvas clips are looping video, not audio, and
             // belong in a cache AudioCache's own limit and eviction policy were
@@ -230,6 +253,16 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // One cache directory can only be opened once per process, and
         // PlaybackService shares this one — so it's opened here, not there.
         AudioCache.init(this)
+        // The Smart Trimmer's once-per-launch pass, ported from ArchiveTune:
+        // both caches evict on their own while running, so the only thing this
+        // adds is a pass over what they are holding right now, before anything
+        // else has written to either of them.
+        if (AppSettings.smartTrimmer.value) {
+            CoroutineScope(Dispatchers.IO).launch {
+                trimImageDiskCache()
+                AudioCache.trimNow()
+            }
+        }
         // The offscreen WebView that mints a Spotify access token from the
         // listener's own session cookie needs a Context, and nothing in the
         // suspend call chain that reaches it (a track's canvas lookup) has
@@ -315,7 +348,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(100L * 1024 * 1024)
+                    .maxSizeBytes(IMAGE_CACHE_LIMIT_BYTES)
                     .build()
             }
             // Covers arriving with a hard cut read as the list flickering as
@@ -345,12 +378,40 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             .any { java.io.File("$it/egl/libEGL_emulation.so").exists() }
     }
 
+    /**
+     * Deletes the oldest image-cache files until the directory is back under
+     * [IMAGE_CACHE_LIMIT_BYTES] — the Smart Trimmer's image half. Coil trims
+     * the same directory as it writes; this is the pass that also catches a
+     * launch that never asked it to write anything.
+     */
+    private fun trimImageDiskCache() {
+        runCatching {
+            val dir = File(cacheDir, "image_cache")
+            if (!dir.isDirectory) return
+            val files = dir.walkTopDown().filter { it.isFile }
+                .sortedBy { it.lastModified() }
+                .toList()
+            var size = files.sumOf { it.length() }
+            if (size <= IMAGE_CACHE_LIMIT_BYTES) return
+            for (file in files) {
+                if (size <= IMAGE_CACHE_LIMIT_BYTES) break
+                val length = file.length()
+                if (file.delete()) size -= length
+            }
+        }
+    }
+
     private fun initLastfm() {
         val sessionKey = AppSettings.lastfmSessionKey.value
         if (sessionKey.isBlank()) return
         val endpoint = AppSettings.lastfmEndpoint.value.ifBlank { LastFM.DEFAULT_API_ENDPOINT }
-        val apiKey = AppSettings.lastfmApiKey.value.trim()
-        val secret = AppSettings.lastfmSecret.value.trim()
+        val (apiKey, secret) = LastFM.credentialsFor(
+            endpoint = endpoint,
+            storedApiKey = AppSettings.lastfmApiKey.value.trim(),
+            storedSecret = AppSettings.lastfmSecret.value.trim(),
+            defaultApiKey = BuildConfig.LASTFM_API_KEY,
+            defaultSecret = BuildConfig.LASTFM_SECRET,
+        )
         if (apiKey.isBlank() || secret.isBlank()) return
         LastFM.configure(
             endpoint = endpoint,
@@ -363,6 +424,9 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
     companion object {
         lateinit var authStore: AuthStore
             private set
+
+        /** The Coil disk cache's ceiling, shared with the Smart Trimmer's trim pass. */
+        private const val IMAGE_CACHE_LIMIT_BYTES = 100L * 1024 * 1024
 
         /**
          * One-time move from region-less script tags to regional ones.

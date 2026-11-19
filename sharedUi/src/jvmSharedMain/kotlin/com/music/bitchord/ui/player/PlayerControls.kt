@@ -119,7 +119,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.listentogether.PartyMember
 import com.music.bitchord.data.settings.TrackAnalysisState
-import com.music.bitchord.data.settings.PlayerSliderStyle
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.model.Song
 import java.util.Locale
@@ -225,9 +224,8 @@ internal fun PlayerScrubber(
     // canvas needs.
     val mixBlend = PlayerSettings.smartMixBlend.collectAsStateWithLifecycle()
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
-    // The bar's own shape and presence, ported from ArchiveTune's Appearance
-    // page: the slider style, and the switch that takes the bar away.
-    val sliderStyle by PlayerSettings.playerSliderStyle.collectAsStateWithLifecycle()
+    // The bar's presence, ported from ArchiveTune's Appearance page: the
+    // switch that takes the bar away.
     val hideSlideBar by PlayerSettings.hideSlideBar.collectAsStateWithLifecycle()
     if (hideSlideBar) return
     // One clock for the bar and the "Mixing" label, so they breathe on the same beat.
@@ -241,7 +239,6 @@ internal fun PlayerScrubber(
             mixing = mixing,
             mixPulse = mixPulse,
             transitionWindow = transitionWindow,
-            style = sliderStyle,
             animated = isPlaying && !reduceAnimation,
         )
         Box(

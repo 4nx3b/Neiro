@@ -86,12 +86,12 @@ object CanvasRepository {
         // stands instead.
         val album = song.albumName
         val spotifyFirst = AppSettings.prioritizeSpotifyCanvas.value
-        val key = cacheKey("song|${song.videoId}", spotifyFirst)
+        val key = cacheKey("song|${song.videoId}", spotifyFirst, spotifyAsked())
 
         return resolve(key, album != null) {
             if (spotifyFirst) {
                 firstHit(
-                    { SpotifyCanvas.search(title, artist, album) },
+                    { spotifySearch(title, artist, album) },
                     { AppleMusicCanvas.search(title, artist, album) },
                     { TidalCanvas.search(title, artist, album) },
                     { CommunityCanvas.search(title, artist, album) },
@@ -101,7 +101,7 @@ object CanvasRepository {
                     { AppleMusicCanvas.search(title, artist, album) },
                     { TidalCanvas.search(title, artist, album) },
                     { CommunityCanvas.search(title, artist, album) },
-                    { SpotifyCanvas.search(title, artist, album) },
+                    { spotifySearch(title, artist, album) },
                 ) { it.matches(title, artist, album) }
             }
         }
@@ -118,8 +118,30 @@ object CanvasRepository {
         val key = cacheKey(
             base = "song|${song.videoId}",
             spotifyFirst = AppSettings.prioritizeSpotifyCanvas.value,
+            spotifyAsked = spotifyAsked(),
         )
         return synchronized(cache) { cache[key]?.artwork }
+    }
+
+    /**
+     * The still cover Tidal has for [song]'s album, for a sleeve that resolved
+     * no artwork at all — the player's "Use Tidal artwork" switch, off by
+     * default because it is one more third party reached on the listener's
+     * connection. Asked only by the player: the rows resolve the same nothing,
+     * and a fallback under them would be a third-party search per row.
+     *
+     * Cached like the canvas lookups, misses included, and off answers null
+     * without going near the network.
+     */
+    suspend fun tidalSleeveFallback(song: Song): CanvasArtwork? {
+        if (!AppSettings.tidalArtworkFallback.value) return null
+        val title = song.title.cleaned()
+        val artist = song.artist.cleaned()
+        if (title.isBlank() || artist.isBlank()) return null
+        val album = song.albumName
+        return resolve("sleeve|${song.videoId}", album != null) {
+            TidalCanvas.fallbackCoverUrl(title, artist, album)?.let { CanvasArtwork(url = it) }
+        }
     }
 
     /**
@@ -136,10 +158,10 @@ object CanvasRepository {
         if (name.isBlank() || credit.isBlank()) return null
 
         val spotifyFirst = AppSettings.prioritizeSpotifyCanvas.value
-        return resolve(cacheKey("album|$name|$credit", spotifyFirst), withAlbum = true) {
+        return resolve(cacheKey("album|$name|$credit", spotifyFirst, spotifyAsked()), withAlbum = true) {
             if (spotifyFirst) {
                 firstHit(
-                    { SpotifyCanvas.searchAlbum(name, credit) },
+                    { spotifySearchAlbum(name, credit) },
                     { AppleMusicCanvas.searchAlbum(name, credit) },
                     { TidalCanvas.searchAlbum(name, credit) },
                     { CommunityCanvas.searchAlbum(name, credit) },
@@ -149,15 +171,27 @@ object CanvasRepository {
                     { AppleMusicCanvas.searchAlbum(name, credit) },
                     { TidalCanvas.searchAlbum(name, credit) },
                     { CommunityCanvas.searchAlbum(name, credit) },
-                    { SpotifyCanvas.searchAlbum(name, credit) },
+                    { spotifySearchAlbum(name, credit) },
                 ) { it.matches(name, credit, name) }
             }
         }
     }
 
-    /** Priority is part of the question, so a toggle never reuses the other order's answer. */
-    private fun cacheKey(base: String, spotifyFirst: Boolean): String =
-        "$base|spotifyFirst=$spotifyFirst"
+    /**
+     * Priority and participation are both part of the question, so a toggle
+     * never reuses the other order's — or the skipped provider's — answer.
+     */
+    private fun cacheKey(base: String, spotifyFirst: Boolean, spotifyAsked: Boolean): String =
+        "$base|spotifyFirst=$spotifyFirst|spotifyAsked=$spotifyAsked"
+
+    /** Whether the Spotify provider is in the chain for this lookup at all. */
+    private fun spotifyAsked(): Boolean = AppSettings.spotifyCanvasEnabled.value
+
+    private suspend fun spotifySearch(title: String, artist: String, album: String?): CanvasArtwork? =
+        if (spotifyAsked()) SpotifyCanvas.search(title, artist, album) else null
+
+    private suspend fun spotifySearchAlbum(album: String, artist: String): CanvasArtwork? =
+        if (spotifyAsked()) SpotifyCanvas.searchAlbum(album, artist) else null
 
     private suspend fun resolve(
         key: String,

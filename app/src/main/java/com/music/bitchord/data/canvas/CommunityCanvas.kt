@@ -130,4 +130,10 @@ object CommunityCanvas {
         fetchedAtMs = now
         return entries
     }
+
+    /** Whether the manifest is fetchable and holds anything — the Canvas Check row's probe. */
+    internal fun probeHealthy(): Boolean {
+        val body = canvasGet(MANIFEST, mapOf("User-Agent" to CANVAS_UA)) ?: return false
+        return body.contains("\"items\"")
+    }
 }
