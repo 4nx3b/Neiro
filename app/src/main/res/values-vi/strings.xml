@@ -1513,6 +1513,7 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro đã gặp sự cố lần trước — nhật ký đã được lưu vào %1$s</string>
     <string name="player_style_reset">Trình phát %1$s liên tục gặp sự cố nên Neiro đã chuyển về trình phát của mình. Nhật ký sự cố nằm trong Downloads/Neiro.</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass liên tục bị lỗi khi khởi động nên đã bị tắt. Bạn có thể bật lại trong Cài đặt.</string>
     <string name="permanent_shuffle">Chế độ ngẫu nhiên vĩnh viễn</string>
     <string name="permanent_shuffle_subtitle">Giữ phát ngẫu nhiên được bật khi bắt đầu bài hát mới</string>
     <string name="auto_skip_on_error">Tự động chuyển sang bài hát tiếp theo khi có lỗi</string>

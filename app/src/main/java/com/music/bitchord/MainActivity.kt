@@ -468,6 +468,21 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG,
                     ).show()
                 }
+                // Liquid Glass kept dying in the renderer before any Java
+                // handler could catch it (a native RenderThread death — see
+                // CrashLoopGuard), so it was switched off before this launch:
+                // say so once too.
+                val glassReset = withContext(Dispatchers.IO) {
+                    runCatching { com.music.bitchord.data.CrashLoopGuard.consumeGlassReset(appContext) }
+                        .getOrDefault(false)
+                }
+                if (glassReset) {
+                    Toast.makeText(
+                        appContext,
+                        getString(R.string.liquid_glass_crash_reset),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
             }
             lifecycleScope.launch {
                 val crashed = withContext(Dispatchers.IO) {
@@ -504,6 +519,7 @@ class MainActivity : AppCompatActivity() {
             }
             val highPerformance by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
             val liquidGlassEnabled by AppSettings.liquidGlass.collectAsStateWithLifecycle()
+            val glassPerformance by AppSettings.glassPerformance.collectAsStateWithLifecycle()
             val iosOverscrollFactory = rememberIosOverscrollFactory()
             val performanceRefreshRate by AppSettings.performanceRefreshRate.collectAsStateWithLifecycle()
             // Ported from ArchiveTune's UI scale: the font scale is multiplied so
@@ -514,6 +530,21 @@ class MainActivity : AppCompatActivity() {
             val composeView = LocalView.current
             LaunchedEffect(highPerformance, performanceRefreshRate, composeView) {
                 applyPerformanceMode(highPerformance, performanceRefreshRate, composeView)
+            }
+            // The frost switch following the app's own glass into the fork's
+            // tier: the bar and the other Glasmio controls read their optics
+            // off GlasmioPerformance, so a toggle mid-session re-renders every
+            // glass surface frosted rather than only the app's own — the same
+            // install BitChordApplication performs before the first composition.
+            LaunchedEffect(glassPerformance) {
+                runCatching {
+                    io.github.neoruaa.glasmio.core.GlasmioPerformance.configure(
+                        context,
+                        io.github.neoruaa.glasmio.core.GlasmioPerformanceConfig(
+                            refraction = !glassPerformance,
+                        ),
+                    )
+                }
             }
             val darkTheme = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()

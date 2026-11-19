@@ -1573,6 +1573,7 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro mengalami crash terakhir kali — log disimpan di %1$s</string>
     <string name="player_style_reset">Pemutar %1$s terus mengalami crash, jadi Neiro kembali ke pemutarnya sendiri. Log crash ada di Downloads/Neiro.</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass terus-menerus crash saat diluncurkan, jadi telah dimatikan. Anda dapat menyalakannya kembali di Pengaturan.</string>
     <string name="permanent_shuffle">Mode acak permanen</string>
     <string name="permanent_shuffle_subtitle">Biarkan pengacakan tetap aktif saat memutar lagu baru</string>
     <string name="auto_skip_on_error">Lompat otomatis ke lagu berikutnya saat terjadi kesalahan</string>

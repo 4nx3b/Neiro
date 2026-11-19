@@ -1553,6 +1553,7 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro son seferde çöktü — günlük %1$s konumuna kaydedildi</string>
     <string name="player_style_reset">%1$s oynatıcısı sürekli çöktüğü için Neiro kendi oynatıcısına döndü. Çökme günlüğü Downloads/Neiro konumunda.</string>
+    <string name="liquid_glass_crash_reset">Liquid Glass açılışta sürekli çöktüğü için kapatıldı. Ayarlar\'dan tekrar açabilirsiniz.</string>
     <string name="permanent_shuffle">Kalıcı karışık mod</string>
     <string name="permanent_shuffle_subtitle">Yeni bir şarkı başlatırken karıştırmayı açık tutun</string>
     <string name="auto_skip_on_error">Hata oluştuğunda otomatik olarak sonraki şarkıya geç</string>

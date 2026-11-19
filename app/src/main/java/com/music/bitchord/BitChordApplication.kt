@@ -216,6 +216,25 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // seconds of starting is switched back to the app's own player before
         // any screen mounts it again (MainActivity says so).
         com.music.bitchord.data.CrashLoopGuard.checkOnLaunch(this)
+        // "Better Performance for Glass" trades the lens for a plain frost —
+        // the switch's own description — and Modifier.liquidGlass already
+        // honoured it for the app's own glass surfaces. The fork's tier is
+        // detected above, but the frost itself is only installed here, after
+        // the settings are open: the navigation bar and the other Glasmio
+        // controls read their optics off GlasmioPerformance, so without this
+        // the switch frosted every glass surface except the one the lens
+        // actually costs the most on (the bar rendering the whole AGSL
+        // refraction chain). Config is snapshot-observed and this runs before
+        // the first glass composition; MainActivity keeps later toggles in
+        // step.
+        runCatching {
+            io.github.neoruaa.glasmio.core.GlasmioPerformance.configure(
+                this,
+                io.github.neoruaa.glasmio.core.GlasmioPerformanceConfig(
+                    refraction = !AppSettings.glassPerformance.value,
+                ),
+            )
+        }
         // The settings Neiro shares with the ported ArchiveTune stack read and
         // write Neiro's own AppSettings, whichever player style is active —
         // after AppSettings is open and the preference store is started.

@@ -2126,3 +2126,143 @@ Work Log:
 
 Stage Summary:
 - Compile/test evidence: recorded by the CI run that follows this merge.
+
+---
+
+## Task: fix the launch RenderThread crash, push to dev, open the PR
+
+Task ID: crash-guard-pr26
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: Fix the app's startup crash (user log 19_11-21-23-30_017.txt), push the
+fix on dev, open a pull request, monitor the build — no local compiling.
+
+Work Log:
+- Read the log: `Fatal signal 5 (SIGTRAP), code 1 (TRAP_BRKPT)` in
+  RenderThread, three launches dead in six seconds, each right after the
+  glass nav bar's first frame — realme RMX3563, Android 16, Mali, ColorOS
+  GED/MEOW hooks injected into RenderThread. No tombstone (SELinux denies
+  crash_dump the maps), and a native death never reaches the Java
+  uncaught-exception handler, so the existing CrashLoopGuard was blind to
+  it: every relaunch armed the same glass and died the same way.
+- Traced the first-frame render path: MainActivity's GlasmioTheme +
+  rememberLayerBackdrop + GlasmioNavigationBarWithTrailingItem (the fork's
+  full optics: AGSL refraction lens, blur, vibrancy, CASDF union) — the
+  port's new GPU load. The fork itself documents the same device and
+  signature (myself-tsuki/Glasmio#7, Muzo, RMX3563/Android 16/Mali) and is
+  rebuilding its render cap around it; that fix is unmerged and
+  GlasmioVersionGuardTest pins v0.2.1, so the app guards itself app-side.
+- The fix, in CrashLoopGuard (the repo's own crash-loop idiom, extended to
+  native deaths): every launch writes a glass session marker in files/crash
+  while Liquid Glass is armed (Application.onCreate, before any glass
+  renders); a launch that survives QUICK_CRASH_MS deletes it; a marker still
+  standing at the next checkOnLaunch is the remains of a launch that died
+  young; two of those in a row — CrashLoopPolicy.isNativeDeathLoop, the
+  same two-quick-crashes rule the style guard uses — switch Liquid Glass
+  off (MainActivity then draws the Haze bars this hardware ran before the
+  port) and the surviving launch says so once. A Java crash clears the
+  marker (the style guard owns that death), one young death never counts, a
+  stale marker is yesterday's force-stop, and the setting can be turned
+  back on at any time.
+- liquid_glass_crash_reset added to values + the 19 locale folders that
+  translate player_style_reset (LocaleStringsTest requires every supported
+  language to carry it); the it/tr apostrophes escaped for AAPT.
+- Resolved this branch against main (PR #26's back-merge): 138 files
+  auto-merged; SettingsSheet.kt takes main's rc01 SliderState conversion
+  (the merged dependency line is compose-bom 2026.09.00 / material3
+  1.5.0-rc01, and the shared bare-track tail needs it); worklog.md unions
+  both histories.
+
+Stage Summary:
+- Pushed to dev (bf8c97c8 the guard, then this merge); PR #26 opened
+  dev -> main. CI is the compile evidence: monitored in check.yml's
+  testDevDebugUnitTest + assembleDevDebug round that follows.
+
+---
+
+## Task: fix the second launch crash log — SIGSEGV this time
+
+Task ID: glass-frost-wiring
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: Fix the crash in the new user log (19_11-22-25-14_825.txt): Fatal
+signal 11 (SIGSEGV) in RenderThread, three launches dead in six seconds,
+same device (realme RMX3563, Dimensity 8100, Android 16, Mali, ColorOS
+MEOW in RenderThread, LSPosed/UnityDisplayTweaker in every app, SELinux
+denying crash_dump its maps — no tombstone, same environment
+docs/glasmio-crash-2026-11-19.md documents for the fork's own crashes).
+
+Work Log:
+- Read the log: death 1 loads libglasmio_liquid_menu_sdf.so (the fork's
+  native SDF field, shipped inside the v0.2.1 AAR) 263 ms before its
+  RenderThread dies; deaths 2 and 3 fault at the SAME address
+  0xb0b000d5c — a pointer slot holding packed field-pixel data, the
+  use-after-free shape the crash doc decoded for the fork's sample
+  (faults like null+0x38, 1.0f+0x38, "android." bytes). The 4th process
+  survived only because the user swiped the app away mid-launch, before
+  the glass composed. The build on the phone predates the crash guard:
+  three deaths, where the guard converges the third launch with Liquid
+  Glass off.
+- Confirmed the phone's tier is Balanced (Dimensity 8100 -> PreviousFlag
+  SoC): full optics — the nav bar runs the fork's whole AGSL refraction
+  chain over the FP16 contact-field bitmap on first frame.
+- The fork's real fix is unreleased (issue #7 open; the snapshot
+  redesign unmerged), v0.2.2-v0.2.4 are banned by GlasmioVersionGuard
+  Test, and a no-tombstone OEM native crash cannot be pinned to a line
+  app-side. What the app CAN do, this log shows where: the app's own
+  "Better Performance for Glass" switch promises "trade the glass lens
+  for a plain frost" — but it only frosted Modifier.liquidGlass; the
+  fork's navigation bar, the component actually dying, read its optics
+  straight off GlasmioPerformance and ignored the switch entirely.
+- The wiring: BitChordApplication installs
+  GlasmioPerformanceConfig(refraction = !AppSettings.glassPerformance)
+  after AppSettings.init — before the first glass composition — and
+  MainActivity keeps mid-session toggles in step with a LaunchedEffect.
+  A phone that dies under the lens now has the frost as a working-glass
+  option rather than all-or-nothing; the crash guard (bf8c97c8) stays
+  the net that guarantees the app boots either way.
+- Launch Smoke for the guard's head (f9b89894) completed successfully:
+  the merged tree boots on API 30/34 emulators with no Fatal signal in
+  logcat. Check, TV and the Release APK workflows all passed the same
+  head.
+
+Stage Summary:
+- Pushed to dev; CI is the compile evidence (7-minute monitor per the
+  rules). PR #26 (dev -> main) carries the guard and this wiring; it
+  merges once this round is green so the phone's next build boots.
+
+---
+
+## Task: the launch smoke tolerates one runner-side flake per APK
+
+Task ID: smoke-retry
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: The Launch Smoke round for the frost wiring (99d68499) failed three
+times on the API 34 job with three different runner-side failures and no
+app crash signature in any of them; make the workflow's verdict mean the
+app, not the runner.
+
+Work Log:
+- Attempt 1: ANR in the dev build — input dispatching timed out waiting
+  5003 ms for FocusEvent, during cold start, with the process ALIVE at
+  +25 s; runner load 20, CPU pressure 89%, 37k major faults.
+- Attempt 2 (rerun): the dev build clean; the same FocusEvent ANR on the
+  PROD build instead; load 30, CPU pressure 91%. The ANR follows whichever
+  APK launches while the runner is buried — not the code, not even the
+  variant.
+- Attempt 3 (rerun): the emulator's own graphics stack broke (Failed to
+  find ColorBuffer: 98, invalid color buffer, I/O thread spun) and the dev
+  build died with NO crash, ANR, or exception line in logcat.
+- Three attempts, three infra modes, zero app signatures: the gate was
+  measuring the runner. launch-smoke.sh now runs each APK's launch through
+  launch_once() with a verdict per class — 0 alive and clean, 1
+  runner-side (silent death, or an ANR the process recovered from), 2 the
+  app's own signature (FATAL EXCEPTION / Fatal signal). Class 1 gets one
+  clean relaunch; class 2 never retries, so a genuinely crashing build
+  still fails both attempts and the gate stays strict. Both attempts keep
+  their logcat and screenshot in the artifacts.
+
+Stage Summary:
+- Pushed with the frost wiring's head; the next Launch Smoke round is the
+  evidence. Check, TV and the Release APK stayed green throughout.

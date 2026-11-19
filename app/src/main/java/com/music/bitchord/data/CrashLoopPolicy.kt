@@ -44,4 +44,14 @@ object CrashLoopPolicy {
         if (a.uptimeMs < 0 || b.uptimeMs < 0) return null
         return a.style
     }
+
+    /**
+     * Whether observed launch deaths form a native crash loop: two or more
+     * consecutive launches that died before they could clear their glass
+     * session, within [WINDOW_MS] of now. One death, or deaths older than the
+     * window, never count — see [CrashLoopGuard.checkNativeGlassLoop] for
+     * what a "death" is when the renderer dies without a Java exception.
+     */
+    fun isNativeDeathLoop(deathTimesMs: List<Long>, now: Long): Boolean =
+        deathTimesMs.count { it > 0 && now - it in 0..WINDOW_MS } >= 2
 }
