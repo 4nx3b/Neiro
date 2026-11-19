@@ -2,6 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      Glasmio (the JitPack fork, :glasmio-glass through :archivetuneplayer's
+      runtime classpath) ships with minSdk 31 — its glass rendering is built
+      for Android 12 and newer. The TV app keeps minSdk 26 and draws none of
+      the fork's glass (TvGlass is a colour palette, not a backdrop), so the
+      manifest merge is told to accept the library anyway rather than fail;
+      the fork's surfaces are never reached from this module.
+    -->
+    <uses-sdk
+        tools:overrideLibrary="io.github.neoruaa.glasmio.core,io.github.neoruaa.glasmio.icons,io.github.neoruaa.glasmio.glass" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Tells Wi-Fi from mobile data, so the matching quality ceiling applies. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
