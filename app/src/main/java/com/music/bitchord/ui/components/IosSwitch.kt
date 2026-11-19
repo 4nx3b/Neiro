@@ -29,8 +29,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.ui.haptics.Haptic
@@ -38,12 +36,11 @@ import com.music.bitchord.ui.haptics.rememberHaptics
 import io.github.neoruaa.glasmio.ui.GlasmioSwitch
 
 /**
- * The iOS 26 switch: a wide green capsule and a white pill of a thumb, which
- * stretches a little toward where it is going while pressed.
- *
- * Plain drawing only — a track, a thumb, a shadow. Every settings page has a
- * column of these, and anything heavier per switch is paid that many times
- * over on every scroll frame.
+ * The app's settings switch: Glasmio's iOS 27 liquid toggle where Liquid
+ * Glass is on — the 63×28 track with the 37×24 elastic glass thumb whose
+ * lens lifts under the finger, ported from the fork — and the plain iOS 26
+ * capsule everywhere the glass isn't drawn (Android 8-11, Liquid Glass off
+ * in Settings, or a row that owns its own tap and passes no callback).
  *
  * It takes Material3's `Switch` call shape so a settings row adopts it by name
  * alone. [thumbContent] and [colors] are accepted and ignored: on is iOS green
@@ -51,11 +48,8 @@ import io.github.neoruaa.glasmio.ui.GlasmioSwitch
  * colour, and the reason it reads as a switch.
  *
  * A null [onCheckedChange] makes it a read-out, the way M3's does: the row
- * around it owns the tap.
- *
- * Interactive, it takes up M3's 48dp touch target around the drawn capsule, as
- * M3's does. The settings rows were spaced around that height — a sub-row has
- * no top padding of its own — and without it they close up on each other.
+ * around it owns the tap — and for that it stays the plain capsule, which
+ * never intercepts a touch of its own.
  *
  * It buzzes when [checked] flips rather than when it is tapped: most rows also
  * toggle from their own `onClick`, which never passes through here, and the
@@ -70,10 +64,27 @@ fun IosSwitch(
     enabled: Boolean = true,
     @Suppress("UNUSED_PARAMETER") colors: SwitchColors? = null,
 ) {
-    if (glasmioAvailable) {
-        GlasmioIosSwitch(checked, onCheckedChange, modifier, enabled)
+    val haptics = rememberHaptics()
+    // Skips the first run, so a switch scrolling into view stays quiet.
+    var settled by remember { mutableStateOf(false) }
+    LaunchedEffect(checked) {
+        if (settled) haptics.play(if (checked) Haptic.ToggleOn else Haptic.ToggleOff)
+        settled = true
+    }
+
+    if (onCheckedChange != null && LocalLiquidGlassEnabled.current && isGlassSupported()) {
+        // The glass switch keeps the app-wide tuning's green off a cold
+        // start: GlasmioSwitch reads its own iOS tint, its backdrop and its
+        // drag physics straight off the fork.
+        GlasmioSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = modifier,
+            enabled = enabled,
+        )
         return
     }
+
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -96,14 +107,6 @@ fun IosSwitch(
         label = "iosSwitchTrack",
     )
     val ltr = LocalLayoutDirection.current == LayoutDirection.Ltr
-
-    val haptics = rememberHaptics()
-    // Skips the first run, so a switch scrolling into view stays quiet.
-    var settled by remember { mutableStateOf(false) }
-    LaunchedEffect(checked) {
-        if (settled) haptics.play(if (checked) Haptic.ToggleOn else Haptic.ToggleOff)
-        settled = true
-    }
 
     Box(
         modifier = modifier
@@ -150,32 +153,3 @@ private val TrackHeight = 28.dp
 private val ThumbWidth = 40.dp
 private val ThumbHeight = 24.dp
 private val ThumbPadding = 2.dp
-
-@Composable
-private fun GlasmioIosSwitch(
-    checked: Boolean,
-    onCheckedChange: ((Boolean) -> Unit)?,
-    modifier: Modifier,
-    enabled: Boolean,
-) {
-    val haptics = rememberHaptics()
-    var settled by remember { mutableStateOf(false) }
-    LaunchedEffect(checked) {
-        if (settled) haptics.play(if (checked) Haptic.ToggleOn else Haptic.ToggleOff)
-        settled = true
-    }
-    if (onCheckedChange != null) {
-        Box(modifier.minimumInteractiveComponentSize(), contentAlignment = Alignment.Center) {
-            GlasmioSwitch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
-        }
-        return
-    }
-    Box(modifier.clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
-        GlasmioSwitch(checked = checked, onCheckedChange = {}, enabled = enabled)
-        Box(
-            Modifier
-                .matchParentSize()
-                .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
-        )
-    }
-}

@@ -2,7 +2,7 @@ name: Diag Build
 
 on:
   push:
-    branches: [arena/27934bf1-neiro]
+    branches: [arena/d984ef3d-neiro]
 
 concurrency:
   group: diag-build-${{ github.ref }}
@@ -26,7 +26,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Setup Secrets (Keystore & local.properties)
+      - name: Setup Secrets
         run: |
           echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" > local.properties
           echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> local.properties
@@ -53,17 +53,16 @@ jobs:
                 --connect-timeout 60 --max-time 900 --fail \
                 -o "$DIST/gradle-9.3.1-bin.zip.part" \
                 https://github.com/gradle/gradle-distributions/releases/download/v9.3.1/gradle-9.3.1-bin.zip && break
-              echo "download attempt $attempt failed; retrying" >&2
               sleep 15
             done
             mv "$DIST/gradle-9.3.1-bin.zip.part" "$DIST/gradle-9.3.1-bin.zip"
           fi
 
-      - name: Build dev, test, build release, build TV
+      - name: Build dev, test, TV, release
         run: |
           ./gradlew :app:assembleDevDebug :app:testDevDebugUnitTest \
-            :app:assembleProdRelease -Pbitchord.abis=arm64-v8a \
-            :tv:assembleDevDebug --continue > build.log 2>&1 || echo "gradle failed"
+            :tv:assembleDevDebug \
+            :app:assembleProdRelease -Pbitchord.abis=arm64-v8a --continue > build.log 2>&1 || echo "gradle failed"
 
       - name: Publish the errors
         if: always()
@@ -71,25 +70,39 @@ jobs:
         run: |
           import re
           log = open("build.log", encoding="utf-8", errors="replace").read().splitlines()
-          pat = re.compile(r"^(e: |FAILURE|BUILD FAILED|\s*\* What went wrong|Execution failed for task|Caused by|> Task .*FAILED)|requires libraries and applications|compile against version|minCompileSdk|Dependency '|Missing class|warning: .*R8")
-          hits = [l.strip() for l in log if pat.search(l)]
-          hits = [h for h in hits if "deprecated" not in h][-40:]
-          if not hits:
-              print("no error lines matched")
-          else:
-              print("\n".join(hits))
+          start = re.compile(r"^e: ")
+          heads = re.compile(r"^(FAILURE|BUILD FAILED|\s*\* What went wrong|Execution failed for task|Caused by|> Task .*FAILED)")
+          hits, i = [], 0
+          while i < len(log):
+              line = log[i]
+              if start.match(line):
+                  block = [line.strip()]
+                  j = i + 1
+                  while j < len(log) and j <= i + 8:
+                      nxt = log[j]
+                      if start.match(nxt) or heads.match(nxt) or nxt.strip() == "":
+                          break
+                      block.append(nxt.strip())
+                      j += 1
+                  hits.append("<NL>".join(block))
+                  i = j
+                  continue
+              if heads.match(line):
+                  hits.append(line.strip())
+              i += 1
+          hits = [h for h in hits if "deprecated" not in h][-24:]
+          print("\n\n".join(hits) if hits else "no error lines matched")
           chunks, cur = [], ""
           for h in hits:
-              if len(cur) + len(h) + 1 > 2500:
+              if len(cur) + len(h) + 2 > 2400:
                   chunks.append(cur); cur = h
               else:
-                  cur = (cur + "<NL>" + h) if cur else h
+                  cur = (cur + "<NL><NL>" + h) if cur else h
           if cur:
               chunks.append(cur)
           for i, c in enumerate(chunks[:8]):
               print(f"::error title=log{i}::{c}")
-          failed = "BUILD SUCCESSFUL" not in "\n".join(log)
-          if failed:
+          if "BUILD SUCCESSFUL" not in "\n".join(log):
               open("failed.flag", "w").write("1")
 
       - name: Fail if the build failed

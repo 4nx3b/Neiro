@@ -1,7 +1,3 @@
-/*
- * Neiro
- * GPL-3.0 License | Contributors: see git history
- */
 package com.music.bitchord.ui.components
 
 import androidx.compose.runtime.Composable
@@ -36,16 +32,23 @@ class SnapshotBackdrop internal constructor() : Backdrop {
 
     internal var image: ImageBitmap? by mutableStateOf(null)
     internal var sourceCoordinates: LayoutCoordinates? = null
+    /** Read while drawing, so bumping it is what asks for a frame to record. */
     internal var requests by mutableIntStateOf(0)
     internal var handled = 0
+    /** Bumped by [release], so a still that lands after it is dropped. */
     internal var generation = 0
 
+    private var inverseLayerScope: InverseLayerScope? = null
+
+    /** Takes a still of the source on its next frame. */
     fun capture() {
         requests++
     }
 
+    /** Whether a still is in — for a panel that would rather not open on none. */
     val hasStill: Boolean get() = image != null
 
+    /** Lets the still go; until the next [capture] this draws nothing. */
     fun release() {
         image = null
         generation++
@@ -62,25 +65,47 @@ class SnapshotBackdrop internal constructor() : Backdrop {
         val coordinates = coordinates ?: return
         val source = sourceCoordinates?.takeIf { it.isAttached } ?: return
         withTransform({
+            if (layerBlock != null) {
+                with(obtainInverseLayerScope()) { inverseTransform(density, layerBlock) }
+            }
             val (offset, panelScale) =
                 try {
+                    // Where the panel's origin, and a point a step along from it,
+                    // land in the source: their distance is the scale anything
+                    // above the panel has it at — a menu growing in on a spring.
                     val origin = source.localPositionOf(coordinates)
                     val step = source.localPositionOf(coordinates, Offset(SCALE_PROBE_PX, 0f))
                     origin to ((step.x - origin.x) / SCALE_PROBE_PX).takeIf { it > 0f }
                 } catch (_: Exception) {
                     (coordinates.positionInWindow() - source.positionInWindow()) to null
                 }
+            // Undone, so the still stays where it is on screen while the panel
+            // grows over it, rather than zooming in and out with the panel.
             if (panelScale != null && panelScale != 1f) scale(1f / panelScale, pivot = Offset.Zero)
             translate(-offset.x, -offset.y)
         }) {
             scale(1f / SNAPSHOT_SCALE, pivot = Offset.Zero) { drawImage(image) }
         }
     }
+
+    private fun obtainInverseLayerScope(): InverseLayerScope {
+        return inverseLayerScope?.apply { reset() }
+            ?: InverseLayerScope().also { inverseLayerScope = it }
+    }
 }
 
 @Composable
 fun rememberSnapshotBackdrop(): SnapshotBackdrop = remember { SnapshotBackdrop() }
 
+/**
+ * Makes this what [backdrop] takes its stills of. Draws as if it weren't here,
+ * except on the one frame after [SnapshotBackdrop.capture], when it also
+ * records itself small and turns that into the picture.
+ *
+ * [floor] goes under the picture, for a source that paints no background of
+ * its own. Left see-through, a panel blurs what is there and shows the sharp
+ * source straight through everywhere else.
+ */
 @Composable
 fun Modifier.snapshotBackdropSource(backdrop: SnapshotBackdrop, floor: Color = Color.Transparent): Modifier {
     val graphicsContext = LocalGraphicsContext.current
@@ -103,6 +128,7 @@ fun Modifier.snapshotBackdropSource(backdrop: SnapshotBackdrop, floor: Color = C
             val generation = backdrop.generation
             scope.launch {
                 try {
+                    // Only if nothing asked again, or let go, in the meantime.
                     val still = layer.toImageBitmap()
                     if (backdrop.handled == request && backdrop.generation == generation) backdrop.image = still
                 } finally {
@@ -112,6 +138,12 @@ fun Modifier.snapshotBackdropSource(backdrop: SnapshotBackdrop, floor: Color = C
         }
 }
 
+/**
+ * The still's resolution against its source's. A quarter: the panels sampling
+ * it draw their backdrop at a quarter before blurring it anyway, so more would
+ * be detail thrown away.
+ */
 private const val SNAPSHOT_SCALE = 0.25f
 
+/** How far along the panel the scale is read over, in its own pixels. */
 private const val SCALE_PROBE_PX = 1000f

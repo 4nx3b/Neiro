@@ -38,9 +38,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
-val IosSlideEasing = Easing { PageMotion.slideEase(it) }
+private val ZoomEasing = Easing { PageMotion.zoomEase(it) }
 
 @Stable
 class PageMotionState {
@@ -80,12 +81,18 @@ class PageMotionState {
 fun AnimatedContentTransitionScope<*>.iosPageTransform(
     motion: PageMotionState,
     reduceMotion: Boolean,
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
     density: Float = 1f,
 ): ContentTransform {
     if (reduceMotion) {
         return fadeIn(tween(150, easing = LinearEasing)) togetherWith fadeOut(tween(150, easing = LinearEasing))
     }
     val zooming = motion.zoomingKey != null
+    // Glasmio's slide, ported: the foreground travels the full width on the
+    // fork's unnormalised critical spring, the underlay the parallax
+    // remainder UIKit prescribes — thirty percent of the width, pixel-exact
+    // — and RTL travels the mirrored way, as the fork's own spec does.
+    val sign = if (layoutDirection == LayoutDirection.Ltr) 1 else -1
     return when {
         zooming && motion.push ->
             (EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished)
@@ -93,15 +100,26 @@ fun AnimatedContentTransitionScope<*>.iosPageTransform(
             (EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished)
                 .apply { targetContentZIndex = -1f }
         motion.push ->
-            slideInHorizontally(IosNavigationSpring()) { it } togetherWith
-                slideOutHorizontally(IosNavigationSpring()) { -iosNavigationParallaxOffset(it, density) }
+            slideInHorizontally(IosNavigationSlideSpring) { it * sign } togetherWith
+                slideOutHorizontally(IosNavigationSlideSpring) {
+                    -iosNavigationParallaxOffset(it, density) * sign
+                }
         else ->
             (
-                slideInHorizontally(IosNavigationSpring()) { -iosNavigationParallaxOffset(it, density) } togetherWith
-                    slideOutHorizontally(IosNavigationSpring()) { it }
+                slideInHorizontally(IosNavigationSlideSpring) {
+                    -iosNavigationParallaxOffset(it, density) * sign
+                } togetherWith
+                    slideOutHorizontally(IosNavigationSlideSpring) { it * sign }
                 ).apply { targetContentZIndex = -1f }
     }
 }
+
+/**
+ * Glasmio's root tab fade, verbatim — the fork's sample swaps its top-level
+ * destinations on `fadeIn() togetherWith fadeOut()`, and this is that exact
+ * transform for the app's tab swaps.
+ */
+fun rootTabFade(): ContentTransform = fadeIn() togetherWith fadeOut()
 
 @Composable
 fun AnimatedVisibilityScope.IosPageFrame(
@@ -117,9 +135,13 @@ fun AnimatedVisibilityScope.IosPageFrame(
     val progress by transition.animateFloat(
         transitionSpec = {
             if (zoomBrowseId != null && targetState != EnterExitState.Visible) {
-                tween(IosNavigationDurationMillis, easing = LinearEasing)
+                tween(PageMotion.CLOSE_MS, easing = LinearEasing)
+            } else if (zoomBrowseId != null) {
+                tween(PageMotion.OPEN_MS, easing = ZoomEasing)
             } else {
-                IosNavigationSpring()
+                // Glasmio's own easing and window: the spring's position over
+                // the 350 ms coordinator duration.
+                tween(IosNavigationDurationMillis, easing = IosNavigationEasing)
             }
         },
         label = "page",
@@ -175,7 +197,7 @@ fun AnimatedVisibilityScope.IosPageFrame(
                     val under = if (motion.push) transition.targetState != EnterExitState.Visible
                     else transition.targetState == EnterExitState.Visible
                     if (under) {
-                        val dim = IosNavigationDim * (1f - progress)
+                        val dim = PageMotion.UNDER_DIM * (1f - progress)
                         if (dim > 0.001f) drawRect(Color.Black.copy(alpha = dim))
                     }
                 }

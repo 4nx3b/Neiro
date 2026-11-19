@@ -1,12 +1,3 @@
-/*
- * The glass rendering itself is Glasmio's (NEORUAA/Glasmio, Apache-2.0),
- * vendored as source at glasmio/ — see glasmio/README.md for the upstream
- * attribution. This file is the integration glue, adapted from
- * EchoMusicApp/Echo-Music's GlassEffectConfig/Modifier.liquidGlass
- * (GPL-3.0), cut down from Echo's full per-component/vibrancy-slider config
- * to the single on/off switch BitChord exposes in Settings. It is used by the
- * floating nav bar and, while enabled, the app-wide floating top controls.
- */
 package com.music.bitchord.ui.components
 
 import android.os.Build
@@ -38,13 +29,13 @@ import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.LiquidGlassIntensity
 import io.github.neoruaa.glasmio.glass.render.Backdrop
 import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
+import io.github.neoruaa.glasmio.glass.render.backdrops.emptyBackdrop
 import io.github.neoruaa.glasmio.glass.render.drawBackdrop
 import io.github.neoruaa.glasmio.glass.render.effects.blur
-import com.music.bitchord.ui.components.colorControls
 import io.github.neoruaa.glasmio.glass.render.effects.lens
+import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
 import io.github.neoruaa.glasmio.glass.render.highlight.Highlight
 import io.github.neoruaa.glasmio.glass.render.shadow.Shadow
-import io.github.neoruaa.glasmio.glass.render.backdrops.emptyBackdrop
 import androidx.compose.ui.unit.dp
 
 /** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
@@ -57,16 +48,14 @@ val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdro
  * Where a [liquidGlass] surface composed under it also records the glass it
  * draws — the sampled, blurred and tinted backdrop, without its rim or shadow —
  * so a lens above it can refract that surface rather than the page behind it.
- * The tab bar's travelling selection pill is the one reader; see
- * [com.music.bitchord.ui.components.floatingtabbar.GlassSelectionPill].
  */
 internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 
 /**
- * Glasmio's renderer draws through [android.graphics.RuntimeShader], available
- * from Android 13 (API 33) — the same line as [glasmioAvailable].
+ * The backdrop blur pipeline requires [android.graphics.RenderEffect] on a
+ * [android.graphics.RenderNode], available from Android 12 (API 31).
  */
-fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.TIRAMISU
+fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.S
 
 /** Apple-matched defaults (Echo's GlassEffectConfig()), fixed rather than user sliders. */
 private const val VIBRANCY = 1f
@@ -181,6 +170,11 @@ internal fun rememberLiquidGlassTuning(): LiquidGlassTuning {
  * pixels than full resolution through the colour matrix, the blur and the lens
  * shader, on as many as six surfaces at once in the middle of a fold, and the
  * blur is what hides the upscale.
+ *
+ * Glasmio multiplies whatever a surface asks for here by its own
+ * performance-tier sampling scale — full-size surfaces stay at their own
+ * scale, exactly the fork's behaviour — so on a mid-range tier the frost
+ * records smaller still.
  */
 private const val GLASS_RESOLUTION_SCALE = 0.33f
 
@@ -235,6 +229,15 @@ fun glassIndicatorColor(): Color =
 /** The selected tab's pill in dark theme, a step whiter than the bar. */
 private const val DARK_INDICATOR_OPACITY = 0.14f
 
+/** The rim-only glass pass the lightweight surfaces share. */
+private fun Modifier.glassRim(shape: Shape): Modifier = drawBackdrop(
+    backdrop = emptyBackdrop(),
+    shape = { shape },
+    effects = {},
+    highlight = { Highlight.Default },
+    shadow = null,
+)
+
 /**
  * A lightweight visual match for liquid glass over a stable background.
  *
@@ -255,12 +258,13 @@ fun Modifier.lightweightLiquidGlass(
     } else {
         Color(0xFF121212)
     }
+
     return clip(shape)
         .background(
             color = if (useGlass) glassTint.copy(alpha = SURFACE_OPACITY) else fallbackColor,
             shape = shape,
         )
-        .then(if (useGlass) Modifier.glassRimOnly(shape) else Modifier)
+        .then(if (useGlass) glassRim(shape) else Modifier)
         .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
 }
 
@@ -277,16 +281,8 @@ fun Modifier.lightweightLiquidGlass(
 fun Modifier.liquidGlassRim(shape: CornerBasedShape): Modifier {
     val glassHeaderPills by AppSettings.glassHeaderPills.collectAsStateWithLifecycle()
     if (!LocalLiquidGlassEnabled.current || !glassHeaderPills || !isGlassSupported()) return this
-    return then(Modifier.glassRimOnly(shape))
+    return remember(shape) { glassRim(shape) }
 }
-
-private fun Modifier.glassRimOnly(shape: Shape): Modifier = drawBackdrop(
-    backdrop = emptyBackdrop(),
-    shape = { shape },
-    effects = {},
-    highlight = { Highlight.Default },
-    shadow = null,
-)
 
 /**
  * Renders this composable as a liquid glass surface sampling [LocalAppBackdrop]:
@@ -342,9 +338,9 @@ fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            colorControls(saturation = 1f + 0.5f * VIBRANCY * tuning.vibrancyFactor)
+            vibrancy(1f + 0.5f * VIBRANCY * tuning.vibrancyFactor)
             blur(blurPx)
-            if (!glassPerformance) {
+            if (!glassPerformance && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(
                     refractionHeight = lensHeightPx,
                     refractionAmount = lensAmountPx,
@@ -391,8 +387,8 @@ fun Modifier.glassGlowOverlay(
     val insetOutline = shape.createOutline(insetSize, layoutDirection, this)
 
     // The rim: brightest at the top, gone by the bottom. Drawn into the shape
-    // inset by half the stroke — translated, as drawOutline takes no offset of
-    // its own — so the line's own width stays inside the edge.
+    // inset by half the stroke — translated, as drawOutline takes no offset of its
+    // own — so the line's own width stays inside the edge.
     translate(halfStroke, halfStroke) {
         drawOutline(
             outline = insetOutline,
