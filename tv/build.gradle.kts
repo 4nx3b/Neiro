@@ -412,6 +412,19 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.3.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
 
+    // ---- Glasmio: iOS 27 Liquid Glass components and motion ----
+    // Mirrored from app/build.gradle.kts, which this module's sources are
+    // shared with — the app's MainActivity wires GlasmioTheme, the backdrop
+    // provider and the icon resolver, GlassNavBar rides the fork's tab bar,
+    // and the settings' switches and sliders are the fork's controls, so the
+    // TV app compiling those sources needs the fork's artifacts on its own
+    // classpath just as the phone app does. The TV UI itself draws none of
+    // the glass (TvGlass is a colour palette, not a backdrop); the manifest's
+    // tools:overrideLibrary accepts the fork's minSdk 31 against this
+    // module's 26 for exactly that reason.
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-ui:v0.2.1")
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1")
+
     // ---- QR encoding, for the party invite ----
     // `core` only: the `android-core`/`zxing-android-embedded` artifacts bring
     // a camera scanner and an Activity with it, and nothing here reads a code —
