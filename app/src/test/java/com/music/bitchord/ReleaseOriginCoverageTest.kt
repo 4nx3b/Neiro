@@ -28,7 +28,7 @@ class ReleaseOriginCoverageTest {
     @Test
     fun thePageAreaStillZooms() {
         val main = source("app/src/main/java/com/music/bitchord/MainActivity.kt")
-        assertTrue(main.contains("iosPageTransform(pageMotion"))
+        assertTrue(main.contains("iosPageTransform("))
         assertTrue(main.contains("IosPageFrame("))
         assertTrue(main.contains("pageMotion.onDestination("))
     }

@@ -310,6 +310,14 @@ dependencies {
     // Glasmio's liquid-glass controls and motion, vendored at glasmio/ (minSdk 33,
     // reached only behind glasmioAvailable).
     implementation(project(":glasmio:ui"))
+    // The one scaffold composable the tab bar rides — Glasmio's navigation bar
+    // with the fused trailing item — which the vendored tree at glasmio/ does
+    // not carry. Its own Glasmio modules are excluded: the vendored :glasmio:*
+    // projects are what the app compiles and ships against, and pulling the
+    // published copies too would put two of every class on the classpath.
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1") {
+        exclude(group = "com.github.myself-tsuki.Glasmio")
+    }
 
     // ---- Compose (Material 3) ----
     // The 1.12 line, whole. The old line (BOM 2024.12.01 with foundation

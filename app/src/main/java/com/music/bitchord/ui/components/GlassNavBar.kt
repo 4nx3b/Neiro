@@ -1,29 +1,18 @@
 /*
- * The bar's structure and its inline/expanded behaviour are
- * EchoMusicApp/Echo-Music's AppFloatingNavBar + FloatingMiniPlayer (GPL-3.0),
- * over the FloatingTabBar vendored in [com.music.bitchord.ui.components.floatingtabbar].
- * BitChord's own tabs, song model, transport and haptics are wired through it in
- * place of Echo's Screens routing and PlayerConnection.
+ * The glass navigation bar, ported onto Glasmio's tab bar (the myself-tsuki
+ * fork from JitPack): the iOS 27 split-search tab bar — the capsule platter
+ * with the trailing Search circle fused into it through the fork's
+ * BottomNavigationContact CASDF union, the selection indicator as a native
+ * control lens sampling the material backplate, and the platter's own morph
+ * into the selected tab's circle on the fold. The now-playing accessory
+ * rides above it as its own glass capsule rather than docking into the pill,
+ * as the fork's sample lays its floating controls out. The bar's structure
+ * and the fold behaviour are BitChord's own, first drawn after
+ * EchoMusicApp/Echo-Music's AppFloatingNavBar (GPL-3.0); the shell under
+ * them is Glasmio's now.
  */
-@file:OptIn(ExperimentalSharedTransitionApi::class)
-
 package com.music.bitchord.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.semantics.Role
-import io.github.neoruaa.glasmio.icons.GlasmioIconResolver
-import io.github.neoruaa.glasmio.icons.LocalGlasmioIconResolver
-import io.github.neoruaa.glasmio.icons.SfSymbol
-import io.github.neoruaa.glasmio.ui.CompactBottomControlSize
-import io.github.neoruaa.glasmio.ui.GlasmioNavigationBar
-import io.github.neoruaa.glasmio.ui.GlasmioTabItem
-import io.github.neoruaa.glasmio.ui.NavigationBarSurfaceHeight
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -32,14 +21,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
@@ -48,8 +37,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -59,8 +48,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -68,36 +55,41 @@ import com.music.bitchord.R
 import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
-import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBar
-import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarDefaults
-import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarScrollConnection
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
 import com.music.bitchord.playback.MusicOnlyPlayback
 import com.music.bitchord.ui.player.PlayerDock
 import com.music.bitchord.ui.player.AndroidMusicVideo
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.text.font.FontWeight
+import io.github.neoruaa.glasmio.icons.SfSymbol
+import io.github.neoruaa.glasmio.scaffold.GlasmioNavigationBarWithTrailingItem
+import io.github.neoruaa.glasmio.ui.GlasmioTabItem
 
 /**
- * The liquid glass navigation bar: the iOS 26 shape where the now playing
- * controls and the tabs are one component rather than two stacked bars.
+ * The liquid glass navigation bar, ported from Glasmio.
  *
- * Expanded, it is a full width now playing pill sitting over the tab pill and a
- * separate circular Search tab. Scrolling down collapses it inline — the tabs
- * fold down to just the selected one, the now playing controls narrow into the
- * gap between it and Search, and the whole thing becomes a single row the width
- * of the screen. Scrolling back up expands it. The fold is driven by
- * [scrollConnection], which the page's scroll has to be dispatched into for any
- * of this to move; see MainActivity's `nestedScroll`.
+ * The tab platter is the fork's own [GlasmioNavigationBarWithTrailingItem]:
+ * the Home/Explore/Library capsule with the Search circle as its trailing
+ * control, the two fused through the fork's contact-field union shape, the
+ * selection lens a native control lens over the material. Scrolling down
+ * collapses the platter into the selected tab's circle — Glasmio's compact
+ * morph, driven here by [scrollConnection] the page's scroll is dispatched
+ * into, so the fold behaves as it always has (see MainActivity's
+ * `nestedScroll`). Tapping the collapsed circle expands the bar again.
  *
- * Every surface here samples the app backdrop through [Modifier.liquidGlass], so
- * this is only ever used where that is supported and switched on — off either,
+ * The now-playing accessory is the fork's sample's layout: its own glass
+ * capsule above the platter while the bar is expanded, fading away with the
+ * fold, rather than iOS 26's one-component dock. [song] null means nothing
+ * is playing and the platter and Search stand alone.
+ *
+ * Every surface here samples the app backdrop — the platter through Glasmio's
+ * own GlassSurface, the accessory through [Modifier.liquidGlass] — so this is
+ * only ever used where that is supported and switched on; off either,
  * MainActivity draws [MiniPlayer] and [FloatingBottomBar] instead.
- *
- * [song] null means nothing is playing, and the accessory is simply absent: the
- * bar is then the tab pill and Search alone, and the collapse still works.
  */
 @Composable
 fun GlassNavBar(
@@ -121,227 +113,107 @@ fun GlassNavBar(
     pull: MiniPlayerPull? = null,
     modifier: Modifier = Modifier,
 ) {
-    // Held for the same reason [tabs] is. The glass factory below closes over
-    // this shape, and a fresh RoundedCornerShape each pass means a fresh factory
-    // lambda, which the tab bar sees as a changed argument and recomposes on.
-    val pillShape = remember { RoundedCornerShape(percent = 50) }
-    val contentColor = glassContentColor()
-    val selectedColor = contentColor
-    val unselectedColor = contentColor.copy(alpha = 0.65f)
-    val haptics = rememberHaptics()
+    // The fold: Glasmio's compact morph running on the fork's own
+    // navigation endpoint spring — critically damped, 0.3 s response, the
+    // stiffness (2π/0.3)² the fork's navigation motion uses throughout.
+    val compactProgressState: State<Float> = animateFloatAsState(
+        targetValue = if (scrollConnection.isInline) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = GLASS_NAV_COMPACT_STIFFNESS,
+        ),
+        label = "glassNavCompact",
+    )
+    val compact = compactProgressState.value
 
-    // The tab content lambdas below are captured once per contentKey and held
-    // until it changes, so a click handler that reached back to this call's
-    // `onTabSelected` would go stale the moment anything it closes over moved.
-    // Held through a state that is always current instead, which also keeps the
-    // handler out of the key.
-    val currentOnTabSelected by rememberUpdatedState(onTabSelected)
-
-    // Search is the odd one out in the iOS 26 layout: a circle of its own beside
-    // the pill rather than a quarter of it. It is the last tab in BitChord's
-    // order, which is where the shape wants it anyway.
-    val standaloneIndex = tabs.lastIndex
-
-    // A factory, not a value — see the note in FloatingTabBar's header. Each of
-    // the three surfaces gets its own glass modifier and so its own shape cache.
-    // The theme's own glass tint, as the liquid top bar has it — no white wash.
-    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape) }
-
-    if (glasmioAvailable) {
-        val accessory: (@Composable (Boolean, Modifier) -> Unit)? = song?.let { current ->
-            { inline, accessoryModifier ->
-                GlassNowPlaying(
-                    song = current,
-                    isInline = inline,
-                    isPlaying = isPlaying,
-                    isLoading = isLoading,
-                    contentColor = contentColor,
-                    onPlayPause = onPlayPause,
-                    onNext = onNext,
-                    onPrevious = onPrevious,
-                    onExpand = onExpand,
-                    controlsLocked = controlsLocked,
-                    onBlockedControl = onBlockedControl,
-                    dock = dock,
-                    pull = pull,
-                    modifier = accessoryModifier.then(glassSurface()),
-                )
-            }
+    // Search is the trailing control in the fork's split-search layout — the
+    // circle of its own beside the platter — which is the last tab in
+    // BitChord's order anyway.
+    val navItems = remember(tabs) {
+        tabs.dropLast(1).mapIndexed { index, tab ->
+            GlasmioTabItem(
+                key = index,
+                label = tab.label,
+                symbol = when (index) {
+                    0 -> SfSymbol.House
+                    1 -> SfSymbol.Safari
+                    else -> SfSymbol.MusicNoteList
+                },
+            )
         }
-        GlasmioTabBar(
-            tabs = tabs,
-            selectedIndex = selectedIndex,
-            onTabSelected = { index ->
-                if (index != selectedIndex) haptics.play(Haptic.Select)
-                currentOnTabSelected(index)
-            },
-            scrollConnection = scrollConnection,
-            contentColor = contentColor,
-            accessory = accessory,
-            modifier = modifier
-                .windowInsetsPadding(floatingBarInsets)
-                .padding(horizontal = NAV_BAR_GUTTER)
-                .padding(bottom = NAV_BAR_LIFT)
-                .fillMaxWidth(),
+    }
+    val trailingItem = remember(tabs) {
+        GlasmioTabItem(
+            key = tabs.lastIndex,
+            label = tabs.last().label,
+            symbol = SfSymbol.Search,
         )
-        return
     }
 
-    FloatingTabBar(
-        selectedTabKey = selectedIndex,
-        scrollConnection = scrollConnection,
-        modifier = modifier
+    Column(
+        modifier
             .windowInsetsPadding(floatingBarInsets)
             .padding(horizontal = NAV_BAR_GUTTER)
             .padding(bottom = NAV_BAR_LIFT)
             .fillMaxWidth(),
-        tabBarContentModifier = glassSurface,
-        inlineAccessory = song?.let { current ->
-            { accessoryModifier, _ ->
-                GlassNowPlaying(
-                    song = current,
-                    isInline = true,
-                    isPlaying = isPlaying,
-                    isLoading = isLoading,
-                    contentColor = contentColor,
-                    onPlayPause = onPlayPause,
-                    onNext = onNext,
-                    onPrevious = onPrevious,
-                    onExpand = onExpand,
-                    controlsLocked = controlsLocked,
-                    onBlockedControl = onBlockedControl,
-                    dock = dock,
-                    pull = pull,
-                    modifier = accessoryModifier.then(glassSurface()),
-                )
-            }
-        },
-        expandedAccessory = song?.let { current ->
-            { accessoryModifier, _ ->
-                GlassNowPlaying(
-                    song = current,
-                    isInline = false,
-                    isPlaying = isPlaying,
-                    isLoading = isLoading,
-                    contentColor = contentColor,
-                    onPlayPause = onPlayPause,
-                    onNext = onNext,
-                    onPrevious = onPrevious,
-                    onExpand = onExpand,
-                    controlsLocked = controlsLocked,
-                    onBlockedControl = onBlockedControl,
-                    dock = dock,
-                    pull = pull,
-                    modifier = accessoryModifier.fillMaxWidth().then(glassSurface()),
-                )
-            }
-        },
-        // Transparent: the glass surface underneath is the background, and a
-        // colour over it would be the thing you saw instead of the backdrop.
-        colors = FloatingTabBarDefaults.colors(
-            backgroundColor = Color.Transparent,
-            accessoryBackgroundColor = Color.Transparent,
-            indicatorColor = glassIndicatorColor(),
-        ),
-        // Flat, because the glass is not. Every surface here already draws its
-        // own [Shadow.Default] as part of the backdrop pass, and the library's
-        // Modifier.shadow on top of that is a second offscreen layer and a
-        // second shadow render for each of them — three at rest, six mid-fold,
-        // paying twice for a shadow you can only see once.
-        elevations = FloatingTabBarDefaults.elevations(
-            inlineElevation = 0.dp,
-            expandedElevation = 0.dp,
-        ),
-        // Expanded, this is meant to be the plain [FloatingBottomBar] with a
-        // different material — same outer width, same pill inset, same tab
-        // padding, same glyph — so the two bars measure identically and the
-        // toggle changes the surface rather than the layout. The horizontal tab
-        // padding is gone with it: the tabs divide the pill by weight now, the
-        // way the plain bar's do, so a per-tab horizontal padding would only
-        // inset the ripple.
-        sizes = FloatingTabBarDefaults.sizes(
-            tabBarContentPadding = PaddingValues(PILL_INSET),
-            tabExpandedContentPadding = PaddingValues(vertical = TAB_VERTICAL_PADDING),
-            // Collapsed, Apple's row is narrower and more spaced: 48pt circles
-            // 28pt in from the screen's sides, 14pt apart, centred on the line
-            // the expanded bar's middle runs along.
-            inlineComponentSpacing = INLINE_SPACING,
-            inlineBarPadding = PaddingValues(
-                start = INLINE_GUTTER - NAV_BAR_GUTTER,
-                end = INLINE_GUTTER - NAV_BAR_GUTTER,
-                bottom = INLINE_LIFT,
-            ),
-        ),
-        // Held too: this is declared `Any?`, so a fresh list every pass is a
-        // changed argument by identity and defeats skipping on its own.
-        contentKey = remember(selectedIndex, tabs, contentColor) {
-            listOf(selectedIndex, tabs, contentColor)
-        },
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        tabs.forEachIndexed { index, tab ->
-            val isSelected = index == selectedIndex
-            val tint = if (isSelected) selectedColor else unselectedColor
-            val onClick = {
-                if (!isSelected) haptics.play(Haptic.Select)
-                currentOnTabSelected(index)
-            }
-            if (index == standaloneIndex) {
-                standaloneTab(
-                    key = index,
-                    icon = {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = tab.label,
-                            tint = tint,
-                            modifier = Modifier.size(TAB_ICON_SIZE),
-                        )
-                    },
-                    onClick = onClick,
-                )
-            } else {
-                tab(
-                    key = index,
-                    icon = {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = tab.label,
-                            tint = tint,
-                            modifier = Modifier.size(TAB_ICON_SIZE),
-                        )
-                    },
-                    title = {
-                        Text(
-                            text = tab.label,
-                            style = tabLabelStyle(),
-                            color = tint,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            // The library's Tab stacks the glyph and the label
-                            // with nothing between them; the plain bar spaces
-                            // them, and this is where that gap goes.
-                            modifier = Modifier.padding(top = TAB_ICON_LABEL_GAP),
-                        )
-                    },
-                    onClick = onClick,
-                )
-            }
+        song?.let { current ->
+            // The now-playing capsule, its own glass surface above the
+            // platter, gone with the fold: the compact circle is the whole
+            // bar by then, as the fork's sample lays it out.
+            GlassNowPlaying(
+                song = current,
+                isInline = false,
+                isPlaying = isPlaying,
+                isLoading = isLoading,
+                contentColor = glassContentColor(),
+                onPlayPause = onPlayPause,
+                onNext = onNext,
+                onPrevious = onPrevious,
+                onExpand = onExpand,
+                controlsLocked = controlsLocked,
+                onBlockedControl = onBlockedControl,
+                dock = dock,
+                pull = pull,
+                modifier = Modifier
+                    .fillMaxWidth(0.94f)
+                    .graphicsLayer {
+                        alpha = (1f - compact * 1.6f).coerceIn(0f, 1f)
+                        scaleX = 1f - 0.24f * compact
+                        scaleY = 1f - 0.24f * compact
+                    }
+                    .liquidGlass(shape = GlassNowPlayingShape),
+            )
+            Spacer(Modifier.height(8.dp))
         }
+
+        GlasmioNavigationBarWithTrailingItem(
+            items = navItems,
+            trailingItem = trailingItem,
+            selectedKey = selectedIndex,
+            onSelected = onTabSelected,
+            onExpand = { scrollConnection.expand() },
+            compactProgress = compactProgressState,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
+/** The now-playing capsule's silhouette — the accessory it always was. */
+private val GlassNowPlayingShape = RoundedCornerShape(percent = 50)
+
+/** Glasmio's navigation motion spring: (2π/0.3)², the 0.3 s native response. */
+private const val GLASS_NAV_COMPACT_STIFFNESS = 438.64908f
+
 /**
- * The now playing controls docked into [GlassNavBar] as its accessory.
+ * The now playing controls docked above [GlassNavBar] as its accessory.
  *
- * Two densities of the same row rather than two components, so the shared
- * element carrying it between the bar's states has one thing to interpolate:
- * [isInline] drops the skip button and draws the play button smaller. The
- * artwork and the type are the same at both, as they are in Apple's accessory,
- * which only changes width between its two placements.
- *
- * The content is [MiniPlayer]'s — same artwork, same transport, same haptics —
- * and not Echo's, which reaches into a player connection this app doesn't have.
- * The press response is Echo's, and belongs to the glass rather than the row:
- * a surface you can push on is the whole point of the material.
+ * [MiniPlayer]'s content — same artwork, same transport, same haptics — on
+ * the glass capsule of its own the fork's sample gives its floating controls,
+ * with Echo's press response (a surface you can push on is the whole point
+ * of the material). The inline density is gone with the dock: the capsule
+ * only ever draws expanded, the fold fades the whole accessory.
  */
 @Composable
 private fun GlassNowPlaying(
@@ -382,18 +254,7 @@ private fun GlassNowPlaying(
     val glyphSize = if (isInline) 24.dp else EXPANDED_GLYPH_SIZE
 
     Box(
-        // Inline, the accessory is stretched to the row's height by the tab bar
-        // (`fillMaxHeight` on a row measured at IntrinsicSize.Max), and this row
-        // is shorter than that — the tab pill beside it, with a 28dp glyph in
-        // 10dp of padding, is the tallest thing in the row and sets the height.
-        // A Box defaults to TopStart, so the artwork and the transport sat a
-        // couple of dp above the pill's centre line. Expanded the Box wraps its
-        // content, so centring is a no-op there.
         contentAlignment = Alignment.Center,
-        // The gestures and the tap belong to the whole glass surface, not the
-        // row centred in it. Inline, that row is shorter than the pill it sits
-        // in, and a pull started in the strip above or below it went nowhere —
-        // on a bar only 48dp tall to begin with.
         modifier = Modifier
             // Outside the press scale, which it lifts along with everything else.
             .miniPlayerGestures(
@@ -428,7 +289,7 @@ private fun GlassNowPlaying(
                     // The artwork sits in the end of a capsule, which curves
                     // away from it; at 8dp its corner met the curve.
                     start = 16.dp,
-                    end = if (isInline) 8.dp else 12.dp,
+                    end = 12.dp,
                     // Expanded, the 40dp play button and these come to the 48dp
                     // Apple's accessory is.
                     top = 4.dp,
@@ -467,11 +328,9 @@ private fun GlassNowPlaying(
                     )
                 }
             }
-            Spacer(Modifier.width(if (isInline) 8.dp else 9.dp))
+            Spacer(Modifier.width(9.dp))
             // Title and artist at both densities, as Apple Music has them, in its
-            // small, openly spaced type (see [ACCESSORY_TITLE_SIZE]). The inline
-            // row shares its width with the tab pill and the Search circle, so
-            // a long line fades out at its end, as Apple's does.
+            // small, openly spaced type (see [ACCESSORY_TITLE_SIZE]).
             Column(Modifier.weight(1f)) {
                 val secondary = contentColor.copy(alpha = 0.7f)
                 ExplicitSongTitle(
@@ -492,7 +351,7 @@ private fun GlassNowPlaying(
                     CircularProgressIndicator(
                         color = contentColor,
                         strokeWidth = 2.dp,
-                        modifier = Modifier.size(if (isInline) 18.dp else 20.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             } else {
@@ -511,39 +370,23 @@ private fun GlassNowPlaying(
                     )
                 }
             }
-            // Dropped inline: the collapsed row is sharing its width with the
-            // tab pill and the Search circle, and the title is what has to
-            // survive that, not a second transport button.
-            if (!isInline) {
-                // Glyph centres 44dp apart, as Apple's are.
-                Spacer(Modifier.width(4.dp))
-                IconButton(
-                    onClick = {
-                        haptics.play(Haptic.SkipNext)
-                        onNext()
-                    },
-                    enabled = !controlsLocked,
-                    modifier = Modifier.size(glyphSlot),
-                ) {
-                    MiniPlayerNextGlyph(
-                        tint = contentColor.copy(alpha = if (controlsLocked) 0.3f else 1f),
-                    )
-                }
+            // Glyph centres 44dp apart, as Apple's are.
+            Spacer(Modifier.width(4.dp))
+            IconButton(
+                onClick = {
+                    haptics.play(Haptic.SkipNext)
+                    onNext()
+                },
+                enabled = !controlsLocked,
+                modifier = Modifier.size(glyphSlot),
+            ) {
+                MiniPlayerNextGlyph(
+                    tint = contentColor.copy(alpha = if (controlsLocked) 0.3f else 1f),
+                )
             }
         }
     }
 }
-
-/** The collapsed row's margin at either side of the screen, and its items' spacing. */
-private val INLINE_GUTTER = 28.dp
-private val INLINE_SPACING = 14.dp
-
-/**
- * Half the difference between the expanded tab row, 62dp, and the collapsed
- * one, 48 — a 28dp glyph in 10dp of padding — so the one folds onto the
- * other's centre line.
- */
-private val INLINE_LIFT = 7.dp
 
 /**
  * The accessory's type, measured off Apple's, collapsed and expanded alike:
@@ -569,84 +412,3 @@ private val ACCESSORY_ART_CORNER = 5.7.dp
 
 /** The expanded play glyph: its triangle about Apple's 15pt tall. */
 private val EXPANDED_GLYPH_SIZE = 29.dp
-
-@Composable
-private fun GlasmioTabBar(
-    tabs: List<BottomTab>,
-    selectedIndex: Int,
-    onTabSelected: (Int) -> Unit,
-    scrollConnection: FloatingTabBarScrollConnection,
-    contentColor: Color,
-    accessory: (@Composable (Boolean, Modifier) -> Unit)?,
-    modifier: Modifier,
-) {
-    val inline = scrollConnection.isInline
-    val compact = animateFloatAsState(
-        targetValue = if (inline) 1f else 0f,
-        animationSpec = spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow),
-        label = "glasmioTabBarCompact",
-    )
-    val standaloneIndex = tabs.lastIndex
-    val items = remember(tabs) {
-        tabs.take(standaloneIndex).mapIndexed { index, tab ->
-            GlasmioTabItem(key = index, label = tab.label, symbol = TabSymbols.getOrElse(index) { SfSymbol.MusicNote })
-        }
-    }
-    val resolver = remember(items, tabs) {
-        val vectors = items.associate { it.symbol.systemName to tabs[it.key].icon }
-        GlasmioIconResolver { name -> vectors[name] }
-    }
-    val standalone = tabs.getOrNull(standaloneIndex)
-    val circleSize by animateDpAsState(
-        targetValue = if (inline) CompactBottomControlSize else NavigationBarSurfaceHeight,
-        label = "glasmioSearchSize",
-    )
-    CompositionLocalProvider(LocalGlasmioIconResolver provides resolver) {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(INLINE_SPACING)) {
-            if (!inline) accessory?.invoke(false, Modifier.fillMaxWidth())
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(INLINE_SPACING),
-            ) {
-                if (items.isNotEmpty()) {
-                    GlasmioNavigationBar(
-                        items = items,
-                        selectedKey = selectedIndex,
-                        onSelected = onTabSelected,
-                        onExpand = scrollConnection::expand,
-                        compactProgress = compact,
-                        compactSize = CompactBottomControlSize,
-                        modifier = if (inline) Modifier.width(CompactBottomControlSize) else Modifier.weight(1f),
-                    )
-                }
-                if (inline) accessory?.invoke(true, Modifier.weight(1f))
-                if (standalone != null) {
-                    val selected = selectedIndex == standaloneIndex
-                    Box(
-                        Modifier
-                            .size(circleSize)
-                            .liquidGlass(shape = CircleShape)
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                role = Role.Tab,
-                                onClickLabel = standalone.label,
-                            ) { onTabSelected(standaloneIndex) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = standalone.icon,
-                            contentDescription = standalone.label,
-                            tint = if (selected) MaterialTheme.colorScheme.primary else contentColor,
-                            modifier = Modifier.size(TAB_ICON_SIZE),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private val TabSymbols = listOf(SfSymbol.House, SfSymbol.Safari, SfSymbol.MusicNoteSquareStackFilled)
