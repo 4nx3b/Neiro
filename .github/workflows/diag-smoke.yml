@@ -38,7 +38,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: false
           script: |
-            bash .github/scripts/launch-smoke.sh 34 apks > smoke.log 2>&1 || true
+            timeout -k 30 600 bash .github/scripts/launch-smoke.sh 34 apks > smoke.log 2>&1 || echo "script exited $?" >> smoke.log
 
       - name: Publish what the smoke saw
         if: always()
