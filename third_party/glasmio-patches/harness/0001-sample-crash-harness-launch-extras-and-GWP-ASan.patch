@@ -1,0 +1,89 @@
+From 73e2c4d54f4f371294731e33cde4b9331eb5ac66 Mon Sep 17 00:00:00 2001
+From: Neiro harness <engineer@curialy.local>
+Date: Thu, 19 Nov 2026 14:10:34 +0000
+Subject: [PATCH] sample: crash-harness launch extras and GWP-ASan
+
+Harness only, for Neiro's glasmio-sample-smoke workflow: GWP-ASan always
+on so heap use-after-free reports name the freed object; glasmio_cap forces
+frameRateCap so the capped glass path (GlassFrameCache) runs on a 60 Hz
+emulator; glasmio_route opens a route on top of Home.
+---
+ sample/src/main/AndroidManifest.xml           |  2 +-
+ .../neoruaa/glasmio/sample/HarnessLaunch.kt   | 28 +++++++++++++++++++
+ .../neoruaa/glasmio/sample/MainActivity.kt    |  7 ++++-
+ 3 files changed, 35 insertions(+), 2 deletions(-)
+ create mode 100644 sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt
+
+diff --git a/sample/src/main/AndroidManifest.xml b/sample/src/main/AndroidManifest.xml
+index c5633cb..f64eac8 100644
+--- a/sample/src/main/AndroidManifest.xml
++++ b/sample/src/main/AndroidManifest.xml
+@@ -1,5 +1,5 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+-    <application android:label="Glasmio" android:theme="@style/Theme.Glasmio" android:allowBackup="false" android:supportsRtl="true">
++    <application android:gwpAsanMode="always" android:label="Glasmio" android:theme="@style/Theme.Glasmio" android:allowBackup="false" android:supportsRtl="true">
+         <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+diff --git a/sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt b/sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt
+new file mode 100644
+index 0000000..cd1bbdc
+--- /dev/null
++++ b/sample/src/main/java/io/github/neoruaa/glasmio/sample/HarnessLaunch.kt
+@@ -0,0 +1,28 @@
++package io.github.neoruaa.glasmio.sample
++
++import android.content.Context
++import android.content.Intent
++import io.github.neoruaa.glasmio.core.GlasmioPerformance
++import io.github.neoruaa.glasmio.core.GlasmioPerformanceConfig
++
++/**
++ * Crash-harness launch extras (Neiro's glasmio-sample-smoke workflow; not for release):
++ * `glasmio_cap` forces GlasmioPerformanceConfig.frameRateCap so the capped glass path runs on a 60 Hz emulator,
++ * `glasmio_route` opens a sample route on top of Home.
++ */
++internal object HarnessLaunch {
++    var route: String? = null
++        private set
++
++    fun read(context: Context, intent: Intent?) {
++        intent ?: return
++        if (intent.hasExtra(ExtraCap)) {
++            val cap = intent.getIntExtra(ExtraCap, 0)
++            GlasmioPerformance.configure(context, GlasmioPerformanceConfig(frameRateCap = cap))
++        }
++        route = intent.getStringExtra(ExtraRoute)
++    }
++
++    private const val ExtraCap = "glasmio_cap"
++    private const val ExtraRoute = "glasmio_route"
++}
+diff --git a/sample/src/main/java/io/github/neoruaa/glasmio/sample/MainActivity.kt b/sample/src/main/java/io/github/neoruaa/glasmio/sample/MainActivity.kt
+index 82bf19b..c1a2f97 100644
+--- a/sample/src/main/java/io/github/neoruaa/glasmio/sample/MainActivity.kt
++++ b/sample/src/main/java/io/github/neoruaa/glasmio/sample/MainActivity.kt
+@@ -158,6 +158,7 @@ class MainActivity : ComponentActivity() {
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
++        HarnessLaunch.read(this, intent)
+         val initialPreferences = DemoPreferences.load(this,
+             (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
+         appDarkAppearance = initialPreferences.dark
+@@ -335,7 +336,11 @@ private fun SampleNavigation(
+     val navigationDensity = LocalDensity.current.density
+     val backStack = rememberSaveable(
+         saver = listSaver<SnapshotStateList<String>, String>(save = { it.toList() }, restore = { it.toMutableStateList() }),
+-    ) { mutableStateListOf(sampleEntryKey("Home")) }
++    ) {
++        mutableStateListOf(sampleEntryKey("Home")).also { stack ->
++            HarnessLaunch.route?.takeIf { it != "Home" }?.let { stack.add(sampleEntryKey(it)) }
++        }
++    }
+     val homeListState = rememberLazyListState()
+     val materialsListState = rememberLazyListState()
+     val settingsListState = rememberLazyListState()
+-- 
+2.39.5
+

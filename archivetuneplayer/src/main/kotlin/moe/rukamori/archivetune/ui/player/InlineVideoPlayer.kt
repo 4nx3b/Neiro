@@ -96,7 +96,6 @@ import kotlinx.coroutines.launch
 import moe.rukamori.archivetune.LocalPlayerConnection
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.constants.SliderStyle
-import moe.rukamori.archivetune.constants.SliderStyleKey
 import moe.rukamori.archivetune.constants.VideoAmbientModeKey
 import moe.rukamori.archivetune.constants.VideoAspectRatio
 import moe.rukamori.archivetune.constants.VideoAspectRatioKey
@@ -418,7 +417,6 @@ fun FullscreenVideoOverlay(
     var brightnessGestureJob by remember { mutableStateOf<Job?>(null) }
     var volumeGestureJob by remember { mutableStateOf<Job?>(null) }
 
-    val (sliderStyle, onSliderStyleChange) = rememberEnumPreference(SliderStyleKey, defaultValue = SliderStyle.Standard)
     val (playbackSpeed, onPlaybackSpeedChange) = rememberPreference(VideoPlaybackSpeedKey, defaultValue = 1.0f)
     val (ambientMode, onAmbientModeChange) = rememberPreference(VideoAmbientModeKey, defaultValue = false)
     val (aspectRatio, onAspectRatioChange) = rememberEnumPreference(VideoAspectRatioKey, defaultValue = VideoAspectRatio.FIT)
@@ -894,7 +892,7 @@ fun FullscreenVideoOverlay(
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                     ) {
                         StyledPlaybackSlider(
-                            sliderStyle = sliderStyle,
+                            sliderStyle = SliderStyle.Standard,
                             value = if (seekEnabled) displayPosition.toFloat() else 0f,
                             valueRange = if (seekEnabled) 0f..duration.toFloat() else 0f..1f,
                             onValueChange = { newValue ->
@@ -963,8 +961,6 @@ fun FullscreenVideoOverlay(
         ) {
             KeepStatusBarHiddenInDialog()
             VideoOverflowSheetContent(
-                sliderStyle = sliderStyle,
-                onSliderStyleChange = onSliderStyleChange,
                 playbackSpeed = playbackSpeed,
                 onPlaybackSpeedChange = onPlaybackSpeedChange,
                 ambientMode = ambientMode,
@@ -978,8 +974,6 @@ private const val FullscreenControlsAutoHideMs = 3_500L
 
 @Composable
 private fun VideoOverflowSheetContent(
-    sliderStyle: SliderStyle,
-    onSliderStyleChange: (SliderStyle) -> Unit,
     playbackSpeed: Float,
     onPlaybackSpeedChange: (Float) -> Unit,
     ambientMode: Boolean,
@@ -993,35 +987,6 @@ private fun VideoOverflowSheetContent(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = stringResource(R.string.video_slider_style),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SliderStyle.entries.forEach { style ->
-                    val labelRes =
-                        when (style) {
-                            SliderStyle.Standard -> R.string.slider_style_standard
-                            SliderStyle.Wavy -> R.string.slider_style_wavy
-                            SliderStyle.Thick -> R.string.slider_style_thick
-                            SliderStyle.Circular -> R.string.slider_style_circular
-                            SliderStyle.Simple -> R.string.slider_style_simple
-                        }
-                    PillToggle(
-                        text = stringResource(labelRes),
-                        selected = style == sliderStyle,
-                        onClick = { onSliderStyleChange(style) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

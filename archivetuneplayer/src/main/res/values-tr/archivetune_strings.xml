@@ -23,7 +23,6 @@
   <string name="close">Kapat</string>
   <string name="minimum_volume">Minimum Ses</string>
   <string name="maximum_volume">Maksimum Ses</string>
-  <string name="hide_player_thumbnail">Oyuncu Küçük Resmini Gizle</string>
   <plurals name="n_element">
     <item quantity="one">%d öğesi</item>
     <item quantity="other">%d öğe</item>

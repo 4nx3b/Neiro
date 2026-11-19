@@ -28,7 +28,11 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -150,7 +154,6 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.ui.components.ExplicitBadge
 import com.music.bitchord.ui.components.VideoThumbnails
 import com.music.bitchord.ui.components.menuAnchor
-import com.music.bitchord.ui.theme.rememberArtworkPalette
 import com.music.bitchord.ui.theme.HideStatusBar
 import com.music.bitchord.ui.theme.rememberScreenOrientation
 import com.music.bitchord.ui.theme.StatusBarIcons
@@ -166,8 +169,7 @@ import com.music.bitchord.data.canvas.CanvasSource
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.LastPlayerScreen
-import com.music.bitchord.data.settings.LyricsBackgroundStyle
-import com.music.bitchord.data.settings.PlayerButtonsStyle
+import com.music.bitchord.data.settings.PlayerDesignStyle
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.PlaybackSourceType
@@ -215,6 +217,13 @@ internal const val ART_RETRY_DELAY_MS = 1_500L
  * enough not to be noticed on a track that has no album to find.
  */
 internal const val ALBUM_SETTLE_MS = 700L
+
+/**
+ * How long the Tidal sleeve fallback waits for a remote-library track's own
+ * extraction to answer before it asks Tidal — the same beat the canvas lookup
+ * gives the album name, for the same reason: the art is on its way.
+ */
+private const val REMOTE_ART_SETTLE_MS = 700L
 
 /** Long enough for the post-upgrade rollback cue to be noticed without lingering. */
 private const val REVERT_CUE_MS = 2_600L
@@ -458,6 +467,41 @@ private const val ARTWORK_DRAG_SHRINK_SCALE = 0.94f
  */
 private val ArtworkScaleEasing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
 private const val ARTWORK_SCALE_DURATION_MS = 500
+
+/**
+ * The still sleeve's breath while "Animate static album art" is on and a
+ * track has no canvas: the top of the scale and one leg of its cycle, the two
+ * legs — out and back — spelling out a whole ~9s. Small enough to read as the
+ * picture settling deeper rather than the frame growing.
+ */
+private const val STATIC_ARTWORK_BREATH_SCALE = 1.03f
+private const val STATIC_ARTWORK_BREATH_LEG_MS = 4_500
+
+/**
+ * The breathing itself: an infinite scale in and out, read in the layer so a
+ * frame of it is a redraw of the sleeve and never a relayout. The caller's
+ * own modifier — nothing at all — while the sleeve has a canvas over it,
+ * while the switch is off, or under "Reduce animation", where the still
+ * sleeve has always been still.
+ */
+@Composable
+internal fun Modifier.staticArtworkBreathing(breathe: Boolean): Modifier {
+    val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    if (!breathe || reduceAnimation) return this
+    val breath = rememberInfiniteTransition(label = "staticArtworkBreath").animateFloat(
+        initialValue = 1f,
+        targetValue = STATIC_ARTWORK_BREATH_SCALE,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = STATIC_ARTWORK_BREATH_LEG_MS, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "staticArtworkBreathScale",
+    )
+    return graphicsLayer {
+        scaleX = breath.value
+        scaleY = breath.value
+    }
+}
 
 /**
  * How far a tall screen is allowed to push the transport from the blocks either
@@ -884,7 +928,29 @@ fun NowPlayingScreen(
     // Remote tracks whose art lives inside the file resolve it here, once —
     // every surface below reads the same value rather than each triggering
     // its own extraction.
-    val remoteArt = rememberRemoteArtworkUrl(song)
+    val resolvedArt = rememberRemoteArtworkUrl(song)
+    // The Canvas page's "Use Tidal artwork" fallback: a track that resolved
+    // no artwork at all asks Tidal for its album's cover, for a sleeve the
+    // player would otherwise tile over. Asked here and not under the rows,
+    // which resolve the same nothing — a fallback there would be a
+    // third-party search per row, and the switch is the sleeve's. Arrives the
+    // way any cover does, late and fading in; the host answers null without
+    // a request while the switch is off.
+    var tidalSleeve by remember(song.videoId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(song.videoId, song.albumName, resolvedArt) {
+        if (resolvedArt != null) {
+            tidalSleeve = null
+            return@LaunchedEffect
+        }
+        // A WebDAV/SMB track's picture may still be on its way out of the
+        // file — see [rememberRemoteArtworkUrl] — so give the store a beat
+        // to answer before spending a search on a sleeve it is about to.
+        if (song.videoId.startsWith("webdav:") || song.videoId.startsWith("smb:")) {
+            delay(REMOTE_ART_SETTLE_MS)
+        }
+        tidalSleeve = PlayerPlatform.host.tidalSleeveFallback(song)
+    }
+    val remoteArt = resolvedArt ?: tidalSleeve
     // This is produced by the palette's existing 128 px decode and cache. It
     // samples the upper band rather than the whole sleeve because that is what
     // lies beneath the status bar when the player expands to full bleed.
@@ -958,6 +1024,11 @@ fun NowPlayingScreen(
             it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
         } else it
     }
+    // The still sleeve's own motion, for a track with no canvas and no video
+    // picture: "Animate static album art". Worked out once here — the portrait
+    // sleeve below and the landscape one both read it.
+    val animateStaticArtwork by PlayerSettings.animateStaticArtwork.collectAsStateWithLifecycle()
+    val breatheStaticSleeve = animateStaticArtwork && canvas == null && !videoMode
     // Whether the picture has a frame on screen; the still frame shows until then.
     var videoRendered by remember(song.videoId) { mutableStateOf(false) }
     // The picture's shape, read only at layout (see the sleeve's card rect), so
@@ -1391,13 +1462,9 @@ fun NowPlayingScreen(
         }
     }
     val fullBleedArt by PlayerSettings.fullBleedArtwork.collectAsStateWithLifecycle()
-    // The sleeve's own appearance, ported from ArchiveTune's Appearance page:
-    // the corner radius row, the switch that takes the sleeve away, the
-    // moving blur behind the player, and what stands behind the lyrics.
-    val thumbnailCorner by PlayerSettings.thumbnailCornerRadius.collectAsStateWithLifecycle()
-    val hideThumbnail by PlayerSettings.hidePlayerThumbnail.collectAsStateWithLifecycle()
+    // The blurred backdrop's drift behind the player, ported from ArchiveTune's
+    // Appearance page.
     val movingBlur by PlayerSettings.movingBlur.collectAsStateWithLifecycle()
-    val lyricsBackgroundStyle by PlayerSettings.lyricsBackgroundStyle.collectAsStateWithLifecycle()
     // Full-bleed is a phone idiom. What the width has to rule out is a player
     // running a foot wider than the column of controls under it — edge to edge
     // meaning "a picture, and separately some controls" rather than "the
@@ -1786,8 +1853,7 @@ fun NowPlayingScreen(
     // Tablet-sized players use the full-cover blur in all three states, and so
     // does the phone under the simple theme — see the backdrop. "Tablet mode",
     // ported from ArchiveTune, asks for that treatment at any width.
-    val tabletModeSetting by PlayerSettings.tabletMode.collectAsStateWithLifecycle()
-    val tabletArtworkBackdrop = tabletSizedPlayer(windowWidth) || tabletModeSetting
+    val tabletArtworkBackdrop = tabletSizedPlayer(windowWidth)
     // Owned by the song-level player composition, not by any one screen state.
     // Opening lyrics/queue, and rotating into or out of landscape, therefore
     // reuse the same tiny pre-blurred bitmap instead of running a screen-sized
@@ -1809,15 +1875,13 @@ fun NowPlayingScreen(
     // Read through delegates below, so the movable reads the current values
     // without the lambda having to capture them anew each change.
     val currentMovingBlur by rememberUpdatedState(movingBlur)
-    val currentLyricsStyle by rememberUpdatedState(lyricsBackgroundStyle)
     val fullArtworkBlurContent = remember {
         movableContentOf<Modifier> { backdropModifier ->
             FullArtworkBlurBackdrop(
                 image = currentFullArtworkBlurImage.value,
                 // The moving blur, ported from ArchiveTune: the cover drifts
-                // behind the player on its own, and the lyrics' moving-blur
-                // background asks for the same drift while they are open.
-                drift = currentMovingBlur || currentLyricsStyle == LyricsBackgroundStyle.MOVING_BLUR,
+                // behind the player on its own.
+                drift = currentMovingBlur,
                 modifier = backdropModifier,
             )
         }
@@ -1987,17 +2051,10 @@ fun NowPlayingScreen(
     DisposableEffect(Unit) { onDispose { reportLiveCanvas(false) } }
     val frostOff by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val frost = if (frostOff) null else PlayerPlatform.host.rememberPlayerFrost()
-    // The transport's tint, ported from ArchiveTune's PlayerButtonsStyle: the
-    // theme's secondary colour in place of the white chrome, or white as it
-    // always was. Provided around the whole player and its overlays, so a
-    // panel's glyphs follow the same tint as the deck's.
-    val buttonsStyle by PlayerSettings.playerButtonsStyle.collectAsStateWithLifecycle()
-    val chromeTint = if (buttonsStyle == PlayerButtonsStyle.SECONDARY) {
-        MaterialTheme.colorScheme.secondary
-    } else {
-        Color.White
-    }
-    CompositionLocalProvider(LocalPlayerChromeTint provides chromeTint) {
+    // The player's chrome is drawn in white, as it always has been. Provided
+    // around the whole player and its overlays, so a panel's glyphs follow the
+    // same tint as the deck's.
+    CompositionLocalProvider(LocalPlayerChromeTint provides Color.White) {
     FrostedPlayerFrame(
         modifier = modifier,
         // Off where a music video is the backdrop: it can go bright under the
@@ -2146,6 +2203,7 @@ fun NowPlayingScreen(
                             canvasRendered = canvasRendered,
                             isPlaying = isPlaying,
                             onCanvasRenderedChange = { canvasRendered = it },
+                            breathe = breatheStaticSleeve,
                             // A clip decoding behind a player on its way to the
                             // bar is work nobody sees — see [dockMoving].
                             pausedForTransition = dockMoving || overlayOpen.value,
@@ -2493,45 +2551,6 @@ fun NowPlayingScreen(
                 fullArtworkBlurContent(
                     Modifier.graphicsLayer { alpha = fullArtworkBackdropAlpha },
                 )
-                // What stands behind the lyrics, ported from ArchiveTune's
-                // lyrics background style: Follow theme paints the theme's own
-                // background over whatever the player stands on, and Coloring a
-                // wash of the artwork's colours. Default and Moving blur are
-                // the blurred cover itself, above.
-                val lyricsBackdropAlpha by animateFloatAsState(
-                    targetValue = if (
-                        (lyricsOpen || queueOpen) && (
-                            lyricsBackgroundStyle == LyricsBackgroundStyle.FOLLOW_THEME ||
-                                lyricsBackgroundStyle == LyricsBackgroundStyle.COLORING
-                            )
-                    ) 1f else 0f,
-                    animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
-                    label = "lyricsBackgroundCrossfade",
-                )
-                if (lyricsBackdropAlpha > 0f) {
-                    when (lyricsBackgroundStyle) {
-                        LyricsBackgroundStyle.FOLLOW_THEME -> Box(
-                            Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background)
-                                .graphicsLayer { alpha = lyricsBackdropAlpha },
-                        )
-                        LyricsBackgroundStyle.COLORING -> {
-                            val palette = rememberArtworkPalette(remoteArt)
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(palette.background, MaterialTheme.colorScheme.background),
-                                        ),
-                                    )
-                                    .graphicsLayer { alpha = lyricsBackdropAlpha },
-                            )
-                        }
-                        else -> {}
-                    }
-                }
 
                 // Mount once, behind the controls. A known portrait aspect changes the
                 // invisible view to full-player bounds before its first frame is shown.
@@ -3274,11 +3293,10 @@ fun NowPlayingScreen(
                         // The banner's dissolve, firmed up into the cover's hard edge as
                         // it docks.
                         fun sleeveShown(): Float = bannerShown() * dockT()
-                        // The sleeve's corner, ported from ArchiveTune's thumbnail
-                        // corner radius: the stock 8dp unless the row has moved
-                        // it, dissolving to nothing as the sleeve becomes a banner.
+                        // The sleeve's corner: the stock 8dp, dissolving to nothing
+                        // as the sleeve becomes a banner.
                         fun sleeveCorner(): Dp {
-                            val corner = thumbnailCorner.dp * (1f - sleeveShown())
+                            val corner = 8.dp * (1f - sleeveShown())
                             val t = dockT()
                             return if (dock == null || t >= 1f) corner else lerp(dock.miniArtCorner(), corner, t)
                         }
@@ -3361,11 +3379,6 @@ fun NowPlayingScreen(
                                         else if (heroClip != null) 1f - canvasCover.floatValue
                                         else 1f
                                         ) *
-                                        // "Hide player thumbnail", ported from
-                                        // ArchiveTune: the layout keeps its place —
-                                        // the gestures, the stats line, the dock —
-                                        // and only the picture goes.
-                                        (if (hideThumbnail) 0f else 1f) *
                                         // A music video has no square sleeve: its
                                         // picture box stands in, still frame first.
                                         // The sleeve is only the collapsed header's
@@ -3531,6 +3544,7 @@ fun NowPlayingScreen(
                                 // [PlayerArtwork.loaded] still flips the moment it does.
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .staticArtworkBreathing(breatheStaticSleeve)
                                     .drawWithContent {
                                         val frame = still()
                                         if (frame == null) {

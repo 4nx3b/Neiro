@@ -10,12 +10,18 @@ import android.net.NetworkCapabilities
 import androidx.media3.common.Player
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.auth.AuthStore
+import com.music.bitchord.data.NetPolicy
 import com.music.bitchord.data.canvas.SpotifyToken
 import com.music.bitchord.data.lyrics.LyricsSource
+import com.music.bitchord.data.scrobbling.LastFM
+import com.music.bitchord.data.backup.ScheduledBackupFrequency
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.playback.EqLayout
 import com.music.bitchord.playback.EqualizerPreset
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 
 
 /**
@@ -272,6 +278,28 @@ object AppSettings {
      */
     val syncDownloadedPlaylists = MutableStateFlow(false)
 
+    /**
+     * Queue a download for a song the moment it is liked, ported from
+     * ArchiveTune's auto download on like. Off by default: it spends data and
+     * storage without being asked each time. [wifiOnlyDownloads] still gates
+     * it — [Downloads.enqueue][com.music.bitchord.download.Downloads.enqueue]
+     * is the one door into the queue, and it refuses a metered connection.
+     */
+    val autoDownloadOnLike = MutableStateFlow(false)
+
+    /**
+     * Hand the download of a YouTube track to an external app instead of
+     * downloading it here, ported from ArchiveTune's external downloader: the
+     * song menu's Download row launches the app named by
+     * [externalDownloaderPackage] with the track's watch URL. A track another
+     * source serves still downloads through this app — an external downloader
+     * cannot reach the accounts those streams ride.
+     */
+    val externalDownloaderEnabled = MutableStateFlow(false)
+
+    /** The external downloader app, as a package name. Blank means unconfigured. */
+    val externalDownloaderPackage = MutableStateFlow("")
+
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
 
@@ -299,6 +327,96 @@ object AppSettings {
     /** The CPU budget used by Beat This! and vocal analysis for Automix. */
     val automixPerformanceMode = MutableStateFlow(AutomixPerformanceMode.BALANCED)
     val skipSilence = MutableStateFlow(false)
+
+    /**
+     * Whether shuffle survives a fresh queue. Ported from ArchiveTune's
+     * permanent shuffle: off, starting a new queue plays it in order and turns
+     * shuffle off — the queue the listener left shuffled does not silently
+     * follow them into an album they chose to hear from the top; on, shuffle
+     * carries over into whatever starts next.
+     */
+    val permanentShuffle = MutableStateFlow(false)
+
+    /**
+     * Whether a track the recovery ladder has given up on is skipped past or
+     * left stopped on. Ported from ArchiveTune's auto skip on error: on (the
+     * fork's default, and this one's) the queue moves past a track nobody can
+     * play, kept honest by the consecutive-skip cap; off, playback stops on
+     * it and the error stays in front of the listener.
+     */
+    val autoSkipOnError = MutableStateFlow(true)
+
+    /**
+     * Whether playback holds a partial wake lock. Ported from ArchiveTune's
+     * wake lock setting: the CPU stays awake while the music plays, for
+     * devices whose deep doze cuts the stream mid-track; paused or stopped,
+     * the lock goes with it and the device sleeps exactly as before. Off by
+     * default, as a lock the system cannot take back costs battery.
+     */
+    val keepCpuAwake = MutableStateFlow(false)
+
+    /**
+     * Whether the queue survives an app restart. Ported from ArchiveTune's
+     * persistent queue: on, the last queue and position are saved as the app
+     * leaves them and restored when it opens; off, every launch starts empty
+     * and the snapshot on disk is cleared rather than left stale.
+     */
+    val persistentQueue = MutableStateFlow(true)
+
+    /**
+     * Whether playback pauses when the device's media volume hits zero, and
+     * resumes when it comes back. Ported from ArchiveTune's pause on device
+     * mute: the player parks itself instead of playing a stream nobody can
+     * hear, and picks up exactly where it left off the moment the volume
+     * returns. Off by default — a paused-looking player with volume slid to
+     * zero is what Android itself does, and some listeners expect that.
+     */
+    val pauseAtZeroVolume = MutableStateFlow(false)
+
+    /**
+     * Whether playback resumes on its own when a Bluetooth audio device
+     * connects. Ported from ArchiveTune's auto start on Bluetooth: the
+     * receiver waits the fork's second-and-a-half for the link to settle
+     * before it touches the player, and only an audio-shaped device wakes
+     * it at all. Off by default — a connection is not always the listener
+     * asking to hear something.
+     */
+    val autoStartOnBluetooth = MutableStateFlow(false)
+
+    /**
+     * How many upcoming songs read-ahead warms stream URLs for, ported from
+     * ArchiveTune's preload songs: a resolve is cheap and staggered, so
+     * warming several at once is what makes a run of skips land already
+     * resolved. The full-byte half of read-ahead stays exactly one track —
+     * its tuning — whatever this dial says. Ten, the fork's default.
+     */
+    val preloadSongsCount = MutableStateFlow(10)
+
+    /** The dial's bounds, inclusive; read-ahead never warms more than ten or fewer than none. */
+    val preloadSongsCountRange = 0..10
+
+    /**
+     * How long a track has to play before the listening history counts it,
+     * ported from ArchiveTune's history duration: under the floor a skip is a
+     * skip, whatever it ended up being; over it, listened to. The half-a-track
+     * rule with its four-minute ceiling stands above it exactly as before —
+     * this is the floor. Thirty seconds, the fork's default, is what the
+     * recorder's own floor has always been.
+     */
+    val historyDurationSeconds = MutableStateFlow(30)
+
+    /** The dial's bounds, inclusive — the fork's own. */
+    val historyDurationRange = 5..60
+
+    /**
+     * Whether the crossfade stands down between consecutive songs from the
+     * same album, ported from ArchiveTune's skip gapless albums: an album the
+     * artist mixed to run continuously does not want a blend stamped across
+     * the join, so the manual crossfade is suppressed for those pairs —
+     * Automix is its own judgement and decides for itself. On by default, as
+     * the fork ships it.
+     */
+    val skipGaplessAlbums = MutableStateFlow(true)
 
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
@@ -448,6 +566,38 @@ object AppSettings {
     /** Show the output / Listen Together pill under the player's transport. */
     val showListenTogetherButton = MutableStateFlow(false)
 
+    // ── Listen Together ───────────────────────────────────────────────────
+
+    /** The name this device shows every other member of a Listen Together room. */
+    val listenTogetherUsername = MutableStateFlow("")
+
+    /** The WebSocket URL of the Listen Together server a room lives on. */
+    val listenTogetherServerUrl = MutableStateFlow("")
+
+    /** The avatar this device joins rooms with — an index asset, or the custom picture. */
+    val listenTogetherAvatarIndex = MutableStateFlow(0)
+
+    /** Whether a host lets join requests in without being asked. */
+    val listenTogetherAutoApproval = MutableStateFlow(false)
+
+    /** Whether a host takes song suggestions the moment they arrive. */
+    val listenTogetherSuggestionAutoApprove = MutableStateFlow(true)
+
+    /** Whether the room's chat pops notifications while the chat screen is closed. */
+    val listenTogetherChatNotifications = MutableStateFlow(true)
+
+    /** Whether room events also surface in-app (toasts for suggestions and rooms). */
+    val listenTogetherInAppNotifications = MutableStateFlow(true)
+
+    /** Whether a guest's loudness follows the host's device volume. */
+    val listenTogetherSyncHostVolume = MutableStateFlow(false)
+
+    /** Whether a guest re-syncs to the host's playhead after a reconnect. */
+    val listenTogetherSmartResync = MutableStateFlow(true)
+
+    /** Usernames whose join requests and suggestions never surface again. */
+    val listenTogetherBlockedUsers = MutableStateFlow<Set<String>>(emptySet())
+
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
 
@@ -517,8 +667,12 @@ object AppSettings {
      */
     val disableBlendEffects = MutableStateFlow(false)
 
-    /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
-    val liquidGlass = MutableStateFlow(false)
+    /**
+     * Real backdrop-sampled glass (blur, lens refraction) on the floating nav
+     * bar, Android 12+ only. On by default, and switched on once for an
+     * upgrade too (see [GlassDefault]).
+     */
+    val liquidGlass = MutableStateFlow(GlassDefault.DEFAULT_ON)
 
     /**
      * Frosts the glass instead of refracting it, for phones the lens shader is too
@@ -592,21 +746,6 @@ object AppSettings {
      */
     val miniPlayerBarBehavior = MutableStateFlow(MiniPlayerBarBehavior.ADAPTIVE)
 
-    /**
-     * The standard bar's frosted surface — the haze it has always drawn. One of
-     * the three bar styles with [navBarTint] and [liquidGlassNavBar].
-     */
-    val navBarFrosted = MutableStateFlow(true)
-
-    /** The standard bar's accent-tinted surface, one of the three bar styles. */
-    val navBarTint = MutableStateFlow(false)
-
-    /**
-     * The standard bar drawn as Liquid Glass with its own fixed geometry, one of
-     * the three bar styles — the dimensions are the glass's own while it is on.
-     */
-    val liquidGlassNavBar = MutableStateFlow(false)
-
     /** The Nuvio-style rim light and soft sheen on the bar and compact circles. */
     val navBarGlassGlow = MutableStateFlow(true)
 
@@ -664,39 +803,12 @@ object AppSettings {
     /** Hides the player's seek bar, leaving the transport and the times off. */
     val hideSlideBar = MutableStateFlow(false)
 
-    /** Hides the sleeve in the player, leaving the backdrop and the controls. */
-    val hidePlayerThumbnail = MutableStateFlow(false)
-
-    /**
-     * The sleeve's corner radius in dp. 8 is the corner the app has always
-     * drawn, so that is the default — the stock look until it is moved.
-     */
-    val thumbnailCornerRadius = MutableStateFlow(DEFAULT_THUMBNAIL_CORNER_RADIUS)
-
-    val playerButtonsStyle = MutableStateFlow(PlayerButtonsStyle.DEFAULT)
-
-    val playerSliderStyle = MutableStateFlow(PlayerSliderStyle.STANDARD)
-
-    val lyricsBackgroundStyle = MutableStateFlow(LyricsBackgroundStyle.DEFAULT)
-
-    val miniPlayerBackgroundStyle = MutableStateFlow(MiniPlayerBackgroundStyle.FROSTED)
-
     // ---- The Appearance page's home, misc and extras groups ----
 
     /** The home feed keeps only the lead shelf, as a screen saver keeps a clock. */
     val minimalHomeMode = MutableStateFlow(false)
 
     val defaultOpenTab = MutableStateFlow(DefaultOpenTab.HOME)
-
-    /**
-     * Draws the player the way a tablet-sized window gets it — the full-cover
-     * blur standing behind everything — at any width. Ported from ArchiveTune's
-     * tablet mode; the window's own width still decides on its own until this
-     * is switched on.
-     */
-    val tabletMode = MutableStateFlow(false)
-
-    val backAnimationStyle = MutableStateFlow(BackAnimationStyle.DEFAULT)
 
     /** Tab labels under the bottom bar's glyphs. */
     val navBarShowLabels = MutableStateFlow(true)
@@ -788,6 +900,37 @@ object AppSettings {
 
     /** Tries Spotify before Apple Music and the other animated-art providers. */
     val prioritizeSpotifyCanvas = MutableStateFlow(false)
+
+    /**
+     * Whether the Spotify provider takes part in the canvas lookup at all —
+     * [CanvasRepository][com.music.bitchord.data.canvas.CanvasRepository] skips
+     * it while this is off, whatever [prioritizeSpotifyCanvas] says. On by
+     * default: with no `sp_dc` cookie it is a free no-op anyway, so the switch
+     * only bites for a listener who has connected one.
+     */
+    val spotifyCanvasEnabled = MutableStateFlow(true)
+
+    /**
+     * Whether the album, playlist and artist page headers play the looping
+     * motion artwork behind them. On by default — that is what they have always
+     * done while [animatedCanvas] was on; off, every header keeps to the static
+     * cover while the player still gets its clip.
+     */
+    val canvasInHeaders = MutableStateFlow(true)
+
+    /**
+     * Fall back to a Tidal cover when a track resolves no artwork at all — a
+     * network lookup for a sleeve the player would otherwise tile over. Off by
+     * default: it is one more third party reached on the listener's connection.
+     */
+    val tidalArtworkFallback = MutableStateFlow(false)
+
+    /**
+     * Breathe a slow on-device scale into the sleeve while a track has no
+     * animated canvas to play. Off by default — motion the listener did not ask
+     * for costs battery, and the still sleeve has always been still.
+     */
+    val animateStaticArtwork = MutableStateFlow(false)
 
     /**
      * Secondary artist art: a user-hosted artist-signature API used only when
@@ -887,10 +1030,39 @@ object AppSettings {
     val paxSenixApiKey = MutableStateFlow("")
 
     /**
+     * The Muzo Data key (data.kouzu.in), pasted on the Sources screen. Blank
+     * means unconfigured and everything it gates answers nothing — the
+     * lyrics provider is pushed the key the same way PaxSenix's is, because
+     * the shared module cannot see this object.
+     *
+     * The source's *enable* is deliberately not a setting here: it is the
+     * Muzo row's switch in the source list, exactly like Tidal's and Qobuz's,
+     * so there is one place that says whether the resolver may ask Muzo and
+     * no second copy of that fact to drift against it.
+     */
+    val muzoApiKey = MutableStateFlow("")
+
+    /**
      * Disk budget for cached audio. [AudioCache][com.music.bitchord.playback.AudioCache] evicts past it.
      * [UNLIMITED_CACHE_LIMIT_BYTES] means no ceiling of the app's own.
      */
     val audioCacheLimitBytes = MutableStateFlow(DEFAULT_CACHE_LIMIT_BYTES)
+
+    /**
+     * Disk budget for cached canvas clips, in MB. [UNLIMITED_CANVAS_CACHE_MB]
+     * means no ceiling; 0 keeps nothing on disk at all, so every loop of a
+     * clip is fetched over the network again. See
+     * [CanvasCache][com.music.bitchord.data.canvas.CanvasCache].
+     */
+    val maxCanvasCacheSizeMb = MutableStateFlow(DEFAULT_CANVAS_CACHE_SIZE_MB)
+
+    /**
+     * Prune the image and song caches to their limits once per launch, ported
+     * from ArchiveTune's smart trimmer. Off by default: both caches already
+     * evict on their own while running, so this is the one pass that also
+     * reclaims what a session that never wrote anything left behind.
+     */
+    val smartTrimmer = MutableStateFlow(false)
 
     /**
      * Whether Library's "On device" shelf carries the Cached songs folder —
@@ -935,6 +1107,28 @@ object AppSettings {
 
     /** Empty means every MediaStore folder; otherwise this is a persisted SAF tree URI. */
     val localMusicFolderUri = MutableStateFlow("")
+
+    // ── Scheduled backup ─────────────────────────────────────────────────
+
+    /**
+     * The Scheduled auto backup card's state, as flows for the rows that read
+     * it and the worker that runs it. Ported from ArchiveTune's DataStore
+     * keys of the same names; the directory URIs and the cloud folder are
+     * [device-local][DEVICE_LOCAL] — a SAF tree grant means one phone only.
+     */
+    val scheduledBackupEnabled = MutableStateFlow(false)
+    val scheduledBackupFrequency = MutableStateFlow(ScheduledBackupFrequency.WEEKLY)
+    val scheduledBackupCustomDateEpochDay = MutableStateFlow<Long?>(null)
+    val scheduledBackupDirectoryUri = MutableStateFlow("")
+    val scheduledBackupDirectoryName = MutableStateFlow("")
+    val scheduledBackupOverwriteExisting = MutableStateFlow(false)
+
+    /** The Cloud storage sync card, one folder in a cloud provider's app. */
+    val cloudSyncEnabled = MutableStateFlow(false)
+    val cloudSyncFolderUri = MutableStateFlow("")
+    val cloudSyncFolderName = MutableStateFlow("")
+    val cloudSyncOverwriteExisting = MutableStateFlow(false)
+    val cloudSyncLastRunAt = MutableStateFlow(0L)
 
     // ── WebDAV ────────────────────────────────────────────────────────────
 
@@ -994,6 +1188,21 @@ object AppSettings {
     val lastfmScrobbleEnabled = MutableStateFlow(false)
     val lastfmNowPlaying = MutableStateFlow(false)
     val lastfmPrimaryArtistOnly = MutableStateFlow(false)
+
+    /**
+     * Which AudioScrobbler service the Last.fm rows speak to, carried by the
+     * endpoint setting itself so there is one truth: blank is Last.fm,
+     * [LastFM.LIBREFM_API_ENDPOINT] is Libre.fm. A provider switch is a
+     * different service, so the session belongs to the old one and the
+     * caller clears it — the same five writes as signing out.
+     */
+    val libreFmActive: Boolean
+        get() = lastfmEndpoint.value == LastFM.LIBREFM_API_ENDPOINT
+
+    fun setLastfmProvider(libreFm: Boolean) {
+        setLastfmEndpoint(if (libreFm) LastFM.LIBREFM_API_ENDPOINT else "")
+    }
+
     val scrobbleMinDuration = MutableStateFlow(30)
     val scrobbleDelayPercent = MutableStateFlow(0.5f)
     val scrobbleDelaySeconds = MutableStateFlow(180)
@@ -1047,6 +1256,115 @@ object AppSettings {
 
     /** The notice about what connecting an account actually does has been read. */
     val discordInfoDismissed = MutableStateFlow(false)
+
+    // ── Internet, ported from ArchiveTune's Internet page ──────────────
+
+    /**
+     * The country code the YouTube Music requests pin themselves to, or
+     * [NetPolicy.SYSTEM_DEFAULT] to let the app locale place them — the same
+     * preference shape ArchiveTune's region picker stores. Changes restart
+     * the app, because the visitor data and every cached response belong to
+     * the region they were minted in.
+     */
+    val ytMusicRegion = MutableStateFlow(NetPolicy.SYSTEM_DEFAULT)
+
+    /** True when the region follows the locale rather than a pinned country. */
+    val ytMusicRegionIsSystemDefault: Boolean
+        get() = ytMusicRegion.value == NetPolicy.SYSTEM_DEFAULT
+
+    val dnsOverHttpsEnabled = MutableStateFlow(false)
+    val dnsOverHttpsProvider = MutableStateFlow("Cloudflare")
+    val dnsOverHttpsCustomUrl = MutableStateFlow("https://")
+
+    /** The proxy type as the Internet page stores it: "HTTP" or "SOCKS". */
+    val proxyType = MutableStateFlow("HTTP")
+    val proxyEnabled = MutableStateFlow(false)
+    val proxyHost = MutableStateFlow("")
+    val proxyPort = MutableStateFlow(8080)
+    val proxyUsername = MutableStateFlow("")
+    val proxyPassword = MutableStateFlow("")
+
+    /**
+     * Pushes the Internet page's choices into [NetPolicy] — the same publish
+     * pattern the WebDAV and SMB credentials ride. Every setter calls it, and
+     * [readAll] calls it once at start so a restart comes up on the saved
+     * policy.
+     */
+    private fun publishNetPolicy() {
+        if (!this::prefs.isInitialized) return
+        NetPolicy.updateDns(
+            dnsOverHttpsEnabled.value,
+            dnsOverHttpsProvider.value,
+            dnsOverHttpsCustomUrl.value,
+        )
+        NetPolicy.updateProxy(
+            proxyEnabled.value,
+            if (proxyType.value == "SOCKS") java.net.Proxy.Type.SOCKS else java.net.Proxy.Type.HTTP,
+            proxyHost.value,
+            proxyPort.value,
+            proxyUsername.value,
+            proxyPassword.value,
+        )
+    }
+
+    fun setYtMusicRegion(value: String) {
+        ytMusicRegion.value = value
+        prefs.edit().putString(KEY_YT_MUSIC_REGION, value).apply()
+    }
+
+    fun setDnsOverHttpsEnabled(value: Boolean) {
+        dnsOverHttpsEnabled.value = value
+        prefs.edit().putBoolean(KEY_DNS_OVER_HTTPS_ENABLED, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setDnsOverHttpsProvider(value: String) {
+        dnsOverHttpsProvider.value = value
+        prefs.edit().putString(KEY_DNS_OVER_HTTPS_PROVIDER, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setDnsOverHttpsCustomUrl(value: String) {
+        dnsOverHttpsCustomUrl.value = value
+        prefs.edit().putString(KEY_DNS_OVER_HTTPS_CUSTOM_URL, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyEnabled(value: Boolean) {
+        proxyEnabled.value = value
+        prefs.edit().putBoolean(KEY_PROXY_ENABLED, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyType(value: String) {
+        proxyType.value = value
+        prefs.edit().putString(KEY_PROXY_TYPE, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyHost(value: String) {
+        proxyHost.value = value
+        prefs.edit().putString(KEY_PROXY_HOST, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyPort(value: Int) {
+        proxyPort.value = value
+        prefs.edit().putInt(KEY_PROXY_PORT, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyUsername(value: String) {
+        proxyUsername.value = value
+        prefs.edit().putString(KEY_PROXY_USERNAME, value).apply()
+        publishNetPolicy()
+    }
+
+    fun setProxyPassword(value: String) {
+        proxyPassword.value = value
+        prefs.edit().putString(KEY_PROXY_PASSWORD, value).apply()
+        publishNetPolicy()
+    }
 
     /** Published by PlaybackService so the UI can open the system equalizer. */
     val audioSessionId = MutableStateFlow(0)
@@ -1221,6 +1539,15 @@ object AppSettings {
             )
         }.getOrDefault(AutomixPerformanceMode.BALANCED)
         skipSilence.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)
+        permanentShuffle.value = prefs.getBoolean(KEY_PERMANENT_SHUFFLE, false)
+        autoSkipOnError.value = prefs.getBoolean(KEY_AUTO_SKIP_ON_ERROR, true)
+        keepCpuAwake.value = prefs.getBoolean(KEY_KEEP_CPU_AWAKE, false)
+        persistentQueue.value = prefs.getBoolean(KEY_PERSISTENT_QUEUE, true)
+        pauseAtZeroVolume.value = prefs.getBoolean(KEY_PAUSE_AT_ZERO_VOLUME, false)
+        autoStartOnBluetooth.value = prefs.getBoolean(KEY_AUTO_START_ON_BLUETOOTH, false)
+        preloadSongsCount.value = prefs.getInt(KEY_PRELOAD_SONGS_COUNT, 10).coerceIn(0, 10)
+        historyDurationSeconds.value = prefs.getInt(KEY_HISTORY_DURATION_SECONDS, 30).coerceIn(5, 60)
+        skipGaplessAlbums.value = prefs.getBoolean(KEY_SKIP_GAPLESS_ALBUMS, true)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1260,6 +1587,29 @@ object AppSettings {
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, false)
+        // The name survives the port from the old Music Together feature:
+        // whatever display name it had becomes the Listen Together username, once.
+        listenTogetherUsername.value =
+            prefs.getString(KEY_LISTEN_TOGETHER_USERNAME, null)
+                // The old feature's on-disk key, read as a literal so the
+                // migration does not drag the name back in as a constant.
+                ?: prefs.getString("together_display_name", null)
+            ?: ""
+        listenTogetherServerUrl.value =
+            prefs.getString(KEY_LISTEN_TOGETHER_SERVER_URL, null)?.trim().orEmpty()
+        listenTogetherAvatarIndex.value = prefs.getInt(KEY_LISTEN_TOGETHER_AVATAR_INDEX, 0)
+        listenTogetherAutoApproval.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_AUTO_APPROVAL, false)
+        listenTogetherSuggestionAutoApprove.value =
+            prefs.getBoolean(KEY_LISTEN_TOGETHER_SUGGESTION_AUTO_APPROVE, true)
+        listenTogetherChatNotifications.value =
+            prefs.getBoolean(KEY_LISTEN_TOGETHER_CHAT_NOTIFICATIONS, true)
+        listenTogetherInAppNotifications.value =
+            prefs.getBoolean(KEY_LISTEN_TOGETHER_IN_APP_NOTIFICATIONS, true)
+        listenTogetherSyncHostVolume.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_SYNC_HOST_VOLUME, false)
+        listenTogetherSmartResync.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_SMART_RESYNC, true)
+        listenTogetherBlockedUsers.value = decodeBlockedUsers(
+            prefs.getString(KEY_LISTEN_TOGETHER_BLOCKED_USERS, null),
+        )
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         onboardingComplete.value = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
         diwaliGreetingShown.value = prefs.getBoolean(KEY_DIWALI_GREETING_SHOWN, false)
@@ -1284,7 +1634,19 @@ object AppSettings {
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
-        liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
+        run {
+            val glass = GlassDefault.decide(
+                stored = if (prefs.contains(KEY_LIQUID_GLASS)) prefs.getBoolean(KEY_LIQUID_GLASS, true) else null,
+                migrated = prefs.getBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, false),
+            )
+            liquidGlass.value = glass.liquidGlass
+            if (glass.markMigrated) {
+                prefs.edit()
+                    .putBoolean(KEY_LIQUID_GLASS, glass.liquidGlass)
+                    .putBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, true)
+                    .apply()
+            }
+        }
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
         liquidGlassIntensity.value = runCatching {
@@ -1311,9 +1673,6 @@ object AppSettings {
         miniPlayerBarBehavior.value = runCatching {
             MiniPlayerBarBehavior.valueOf(prefs.getString(KEY_MINI_PLAYER_BAR_BEHAVIOR, null) ?: "ADAPTIVE")
         }.getOrDefault(MiniPlayerBarBehavior.ADAPTIVE)
-        navBarFrosted.value = prefs.getBoolean(KEY_NAV_BAR_FROSTED, true)
-        navBarTint.value = prefs.getBoolean(KEY_NAV_BAR_TINT, false)
-        liquidGlassNavBar.value = prefs.getBoolean(KEY_LIQUID_GLASS_NAV_BAR, false)
         navBarGlassGlow.value = prefs.getBoolean(KEY_NAV_BAR_GLASS_GLOW, true)
         navBarGlassGlowIntensity.value = prefs.getFloat(KEY_NAV_BAR_GLASS_GLOW_INTENSITY, 1f).coerceIn(0.2f, 2f)
         navBarWidth.value = prefs.getFloat(KEY_NAV_BAR_WIDTH, 1.0f).coerceIn(0.5f, 1.0f)
@@ -1329,17 +1688,8 @@ object AppSettings {
         customFontUri.value = prefs.getString(KEY_CUSTOM_FONT_URI, "").orEmpty()
         movingBlur.value = prefs.getBoolean(KEY_MOVING_BLUR, false)
         hideSlideBar.value = prefs.getBoolean(KEY_HIDE_SLIDE_BAR, false)
-        hidePlayerThumbnail.value = prefs.getBoolean(KEY_HIDE_PLAYER_THUMBNAIL, false)
-        thumbnailCornerRadius.value = prefs.getFloat(KEY_THUMBNAIL_CORNER_RADIUS, DEFAULT_THUMBNAIL_CORNER_RADIUS)
-            .coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
-        playerButtonsStyle.value = readEnum(KEY_PLAYER_BUTTONS_STYLE, PlayerButtonsStyle.DEFAULT)
-        playerSliderStyle.value = readEnum(KEY_PLAYER_SLIDER_STYLE, PlayerSliderStyle.STANDARD)
-        lyricsBackgroundStyle.value = readEnum(KEY_LYRICS_BACKGROUND_STYLE, LyricsBackgroundStyle.DEFAULT)
-        miniPlayerBackgroundStyle.value = readEnum(KEY_MINI_PLAYER_BACKGROUND_STYLE, MiniPlayerBackgroundStyle.FROSTED)
         minimalHomeMode.value = prefs.getBoolean(KEY_MINIMAL_HOME_MODE, false)
         defaultOpenTab.value = readEnum(KEY_DEFAULT_OPEN_TAB, DefaultOpenTab.HOME)
-        tabletMode.value = prefs.getBoolean(KEY_TABLET_MODE, false)
-        backAnimationStyle.value = readEnum(KEY_BACK_ANIMATION_STYLE, BackAnimationStyle.DEFAULT)
         navBarShowLabels.value = prefs.getBoolean(KEY_NAV_BAR_SHOW_LABELS, true)
         hideSignInBanner.value = prefs.getBoolean(KEY_HIDE_SIGN_IN_BANNER, false)
         hideLibraryReplayCard.value = prefs.getBoolean(KEY_HIDE_LIBRARY_REPLAY_CARD, false)
@@ -1370,6 +1720,10 @@ object AppSettings {
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
+        spotifyCanvasEnabled.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_ENABLED, true)
+        canvasInHeaders.value = prefs.getBoolean(KEY_CANVAS_IN_HEADERS, true)
+        tidalArtworkFallback.value = prefs.getBoolean(KEY_TIDAL_ARTWORK_FALLBACK, false)
+        animateStaticArtwork.value = prefs.getBoolean(KEY_ANIMATE_STATIC_ARTWORK, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, false)
         signatureApiUrl.value = normalizeSignatureApiUrl(prefs.getString(KEY_SIGNATURE_API_URL, "").orEmpty())
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
@@ -1395,7 +1749,14 @@ object AppSettings {
         prioritizeSyllableSync.value = prefs.getBoolean(KEY_PRIORITIZE_SYLLABLE_SYNC, false)
         paxSenixApiKey.value = prefs.getString(KEY_PAXSENIX_API_KEY, "").orEmpty()
         com.music.bitchord.data.lyrics.PaxSenix.setApiKey(paxSenixApiKey.value)
+        muzoApiKey.value = prefs.getString(KEY_MUZO_API_KEY, "").orEmpty().trim()
+        com.music.bitchord.data.lyrics.MuzoLyrics.setApiKey(muzoApiKey.value)
         audioCacheLimitBytes.value = clampCacheLimit(prefs.getLong(KEY_CACHE_LIMIT, DEFAULT_CACHE_LIMIT_BYTES))
+        maxCanvasCacheSizeMb.value = prefs.getInt(KEY_MAX_CANVAS_CACHE_SIZE_MB, DEFAULT_CANVAS_CACHE_SIZE_MB)
+        smartTrimmer.value = prefs.getBoolean(KEY_SMART_TRIMMER, false)
+        autoDownloadOnLike.value = prefs.getBoolean(KEY_AUTO_DOWNLOAD_ON_LIKE, false)
+        externalDownloaderEnabled.value = prefs.getBoolean(KEY_EXTERNAL_DOWNLOADER_ENABLED, false)
+        externalDownloaderPackage.value = prefs.getString(KEY_EXTERNAL_DOWNLOADER_PACKAGE, "").orEmpty()
         showCacheFolder.value = prefs.getBoolean(KEY_SHOW_CACHE_FOLDER, false)
         lastfmEnabled.value = prefs.getBoolean(KEY_LASTFM_ENABLED, false)
         lastfmUsername.value = prefs.getString(KEY_LASTFM_USERNAME, "").orEmpty()
@@ -1413,6 +1774,17 @@ object AppSettings {
         listenBrainzToken.value = prefs.getString(KEY_LISTENBRAINZ_TOKEN, "").orEmpty()
         listenBrainzPrimaryArtistOnly.value = prefs.getBoolean(KEY_LISTENBRAINZ_PRIMARY_ARTIST_ONLY, false)
         spotifySpdcToken.value = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, "").orEmpty()
+        ytMusicRegion.value = prefs.getString(KEY_YT_MUSIC_REGION, NetPolicy.SYSTEM_DEFAULT) ?: NetPolicy.SYSTEM_DEFAULT
+        dnsOverHttpsEnabled.value = prefs.getBoolean(KEY_DNS_OVER_HTTPS_ENABLED, false)
+        dnsOverHttpsProvider.value = prefs.getString(KEY_DNS_OVER_HTTPS_PROVIDER, "Cloudflare").orEmpty().ifBlank { "Cloudflare" }
+        dnsOverHttpsCustomUrl.value = prefs.getString(KEY_DNS_OVER_HTTPS_CUSTOM_URL, "https://").orEmpty()
+        proxyType.value = prefs.getString(KEY_PROXY_TYPE, "HTTP").orEmpty().ifBlank { "HTTP" }
+        proxyEnabled.value = prefs.getBoolean(KEY_PROXY_ENABLED, false)
+        proxyHost.value = prefs.getString(KEY_PROXY_HOST, "").orEmpty()
+        proxyPort.value = prefs.getInt(KEY_PROXY_PORT, 8080)
+        proxyUsername.value = prefs.getString(KEY_PROXY_USERNAME, "").orEmpty()
+        proxyPassword.value = prefs.getString(KEY_PROXY_PASSWORD, "").orEmpty()
+        publishNetPolicy()
         replayGenres.value = prefs.getBoolean(KEY_REPLAY_GENRES, true)
         filterNonMusicAudio.value = prefs.getBoolean(KEY_FILTER_NON_MUSIC_AUDIO, true)
         localMusicSort.value = readLocalMusicSort(KEY_LOCAL_MUSIC_SORT)
@@ -1424,6 +1796,22 @@ object AppSettings {
             ?: LibrarySort.DEFAULT
         detailSongSorts.value = readDetailSongSorts()
         localMusicFolderUri.value = prefs.getString(KEY_LOCAL_MUSIC_FOLDER_URI, "").orEmpty()
+        scheduledBackupEnabled.value = prefs.getBoolean(KEY_SCHEDULED_BACKUP_ENABLED, false)
+        scheduledBackupFrequency.value = runCatching {
+            ScheduledBackupFrequency.valueOf(
+                prefs.getString(KEY_SCHEDULED_BACKUP_FREQUENCY, null) ?: ScheduledBackupFrequency.WEEKLY.name,
+            )
+        }.getOrDefault(ScheduledBackupFrequency.WEEKLY)
+        scheduledBackupCustomDateEpochDay.value =
+            if (prefs.contains(KEY_SCHEDULED_BACKUP_CUSTOM_DATE)) prefs.getLong(KEY_SCHEDULED_BACKUP_CUSTOM_DATE, 0L) else null
+        scheduledBackupDirectoryUri.value = prefs.getString(KEY_SCHEDULED_BACKUP_DIRECTORY_URI, "").orEmpty()
+        scheduledBackupDirectoryName.value = prefs.getString(KEY_SCHEDULED_BACKUP_DIRECTORY_NAME, "").orEmpty()
+        scheduledBackupOverwriteExisting.value = prefs.getBoolean(KEY_SCHEDULED_BACKUP_OVERWRITE, false)
+        cloudSyncEnabled.value = prefs.getBoolean(KEY_CLOUD_SYNC_ENABLED, false)
+        cloudSyncFolderUri.value = prefs.getString(KEY_CLOUD_SYNC_FOLDER_URI, "").orEmpty()
+        cloudSyncFolderName.value = prefs.getString(KEY_CLOUD_SYNC_FOLDER_NAME, "").orEmpty()
+        cloudSyncOverwriteExisting.value = prefs.getBoolean(KEY_CLOUD_SYNC_OVERWRITE, false)
+        cloudSyncLastRunAt.value = prefs.getLong(KEY_CLOUD_SYNC_LAST_RUN, 0L)
         webdavUrl.value = prefs.getString(KEY_WEBDAV_URL, "").orEmpty()
         webdavUsername.value = prefs.getString(KEY_WEBDAV_USERNAME, "").orEmpty()
         webdavPassword.value = authStore.webdavPassword.orEmpty()
@@ -1623,6 +2011,53 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_SKIP_SILENCE, value).apply()
     }
 
+    fun setPermanentShuffle(value: Boolean) {
+        permanentShuffle.value = value
+        prefs.edit().putBoolean(KEY_PERMANENT_SHUFFLE, value).apply()
+    }
+
+    fun setAutoSkipOnError(value: Boolean) {
+        autoSkipOnError.value = value
+        prefs.edit().putBoolean(KEY_AUTO_SKIP_ON_ERROR, value).apply()
+    }
+
+    fun setKeepCpuAwake(value: Boolean) {
+        keepCpuAwake.value = value
+        prefs.edit().putBoolean(KEY_KEEP_CPU_AWAKE, value).apply()
+    }
+
+    fun setPersistentQueue(value: Boolean) {
+        persistentQueue.value = value
+        prefs.edit().putBoolean(KEY_PERSISTENT_QUEUE, value).apply()
+    }
+
+    fun setPauseAtZeroVolume(value: Boolean) {
+        pauseAtZeroVolume.value = value
+        prefs.edit().putBoolean(KEY_PAUSE_AT_ZERO_VOLUME, value).apply()
+    }
+
+    fun setAutoStartOnBluetooth(value: Boolean) {
+        autoStartOnBluetooth.value = value
+        prefs.edit().putBoolean(KEY_AUTO_START_ON_BLUETOOTH, value).apply()
+    }
+
+    fun setPreloadSongsCount(value: Int) {
+        val clamped = value.coerceIn(preloadSongsCountRange)
+        preloadSongsCount.value = clamped
+        prefs.edit().putInt(KEY_PRELOAD_SONGS_COUNT, clamped).apply()
+    }
+
+    fun setHistoryDurationSeconds(value: Int) {
+        val clamped = value.coerceIn(historyDurationRange)
+        historyDurationSeconds.value = clamped
+        prefs.edit().putInt(KEY_HISTORY_DURATION_SECONDS, clamped).apply()
+    }
+
+    fun setSkipGaplessAlbums(value: Boolean) {
+        skipGaplessAlbums.value = value
+        prefs.edit().putBoolean(KEY_SKIP_GAPLESS_ALBUMS, value).apply()
+    }
+
     fun setDolbyAtmos(value: Boolean) {
         dolbyAtmos.value = value
         prefs.edit().putBoolean(KEY_DOLBY_ATMOS, value).apply()
@@ -1715,6 +2150,90 @@ object AppSettings {
     fun setShowListenTogetherButton(value: Boolean) {
         showListenTogetherButton.value = value
         prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_BUTTON, value).apply()
+    }
+
+    fun setListenTogetherUsername(value: String) {
+        val trimmed = value.trim().take(80)
+        listenTogetherUsername.value = trimmed
+        prefs.edit().putString(KEY_LISTEN_TOGETHER_USERNAME, trimmed).apply()
+    }
+
+    fun setListenTogetherServerUrl(value: String) {
+        val url = value.trim()
+        listenTogetherServerUrl.value = url
+        prefs.edit().putString(KEY_LISTEN_TOGETHER_SERVER_URL, url).apply()
+    }
+
+    fun setListenTogetherAvatarIndex(value: Int) {
+        listenTogetherAvatarIndex.value = value
+        prefs.edit().putInt(KEY_LISTEN_TOGETHER_AVATAR_INDEX, value).apply()
+    }
+
+    fun setListenTogetherAutoApproval(value: Boolean) {
+        listenTogetherAutoApproval.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_AUTO_APPROVAL, value).apply()
+    }
+
+    fun setListenTogetherSuggestionAutoApprove(value: Boolean) {
+        listenTogetherSuggestionAutoApprove.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_SUGGESTION_AUTO_APPROVE, value).apply()
+    }
+
+    fun setListenTogetherChatNotifications(value: Boolean) {
+        listenTogetherChatNotifications.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_CHAT_NOTIFICATIONS, value).apply()
+    }
+
+    fun setListenTogetherInAppNotifications(value: Boolean) {
+        listenTogetherInAppNotifications.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_IN_APP_NOTIFICATIONS, value).apply()
+    }
+
+    fun setListenTogetherSyncHostVolume(value: Boolean) {
+        listenTogetherSyncHostVolume.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_SYNC_HOST_VOLUME, value).apply()
+    }
+
+    fun setListenTogetherSmartResync(value: Boolean) {
+        listenTogetherSmartResync.value = value
+        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_SMART_RESYNC, value).apply()
+    }
+
+    fun setListenTogetherBlockedUsers(value: Set<String>) {
+        listenTogetherBlockedUsers.value = value
+        prefs.edit().putString(KEY_LISTEN_TOGETHER_BLOCKED_USERS, encodeBlockedUsers(value)).apply()
+    }
+
+    /**
+     * The room chat's persisted history — one JSON blob the manager rewrites
+     * after every message and restores on the next session. Not a flow: it is
+     * read exactly twice (leave and rejoin) and never while a chat is on screen.
+     */
+    fun listenTogetherChatHistory(): String? = prefs.getString(KEY_LISTEN_TOGETHER_CHAT_HISTORY, null)
+
+    fun setListenTogetherChatHistory(value: String?) {
+        prefs.edit().apply {
+            if (value == null) {
+                remove(KEY_LISTEN_TOGETHER_CHAT_HISTORY)
+            } else {
+                putString(KEY_LISTEN_TOGETHER_CHAT_HISTORY, value)
+            }
+        }.apply()
+    }
+
+    private val blockedUsersJson = Json { ignoreUnknownKeys = true }
+
+    private fun encodeBlockedUsers(users: Set<String>): String =
+        runCatching {
+            blockedUsersJson.encodeToString(ListSerializer(String.serializer()), users.toList())
+        }.getOrDefault("[]")
+
+    private fun decodeBlockedUsers(raw: String?): Set<String> {
+        val stored = raw?.takeIf { it.isNotBlank() } ?: return emptySet()
+        return runCatching {
+            blockedUsersJson.decodeFromString(ListSerializer(String.serializer()), stored)
+        }.getOrDefault(emptyList())
+            .toSet()
     }
 
     fun setThemeMode(value: ThemeMode) {
@@ -1942,49 +2461,6 @@ object AppSettings {
         prefs.edit().putString(KEY_MINI_PLAYER_BAR_BEHAVIOR, value.name).apply()
     }
 
-    /**
-     * The three bar styles are one choice, ported from ArchiveTune's mutual
-     * exclusion: turning one on turns the others off, so exactly one surface is
-     * in force (or none, with all three off).
-     */
-    private fun persistNavBarStyles() {
-        prefs.edit()
-            .putBoolean(KEY_NAV_BAR_FROSTED, navBarFrosted.value)
-            .putBoolean(KEY_NAV_BAR_TINT, navBarTint.value)
-            .putBoolean(KEY_LIQUID_GLASS_NAV_BAR, liquidGlassNavBar.value)
-            .apply()
-    }
-
-    fun setNavBarFrosted(value: Boolean) {
-        navBarFrosted.value = value
-        if (value) {
-            navBarTint.value = false
-            liquidGlassNavBar.value = false
-        }
-        persistNavBarStyles()
-    }
-
-    fun setNavBarTint(value: Boolean) {
-        navBarTint.value = value
-        if (value) {
-            navBarFrosted.value = false
-            liquidGlassNavBar.value = false
-        }
-        persistNavBarStyles()
-    }
-
-    fun setLiquidGlassNavBar(value: Boolean) {
-        liquidGlassNavBar.value = value
-        if (value) {
-            navBarFrosted.value = false
-            navBarTint.value = false
-            // The glass bar's fixed shape assumes the adaptive behavior, the
-            // same way the master glass switch does.
-            setMiniPlayerBarBehavior(MiniPlayerBarBehavior.ADAPTIVE)
-        }
-        persistNavBarStyles()
-    }
-
     fun setNavBarGlassGlow(value: Boolean) {
         navBarGlassGlow.value = value
         prefs.edit().putBoolean(KEY_NAV_BAR_GLASS_GLOW, value).apply()
@@ -2081,37 +2557,6 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_HIDE_SLIDE_BAR, value).apply()
     }
 
-    fun setHidePlayerThumbnail(value: Boolean) {
-        hidePlayerThumbnail.value = value
-        prefs.edit().putBoolean(KEY_HIDE_PLAYER_THUMBNAIL, value).apply()
-    }
-
-    fun setThumbnailCornerRadius(value: Float) {
-        val clamped = value.coerceIn(0f, MAX_THUMBNAIL_CORNER_RADIUS)
-        thumbnailCornerRadius.value = clamped
-        prefs.edit().putFloat(KEY_THUMBNAIL_CORNER_RADIUS, clamped).apply()
-    }
-
-    fun setPlayerButtonsStyle(value: PlayerButtonsStyle) {
-        playerButtonsStyle.value = value
-        prefs.edit().putString(KEY_PLAYER_BUTTONS_STYLE, value.name).apply()
-    }
-
-    fun setPlayerSliderStyle(value: PlayerSliderStyle) {
-        playerSliderStyle.value = value
-        prefs.edit().putString(KEY_PLAYER_SLIDER_STYLE, value.name).apply()
-    }
-
-    fun setLyricsBackgroundStyle(value: LyricsBackgroundStyle) {
-        lyricsBackgroundStyle.value = value
-        prefs.edit().putString(KEY_LYRICS_BACKGROUND_STYLE, value.name).apply()
-    }
-
-    fun setMiniPlayerBackgroundStyle(value: MiniPlayerBackgroundStyle) {
-        miniPlayerBackgroundStyle.value = value
-        prefs.edit().putString(KEY_MINI_PLAYER_BACKGROUND_STYLE, value.name).apply()
-    }
-
     fun setMinimalHomeMode(value: Boolean) {
         minimalHomeMode.value = value
         prefs.edit().putBoolean(KEY_MINIMAL_HOME_MODE, value).apply()
@@ -2120,16 +2565,6 @@ object AppSettings {
     fun setDefaultOpenTab(value: DefaultOpenTab) {
         defaultOpenTab.value = value
         prefs.edit().putString(KEY_DEFAULT_OPEN_TAB, value.name).apply()
-    }
-
-    fun setTabletMode(value: Boolean) {
-        tabletMode.value = value
-        prefs.edit().putBoolean(KEY_TABLET_MODE, value).apply()
-    }
-
-    fun setBackAnimationStyle(value: BackAnimationStyle) {
-        backAnimationStyle.value = value
-        prefs.edit().putString(KEY_BACK_ANIMATION_STYLE, value.name).apply()
     }
 
     fun setNavBarShowLabels(value: Boolean) {
@@ -2355,6 +2790,19 @@ object AppSettings {
     }
 
     /**
+     * Stores the Muzo Data key, trimmed the way the service's own editor
+     * trims one — a stray space either side of a paste is not part of the
+     * credential — and hands it to the lyrics provider, which reads it live
+     * from here rather than from this object it cannot see.
+     */
+    fun setMuzoApiKey(value: String) {
+        val trimmed = value.trim()
+        muzoApiKey.value = trimmed
+        prefs.edit().putString(KEY_MUZO_API_KEY, trimmed).apply()
+        com.music.bitchord.data.lyrics.MuzoLyrics.setApiKey(trimmed)
+    }
+
+    /**
      * Puts the source list, its order and [prioritizeSyllableSync] back the
      * way a fresh install finds them. [syncedLyrics] itself is left alone —
      * this is "start over on *which* lyrics", not "turn lyrics off".
@@ -2383,6 +2831,26 @@ object AppSettings {
     fun setPrioritizeSpotifyCanvas(value: Boolean) {
         prioritizeSpotifyCanvas.value = value
         prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, value).apply()
+    }
+
+    fun setSpotifyCanvasEnabled(value: Boolean) {
+        spotifyCanvasEnabled.value = value
+        prefs.edit().putBoolean(KEY_SPOTIFY_CANVAS_ENABLED, value).apply()
+    }
+
+    fun setCanvasInHeaders(value: Boolean) {
+        canvasInHeaders.value = value
+        prefs.edit().putBoolean(KEY_CANVAS_IN_HEADERS, value).apply()
+    }
+
+    fun setTidalArtworkFallback(value: Boolean) {
+        tidalArtworkFallback.value = value
+        prefs.edit().putBoolean(KEY_TIDAL_ARTWORK_FALLBACK, value).apply()
+    }
+
+    fun setAnimateStaticArtwork(value: Boolean) {
+        animateStaticArtwork.value = value
+        prefs.edit().putBoolean(KEY_ANIMATE_STATIC_ARTWORK, value).apply()
     }
 
     fun setSignatureApiEnabled(value: Boolean) {
@@ -2445,6 +2913,41 @@ object AppSettings {
     fun setShowCacheFolder(value: Boolean) {
         showCacheFolder.value = value
         prefs.edit().putBoolean(KEY_SHOW_CACHE_FOLDER, value).apply()
+    }
+
+    /**
+     * Clamped to the choice list's values — off, the fixed sizes, or
+     * [UNLIMITED_CANVAS_CACHE_MB]. CanvasCache picks the change up itself.
+     */
+    fun setMaxCanvasCacheSizeMb(value: Int) {
+        val clamped = normalizeCanvasCacheSizeMb(value)
+        maxCanvasCacheSizeMb.value = clamped
+        prefs.edit().putInt(KEY_MAX_CANVAS_CACHE_SIZE_MB, clamped).apply()
+    }
+
+    private fun normalizeCanvasCacheSizeMb(value: Int): Int =
+        if (value == UNLIMITED_CANVAS_CACHE_MB) UNLIMITED_CANVAS_CACHE_MB else value.coerceIn(0, 2048)
+
+    fun setSmartTrimmer(value: Boolean) {
+        smartTrimmer.value = value
+        prefs.edit().putBoolean(KEY_SMART_TRIMMER, value).apply()
+    }
+
+    fun setAutoDownloadOnLike(value: Boolean) {
+        autoDownloadOnLike.value = value
+        prefs.edit().putBoolean(KEY_AUTO_DOWNLOAD_ON_LIKE, value).apply()
+    }
+
+    fun setExternalDownloaderEnabled(value: Boolean) {
+        externalDownloaderEnabled.value = value
+        prefs.edit().putBoolean(KEY_EXTERNAL_DOWNLOADER_ENABLED, value).apply()
+    }
+
+    /** Trimmed; blank forgets the app. */
+    fun setExternalDownloaderPackage(value: String) {
+        val normalized = value.trim()
+        externalDownloaderPackage.value = normalized
+        prefs.edit().putString(KEY_EXTERNAL_DOWNLOADER_PACKAGE, normalized).apply()
     }
 
     fun setLastfmEnabled(value: Boolean) {
@@ -2703,6 +3206,64 @@ object AppSettings {
         prefs.edit().putString(KEY_LOCAL_MUSIC_FOLDER_URI, value).apply()
     }
 
+    fun setScheduledBackupEnabled(value: Boolean) {
+        scheduledBackupEnabled.value = value
+        prefs.edit().putBoolean(KEY_SCHEDULED_BACKUP_ENABLED, value).apply()
+    }
+
+    fun setScheduledBackupFrequency(value: ScheduledBackupFrequency) {
+        scheduledBackupFrequency.value = value
+        prefs.edit().putString(KEY_SCHEDULED_BACKUP_FREQUENCY, value.name).apply()
+    }
+
+    /** A custom date is what makes the frequency custom, so it sets both. */
+    fun setScheduledBackupCustomDate(epochDay: Long) {
+        scheduledBackupFrequency.value = ScheduledBackupFrequency.CUSTOM
+        scheduledBackupCustomDateEpochDay.value = epochDay
+        prefs.edit()
+            .putString(KEY_SCHEDULED_BACKUP_FREQUENCY, ScheduledBackupFrequency.CUSTOM.name)
+            .putLong(KEY_SCHEDULED_BACKUP_CUSTOM_DATE, epochDay)
+            .apply()
+    }
+
+    fun setScheduledBackupDirectory(uri: String, name: String) {
+        scheduledBackupDirectoryUri.value = uri
+        scheduledBackupDirectoryName.value = name
+        prefs.edit()
+            .putString(KEY_SCHEDULED_BACKUP_DIRECTORY_URI, uri)
+            .putString(KEY_SCHEDULED_BACKUP_DIRECTORY_NAME, name)
+            .apply()
+    }
+
+    fun setScheduledBackupOverwriteExisting(value: Boolean) {
+        scheduledBackupOverwriteExisting.value = value
+        prefs.edit().putBoolean(KEY_SCHEDULED_BACKUP_OVERWRITE, value).apply()
+    }
+
+    fun setCloudSyncEnabled(value: Boolean) {
+        cloudSyncEnabled.value = value
+        prefs.edit().putBoolean(KEY_CLOUD_SYNC_ENABLED, value).apply()
+    }
+
+    fun setCloudSyncFolder(uri: String, name: String) {
+        cloudSyncFolderUri.value = uri
+        cloudSyncFolderName.value = name
+        prefs.edit()
+            .putString(KEY_CLOUD_SYNC_FOLDER_URI, uri)
+            .putString(KEY_CLOUD_SYNC_FOLDER_NAME, name)
+            .apply()
+    }
+
+    fun setCloudSyncOverwriteExisting(value: Boolean) {
+        cloudSyncOverwriteExisting.value = value
+        prefs.edit().putBoolean(KEY_CLOUD_SYNC_OVERWRITE, value).apply()
+    }
+
+    fun setCloudSyncLastRunAt(value: Long) {
+        cloudSyncLastRunAt.value = value
+        prefs.edit().putLong(KEY_CLOUD_SYNC_LAST_RUN, value).apply()
+    }
+
     fun setWebDavUrl(value: String) {
         val normalized = value.trim().trimEnd('/')
         webdavUrl.value = normalized
@@ -2910,6 +3471,7 @@ object AppSettings {
         KEY_LISTENBRAINZ_TOKEN,
         KEY_SPOTIFY_SPDC_TOKEN,
         KEY_PAXSENIX_API_KEY,
+        KEY_MUZO_API_KEY,
     )
 
     /**
@@ -2930,6 +3492,11 @@ object AppSettings {
         KEY_LOCAL_MUSIC_FOLDER_URI,
         KEY_LAST_VERSION_CODE,
         KEY_ONBOARDING_COMPLETE,
+        KEY_SCHEDULED_BACKUP_DIRECTORY_URI,
+        KEY_SCHEDULED_BACKUP_DIRECTORY_NAME,
+        KEY_CLOUD_SYNC_FOLDER_URI,
+        KEY_CLOUD_SYNC_FOLDER_NAME,
+        KEY_CLOUD_SYNC_LAST_RUN,
     )
 
     const val DEFAULT_CACHE_LIMIT_BYTES = 512L * 1024 * 1024
@@ -2937,6 +3504,12 @@ object AppSettings {
 
     /** The cache limit with no ceiling: only free storage bounds it. */
     const val UNLIMITED_CACHE_LIMIT_BYTES = Long.MAX_VALUE
+
+    /** The canvas cache's own budget, in MB — see [maxCanvasCacheSizeMb]. */
+    const val DEFAULT_CANVAS_CACHE_SIZE_MB = 256
+
+    /** The [maxCanvasCacheSizeMb] value for no ceiling at all. */
+    const val UNLIMITED_CANVAS_CACHE_MB = -1
 
     const val MIN_LYRICS_OFFSET_MS = -5_000
     const val MAX_LYRICS_OFFSET_MS = 5_000
@@ -2965,6 +3538,15 @@ object AppSettings {
     private const val KEY_SMART_FADE = "smart_fade_enabled"
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
     private const val KEY_SKIP_SILENCE = "skip_silence"
+    private const val KEY_PERMANENT_SHUFFLE = "permanent_shuffle"
+    private const val KEY_AUTO_SKIP_ON_ERROR = "auto_skip_on_error"
+    private const val KEY_KEEP_CPU_AWAKE = "keep_cpu_awake"
+    private const val KEY_PERSISTENT_QUEUE = "persistent_queue"
+    private const val KEY_PAUSE_AT_ZERO_VOLUME = "pause_at_zero_volume"
+    private const val KEY_AUTO_START_ON_BLUETOOTH = "auto_start_on_bluetooth"
+    private const val KEY_PRELOAD_SONGS_COUNT = "preload_songs_count"
+    private const val KEY_HISTORY_DURATION_SECONDS = "history_duration_seconds"
+    private const val KEY_SKIP_GAPLESS_ALBUMS = "skip_gapless_albums"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"
@@ -2990,6 +3572,17 @@ object AppSettings {
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
+    private const val KEY_LISTEN_TOGETHER_USERNAME = "listen_together_username"
+    private const val KEY_LISTEN_TOGETHER_SERVER_URL = "listen_together_server_url"
+    private const val KEY_LISTEN_TOGETHER_AVATAR_INDEX = "listen_together_avatar_index"
+    private const val KEY_LISTEN_TOGETHER_AUTO_APPROVAL = "listen_together_auto_approval"
+    private const val KEY_LISTEN_TOGETHER_SUGGESTION_AUTO_APPROVE = "listen_together_suggestion_auto_approve"
+    private const val KEY_LISTEN_TOGETHER_CHAT_NOTIFICATIONS = "listen_together_chat_notifications"
+    private const val KEY_LISTEN_TOGETHER_IN_APP_NOTIFICATIONS = "listen_together_in_app_notifications"
+    private const val KEY_LISTEN_TOGETHER_SYNC_HOST_VOLUME = "listen_together_sync_host_volume"
+    private const val KEY_LISTEN_TOGETHER_SMART_RESYNC = "listen_together_smart_resync"
+    private const val KEY_LISTEN_TOGETHER_BLOCKED_USERS = "listen_together_blocked_users"
+    private const val KEY_LISTEN_TOGETHER_CHAT_HISTORY = "listen_together_chat_history"
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
@@ -3013,6 +3606,7 @@ object AppSettings {
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
     private const val KEY_LIQUID_GLASS = "liquid_glass"
+    private const val KEY_LIQUID_GLASS_DEFAULT_ON_V1 = "liquid_glass_default_on_v1"
     private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LIQUID_GLASS_INTENSITY = "liquid_glass_intensity"
@@ -3030,9 +3624,6 @@ object AppSettings {
     private const val KEY_GLASS_MINI_PLAYER = "glass_mini_player"
     private const val KEY_GLASS_MENUS = "glass_menus"
     private const val KEY_MINI_PLAYER_BAR_BEHAVIOR = "mini_player_bar_behavior"
-    private const val KEY_NAV_BAR_FROSTED = "nav_bar_frosted"
-    private const val KEY_NAV_BAR_TINT = "nav_bar_tint"
-    private const val KEY_LIQUID_GLASS_NAV_BAR = "liquid_glass_nav_bar"
     private const val KEY_NAV_BAR_GLASS_GLOW = "nav_bar_glass_glow"
     private const val KEY_NAV_BAR_GLASS_GLOW_INTENSITY = "nav_bar_glass_glow_intensity"
     private const val KEY_NAV_BAR_WIDTH = "nav_bar_width"
@@ -3048,16 +3639,8 @@ object AppSettings {
     private const val KEY_CUSTOM_FONT_URI = "custom_font_uri"
     private const val KEY_MOVING_BLUR = "moving_blur"
     private const val KEY_HIDE_SLIDE_BAR = "hide_slide_bar"
-    private const val KEY_HIDE_PLAYER_THUMBNAIL = "hide_player_thumbnail"
-    private const val KEY_THUMBNAIL_CORNER_RADIUS = "thumbnail_corner_radius"
-    private const val KEY_PLAYER_BUTTONS_STYLE = "player_buttons_style"
-    private const val KEY_PLAYER_SLIDER_STYLE = "player_slider_style"
-    private const val KEY_LYRICS_BACKGROUND_STYLE = "lyrics_background_style"
-    private const val KEY_MINI_PLAYER_BACKGROUND_STYLE = "mini_player_background_style"
     private const val KEY_MINIMAL_HOME_MODE = "minimal_home_mode"
     private const val KEY_DEFAULT_OPEN_TAB = "default_open_tab"
-    private const val KEY_TABLET_MODE = "tablet_mode"
-    private const val KEY_BACK_ANIMATION_STYLE = "back_animation_style"
     private const val KEY_NAV_BAR_SHOW_LABELS = "nav_bar_show_labels"
     private const val KEY_HIDE_SIGN_IN_BANNER = "hide_sign_in_banner"
     private const val KEY_HIDE_LIBRARY_REPLAY_CARD = "hide_library_replay_card"
@@ -3076,10 +3659,6 @@ object AppSettings {
     private const val KEY_AOD_AUTO_TIMER_SECONDS = "aod_auto_timer_seconds"
     private const val KEY_AOD_TOUCH_LOCK = "aod_touch_lock"
     private const val KEY_AOD_PIXEL_SHIFT = "aod_pixel_shift"
-
-    /** The sleeve's stock corner, which the corner-radius row opens on. */
-    const val DEFAULT_THUMBNAIL_CORNER_RADIUS = 8f
-    const val MAX_THUMBNAIL_CORNER_RADIUS = 28f
 
     /** Reads an enum by name, falling back when the stored name isn't one. */
     private inline fun <reified T : Enum<T>> readEnum(key: String, default: T): T =
@@ -3109,6 +3688,15 @@ object AppSettings {
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"
+    private const val KEY_SPOTIFY_CANVAS_ENABLED = "spotify_canvas_enabled"
+    private const val KEY_CANVAS_IN_HEADERS = "canvas_in_headers"
+    private const val KEY_TIDAL_ARTWORK_FALLBACK = "tidal_artwork_fallback"
+    private const val KEY_ANIMATE_STATIC_ARTWORK = "animate_static_artwork"
+    private const val KEY_MAX_CANVAS_CACHE_SIZE_MB = "max_canvas_cache_size_mb"
+    private const val KEY_SMART_TRIMMER = "smart_trimmer"
+    private const val KEY_AUTO_DOWNLOAD_ON_LIKE = "auto_download_on_like"
+    private const val KEY_EXTERNAL_DOWNLOADER_ENABLED = "external_downloader_enabled"
+    private const val KEY_EXTERNAL_DOWNLOADER_PACKAGE = "external_downloader_package"
     private const val KEY_SIGNATURE_API_ENABLED = "signature_api_enabled"
     private const val KEY_SIGNATURE_API_URL = "signature_api_url"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
@@ -3124,6 +3712,7 @@ object AppSettings {
     private const val KEY_LYRICS_SOURCE_ORDER = "lyrics_source_order"
     private const val KEY_PRIORITIZE_SYLLABLE_SYNC = "prioritize_syllable_sync"
     private const val KEY_PAXSENIX_API_KEY = "paxsenix_api_key"
+    private const val KEY_MUZO_API_KEY = "muzo_api_key"
     private const val KEY_REPLAY_GENRES = "replay_genres"
     private const val KEY_FILTER_NON_MUSIC_AUDIO = "filter_non_music_audio"
     private const val KEY_SHOW_CACHE_FOLDER = "show_cache_folder"
@@ -3134,6 +3723,17 @@ object AppSettings {
     private const val KEY_LOCAL_MUSIC_VIEW_TYPE = "local_music_view_type"
     private const val KEY_DOWNLOADED_MUSIC_VIEW_TYPE = "downloaded_music_view_type"
     private const val KEY_LOCAL_MUSIC_FOLDER_URI = "local_music_folder_uri"
+    private const val KEY_SCHEDULED_BACKUP_ENABLED = "scheduledBackupEnabled"
+    private const val KEY_SCHEDULED_BACKUP_FREQUENCY = "scheduledBackupFrequency"
+    private const val KEY_SCHEDULED_BACKUP_CUSTOM_DATE = "scheduledBackupCustomDateEpochDay"
+    private const val KEY_SCHEDULED_BACKUP_DIRECTORY_URI = "scheduledBackupDirectoryUri"
+    private const val KEY_SCHEDULED_BACKUP_DIRECTORY_NAME = "scheduledBackupDirectoryName"
+    private const val KEY_SCHEDULED_BACKUP_OVERWRITE = "scheduledBackupOverwriteExisting"
+    private const val KEY_CLOUD_SYNC_ENABLED = "cloudSyncEnabled"
+    private const val KEY_CLOUD_SYNC_FOLDER_URI = "cloudSyncFolderUri"
+    private const val KEY_CLOUD_SYNC_FOLDER_NAME = "cloudSyncFolderName"
+    private const val KEY_CLOUD_SYNC_OVERWRITE = "cloudSyncOverwriteExisting"
+    private const val KEY_CLOUD_SYNC_LAST_RUN = "cloudSyncLastRunAt"
     private const val KEY_WEBDAV_URL = "webdav_url"
     private const val KEY_WEBDAV_USERNAME = "webdav_username"
     private const val KEY_SMB_HOST = "smb_host"
@@ -3157,6 +3757,17 @@ object AppSettings {
     private const val KEY_LISTENBRAINZ_ENABLED = "listenbrainz_enabled"
     private const val KEY_LISTENBRAINZ_TOKEN = "listenbrainz_token"
     private const val KEY_LISTENBRAINZ_PRIMARY_ARTIST_ONLY = "listenbrainz_primary_artist_only"
+
+    private const val KEY_YT_MUSIC_REGION = "yt_music_region"
+    private const val KEY_DNS_OVER_HTTPS_ENABLED = "dns_over_https_enabled"
+    private const val KEY_DNS_OVER_HTTPS_PROVIDER = "dns_over_https_provider"
+    private const val KEY_DNS_OVER_HTTPS_CUSTOM_URL = "dns_over_https_custom_url"
+    private const val KEY_PROXY_ENABLED = "proxy_enabled"
+    private const val KEY_PROXY_TYPE = "proxy_type"
+    private const val KEY_PROXY_HOST = "proxy_host"
+    private const val KEY_PROXY_PORT = "proxy_port"
+    private const val KEY_PROXY_USERNAME = "proxy_username"
+    private const val KEY_PROXY_PASSWORD = "proxy_password"
     private const val KEY_SPOTIFY_SPDC_TOKEN = "spotify_spdc_token"
 
     private const val KEY_DISCORD_USERNAME = "discord_username"

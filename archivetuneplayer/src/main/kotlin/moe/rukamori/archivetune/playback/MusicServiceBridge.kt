@@ -53,8 +53,10 @@ class MusicService(
     }
 
     fun pauseFromSleepTimer() {
+        // The host pauses on its controller's own looper. The sleep timer
+        // fires from a coroutine, and a MediaController called off its
+        // looper throws, so no direct player call here.
         host?.pauseFromSleepTimer()
-        host?.player()?.pause()
     }
 
     val crossfadeMixing: StateFlow<Boolean> = MutableStateFlow(false)

@@ -1,6 +1,12 @@
 pluginManagement {
     repositories {
         google()
+        // Google's Maven Central mirror, ahead of the original: identical
+        // bytes, but repo.maven.apache.org's CDN 429-rate-limits CI runners
+        // and now redirects its biggest jars to GitHub release downloads,
+        // which 504 on the runners often enough to fail whole builds. The
+        // mirror answers neither way; the original stays as its fallback.
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
         mavenCentral()
         gradlePluginPortal()
     }
@@ -9,6 +15,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        // Same mirror, same reason, for the build's own classpaths — the
+        // Kotlin compiler jar is the one that died through the redirect.
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
         mavenCentral()
         // NewPipeExtractor is published via JitPack.
         maven("https://jitpack.io")

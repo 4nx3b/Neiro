@@ -29,9 +29,9 @@ import com.music.bitchord.playback.AudioRouting
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.playback.audio.bitperfect.DacVolume
 import com.music.bitchord.playback.cast.CastController
-import com.music.bitchord.ui.components.backdrop.backdrops.SnapshotBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.rememberSnapshotBackdrop
-import com.music.bitchord.ui.components.backdrop.backdrops.snapshotBackdropSource
+import com.music.bitchord.ui.components.SnapshotBackdrop
+import com.music.bitchord.ui.components.rememberSnapshotBackdrop
+import com.music.bitchord.ui.components.snapshotBackdropSource
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.menuBackdropFrost
 import dev.chrisbanes.haze.HazeState
@@ -64,6 +64,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val audioQualityCellular get() = AppSettings.audioQualityCellular
         override val audioQualityWifi get() = AppSettings.audioQualityWifi
         override val canvasOverCellular get() = AppSettings.canvasOverCellular
+        override val animateStaticArtwork get() = AppSettings.animateStaticArtwork
         override val fullBleedArtwork get() = AppSettings.fullBleedArtwork
         override val hideSongStatus get() = AppSettings.hideSongStatus
         override val showQueueHistory get() = AppSettings.showQueueHistory
@@ -76,12 +77,6 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val blurIntensity get() = AppSettings.blurIntensity
         override val movingBlur get() = AppSettings.movingBlur
         override val hideSlideBar get() = AppSettings.hideSlideBar
-        override val hidePlayerThumbnail get() = AppSettings.hidePlayerThumbnail
-        override val thumbnailCornerRadius get() = AppSettings.thumbnailCornerRadius
-        override val playerButtonsStyle get() = AppSettings.playerButtonsStyle
-        override val playerSliderStyle get() = AppSettings.playerSliderStyle
-        override val lyricsBackgroundStyle get() = AppSettings.lyricsBackgroundStyle
-        override val tabletMode get() = AppSettings.tabletMode
         override val lyricsBlur get() = AppSettings.lyricsBlur
         override val lyricsOffsetMs get() = AppSettings.lyricsOffsetMs
         override val lyricsSourceOrder get() = AppSettings.lyricsSourceOrder
@@ -118,6 +113,9 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
     override fun cachedCanvas(song: Song): CanvasArtwork? = CanvasRepository.cached(song)
 
     override suspend fun canvasFor(song: Song): CanvasArtwork? = CanvasRepository.canvasFor(song)
+
+    override suspend fun tidalSleeveFallback(song: Song): String? =
+        CanvasRepository.tidalSleeveFallback(song)?.url
 
     @Composable
     override fun CanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) = AndroidCanvasVideo(spec, modifier)

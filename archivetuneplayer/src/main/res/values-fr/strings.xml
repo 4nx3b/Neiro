@@ -112,11 +112,6 @@
   <string name="clear">Effacer</string>
   <string name="copy_link">Copier le lien</string>
   <string name="got_it">Compris</string>
-  <string name="slider_style_standard">Standard</string>
-  <string name="slider_style_wavy">Ondulé</string>
-  <string name="slider_style_thick">Épais</string>
-  <string name="slider_style_circular">Circulaire</string>
-  <string name="slider_style_simple">Simple</string>
   <string name="pin_to_speed_dial">Épingler à l\'Accès Rapide</string>
   <string name="remove_from_speed_dial">Retirer de l\'Accès Rapide</string>
   <string name="sort_by_most_played">Les plus joués</string>

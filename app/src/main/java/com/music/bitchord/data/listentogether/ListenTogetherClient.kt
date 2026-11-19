@@ -1,0 +1,2154 @@
+/*
+ * ArchiveTune (2026)
+ * © vossgraves — github.com/vossgraves
+ * © Rukamori — github.com/rukamori
+ * GPL-3.0 License | Contributors: see git history
+ * Do not remove or alter this notice. - Per GPL-3.0 Section 4 & Section 5
+ *
+ * Listen Together WebSocket client — ported from vivi-music (beta branch),
+ * vivi-music's listentogether.ListenTogetherClient (GPL-3.0).
+ *
+ * PORT-NOTE (Neiro): retitled to com.music.bitchord.data.listentogether; Hilt
+ * dropped (plain class, the singleton held by the facade); the vivi datastore
+ * preferences read Neiro's own AppSettings instead, and the reconnect session
+ * (token, room code, user id, host flag, timestamp) keeps its own SharedPreferences
+ * file rather than the app's settings. Timber became the app's DebugLog, the
+ * notification small icon is the app's own, and a saved custom server URL is
+ * honoured rather than silently swapped back to the default (the settings page
+ * offers custom servers, so the client has to take them seriously).
+ */
+
+
+
+package com.music.bitchord.data.listentogether
+
+import android.util.Base64
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.PowerManager
+import android.widget.Toast
+import androidx.annotation.RequiresPermission
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.Person
+import androidx.core.app.RemoteInput
+import androidx.core.content.getSystemService
+import com.music.bitchord.R
+import com.music.bitchord.data.DebugLog as Log
+import com.music.bitchord.data.settings.AppSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import moe.rukamori.archivetune.utils.NetworkConnectivityObserver
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
+
+/**
+ * Connection state for the Listen Together feature
+ */
+enum class ConnectionState {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+    RECONNECTING,
+    ERROR
+}
+
+/**
+ * Room role for the current user
+ */
+enum class RoomRole {
+    HOST,
+    GUEST,
+    NONE
+}
+
+/**
+ * Log entry for debugging
+ */
+data class LogEntry(
+    val timestamp: String,
+    val level: LogLevel,
+    val message: String,
+    val details: String? = null
+)
+
+enum class LogLevel {
+    INFO,
+    WARNING,
+    ERROR,
+    DEBUG
+}
+
+/**
+ * Pending action to execute when connected
+ */
+sealed class PendingAction {
+    data class CreateRoom(val username: String) : PendingAction()
+    data class JoinRoom(val roomCode: String, val username: String) : PendingAction()
+}
+
+/**
+ * Event types for the Listen Together client
+ */
+sealed class ListenTogetherEvent {
+    // Connection events
+    data class Connected(val userId: String) : ListenTogetherEvent()
+    data object Disconnected : ListenTogetherEvent()
+    data class ConnectionError(val error: String) : ListenTogetherEvent()
+    data class Reconnecting(val attempt: Int, val maxAttempts: Int) : ListenTogetherEvent()
+
+    // Room events
+    data class RoomCreated(val roomCode: String, val userId: String) : ListenTogetherEvent()
+    data class JoinRequestReceived(val userId: String, val username: String) : ListenTogetherEvent()
+    data class JoinApproved(val roomCode: String, val userId: String, val state: RoomState) : ListenTogetherEvent()
+    data class JoinRejected(val reason: String) : ListenTogetherEvent()
+    data class UserJoined(val userId: String, val username: String) : ListenTogetherEvent()
+    data class UserLeft(val userId: String, val username: String) : ListenTogetherEvent()
+    data class HostChanged(val newHostId: String, val newHostName: String) : ListenTogetherEvent()
+    data class Kicked(val reason: String) : ListenTogetherEvent()
+    data class Reconnected(val roomCode: String, val userId: String, val state: RoomState, val isHost: Boolean) : ListenTogetherEvent()
+    data class UserReconnected(val userId: String, val username: String) : ListenTogetherEvent()
+    data class UserDisconnected(val userId: String, val username: String) : ListenTogetherEvent()
+
+    // Playback events
+    data class PlaybackSync(val action: PlaybackActionPayload) : ListenTogetherEvent()
+    data class BufferWait(val trackId: String, val waitingFor: List<String>) : ListenTogetherEvent()
+    data class BufferComplete(val trackId: String) : ListenTogetherEvent()
+    data class SyncStateReceived(val state: SyncStatePayload) : ListenTogetherEvent()
+
+    // Error events
+    data class ServerError(val code: String, val message: String) : ListenTogetherEvent()
+
+    // Chat events
+    data class ChatMessageReceived(val payload: ChatMessagePayload) : ListenTogetherEvent()
+
+    /** A reactions/edit/delete/pin/typing control event decoded from the chat relay. */
+    data class ChatControlReceived(
+        val userId: String,
+        val username: String,
+        val event: ChatControlEvent,
+    ) : ListenTogetherEvent()
+
+    data class LocalSuggestionApproved(
+        val payload: SuggestionReceivedPayload,
+        val playImmediately: Boolean = false,
+    ) : ListenTogetherEvent()
+
+    /** The host turned the local user's suggestion down, so the manager can drop its one-shot
+     *  dedup and let the same song be suggested again. */
+    data class SuggestionRejected(
+        val suggestionId: String,
+        val reason: String? = null,
+    ) : ListenTogetherEvent()
+}
+
+/**
+ * WebSocket client for Listen Together feature
+ */
+class ListenTogetherClient(
+    private val context: Context,
+) {
+    companion object {
+        private const val TAG = "ListenTogether"
+        private val DEFAULT_SERVER_URL = ListenTogetherServers.defaultServerUrl
+        private const val MAX_RECONNECT_ATTEMPTS = 15  // Increased from 5 to 15
+        private const val INITIAL_RECONNECT_DELAY_MS = 1000L  // Start at 1 second
+        private const val MAX_RECONNECT_DELAY_MS = 120000L  // Cap at 2 minutes
+        private const val PING_INTERVAL_MS = 25000L
+        private const val MAX_LOG_ENTRIES = 500
+        private const val SESSION_GRACE_PERIOD_MS = 10 * 60 * 1000L  // 10 minutes
+
+        // PORT-NOTE: the reconnect session rides its own SharedPreferences file (see
+        // [sessionPrefs]) — vivi kept it in the DataStore alongside real preferences.
+        private const val SESSION_PREFS = "bitchord_listen_together_session"
+        private const val KEY_SESSION_TOKEN = "session_token"
+        private const val KEY_SESSION_ROOM_CODE = "room_code"
+        private const val KEY_SESSION_USER_ID = "user_id"
+        private const val KEY_SESSION_IS_HOST = "is_host"
+        private const val KEY_SESSION_TIMESTAMP = "session_timestamp"
+
+        // How long after sending a create/join an invalid_message reply is still
+        // considered a rejection of that action (and worth a protobuf retry), and
+        // how long to wait before re-sending it.
+        private const val ROOM_ACTION_RETRY_WINDOW_MS = 10_000L
+        private const val ROOM_ACTION_RETRY_DELAY_MS = 250L
+        private const val CONNECTION_DEADLINE_MS = 60_000L
+        private const val ROOM_ACTION_DEADLINE_MS = 90_000L
+
+        // Notification constants
+        private const val NOTIFICATION_CHANNEL_ID = "listen_together_channel"
+        // PORT-NOTE: action strings renamed from vivi's package to ArchiveTune's
+        // application id — they are matched only between this client and the
+        // ListenTogetherActionReceiver, so the rename is behaviour-neutral.
+        const val ACTION_APPROVE_JOIN = "com.music.bitchord.LISTEN_TOGETHER_APPROVE_JOIN"
+        const val ACTION_REJECT_JOIN = "com.music.bitchord.LISTEN_TOGETHER_REJECT_JOIN"
+        const val ACTION_APPROVE_SUGGESTION = "com.music.bitchord.LISTEN_TOGETHER_APPROVE_SUGGESTION"
+        const val ACTION_REJECT_SUGGESTION = "com.music.bitchord.LISTEN_TOGETHER_REJECT_SUGGESTION"
+        const val ACTION_REPLY_CHAT = "com.music.bitchord.LISTEN_TOGETHER_REPLY_CHAT"
+        const val KEY_TEXT_REPLY = "key_text_reply"
+        const val EXTRA_USER_ID = "extra_user_id"
+        const val EXTRA_SUGGESTION_ID = "extra_suggestion_id"
+        const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
+
+        // Stable id for the chat conversation notification so each new message
+        // updates the same shade entry (and its RemoteInput history) instead of
+        // stacking separate notifications.
+        private const val CHAT_NOTIFICATION_ID = 40001
+
+        // Conversation depth kept for the MessagingStyle in the shade.
+        private const val MAX_CHAT_NOTIFICATION_HISTORY = 25
+
+        // Wire envelope for chat control events (reactions/edits/deletes/pins/typing),
+        // mirroring the custom-avatar and reply-embed patterns.
+        const val ChatControlEnvelopePrefix = "\u200B[LTC:"
+        const val ChatControlEnvelopeSuffix = "]\u200B"
+
+        // Wire envelope for a song shared into the chat (an [LTS:base64 TrackInfo]
+        // prefix on the message text, mirroring LTC/LTA).
+        const val SharedTrackEnvelopePrefix = "\u200B[LTS:"
+        const val SharedTrackEnvelopeSuffix = "]\u200B"
+
+        private val chatControlJson = kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = false
+        }
+
+        private val sharedTrackJson = kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = false
+        }
+
+        fun decodeChatControl(message: String): ChatControlEvent? =
+            try {
+                if (!message.startsWith(ChatControlEnvelopePrefix)) return null
+                val endIdx = message.indexOf(ChatControlEnvelopeSuffix, ChatControlEnvelopePrefix.length)
+                if (endIdx <= ChatControlEnvelopePrefix.length) return null
+                val json = String(
+                    Base64.decode(
+                        message.substring(ChatControlEnvelopePrefix.length, endIdx),
+                        Base64.NO_WRAP,
+                    ),
+                )
+                chatControlJson.decodeFromString(ChatControlEvent.serializer(), json)
+            } catch (e: Exception) {
+                null
+            }
+
+        /** Splits a leading [LTS:base64] song-share envelope off a chat message.
+         * Returns null when the message carries no envelope. */
+        fun decodeSharedTrack(message: String): Pair<TrackInfo, String>? =
+            try {
+                if (!message.startsWith(SharedTrackEnvelopePrefix)) return null
+                val endIdx = message.indexOf(SharedTrackEnvelopeSuffix, SharedTrackEnvelopePrefix.length)
+                if (endIdx <= SharedTrackEnvelopePrefix.length) return null
+                val json = String(
+                    Base64.decode(
+                        message.substring(SharedTrackEnvelopePrefix.length, endIdx),
+                        Base64.NO_WRAP,
+                    ),
+                )
+                val track = sharedTrackJson.decodeFromString(TrackInfo.serializer(), json)
+                track to message.substring(endIdx + SharedTrackEnvelopeSuffix.length)
+            } catch (e: Exception) {
+                null
+            }
+
+        @Volatile
+        private var instance: ListenTogetherClient? = null
+
+        fun getInstance(): ListenTogetherClient? = instance
+
+        fun setInstance(client: ListenTogetherClient) {
+            instance = client
+        }
+    }
+
+    // Initialize scope early before init block since it's used in observeNetworkChanges()
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // State flows - initialized before init block to avoid NullPointerException when accessing log()
+    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private val _roomState = MutableStateFlow<RoomState?>(null)
+    val roomState: StateFlow<RoomState?> = _roomState.asStateFlow()
+
+    private val _role = MutableStateFlow(RoomRole.NONE)
+    val role: StateFlow<RoomRole> = _role.asStateFlow()
+
+    private val _userId = MutableStateFlow<String?>(null)
+    val userId: StateFlow<String?> = _userId.asStateFlow()
+
+    private val _pendingJoinRequests = MutableStateFlow<List<JoinRequestPayload>>(emptyList())
+    val pendingJoinRequests: StateFlow<List<JoinRequestPayload>> = _pendingJoinRequests.asStateFlow()
+
+    private val _bufferingUsers = MutableStateFlow<List<String>>(emptyList())
+    val bufferingUsers: StateFlow<List<String>> = _bufferingUsers.asStateFlow()
+
+    // Suggestions: pending items visible to host
+    private val _pendingSuggestions = MutableStateFlow<List<SuggestionReceivedPayload>>(emptyList())
+    val pendingSuggestions: StateFlow<List<SuggestionReceivedPayload>> = _pendingSuggestions.asStateFlow()
+
+    // Blocked usernames (internal list for privacy)
+    private val _blockedUsernames = MutableStateFlow<Set<String>>(emptySet())
+    val blockedUsernames: StateFlow<Set<String>> = _blockedUsernames.asStateFlow()
+
+    private val _logs = MutableStateFlow<List<LogEntry>>(emptyList())
+    val logs: StateFlow<List<LogEntry>> = _logs.asStateFlow()
+
+    // Event flow
+    private val _events = MutableSharedFlow<ListenTogetherEvent>()
+    val events: SharedFlow<ListenTogetherEvent> = _events.asSharedFlow()
+
+
+
+    /**
+     * Observe network changes to trigger reconnections
+     */
+    private fun observeNetworkChanges() {
+        scope.launch {
+            try {
+                val observer = connectivityObserver ?: return@launch
+                observer.networkStatus.collect { available: Boolean ->
+                    val previous = isNetworkAvailable
+                    isNetworkAvailable = available
+
+                    if (available && !previous) {
+                        log(LogLevel.INFO, "Network restored, checking if reconnection needed")
+                        // Reset attempts when network is restored to allow a fresh set of retries
+                        if (_connectionState.value == ConnectionState.ERROR ||
+                            _connectionState.value == ConnectionState.DISCONNECTED) {
+
+                            if (sessionToken != null || _roomState.value != null || pendingAction != null) {
+                                log(LogLevel.INFO, "Network restored, triggering reconnection")
+                                reconnectAttempts = 0 // Reset attempts for a fresh start
+                                connect()
+                            }
+                        }
+                    } else if (!available && previous) {
+                        log(LogLevel.WARNING, "Network lost")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error observing network changes")
+            }
+        }
+    }
+
+    /**
+     * The reconnect session's own store, deliberately separate from the app's
+     * settings: this is transient room state (a token, a code, a host flag and
+     * the moment they were written), not a preference, and a "clear" must never
+     * have to know which of the two it is wiping.
+     */
+    private val sessionPrefs: SharedPreferences =
+        context.applicationContext.getSharedPreferences(SESSION_PREFS, Context.MODE_PRIVATE)
+
+    /**
+     * Load persisted session information from storage
+     */
+    private fun loadPersistedSession() {
+        try {
+            val token = sessionPrefs.getString(KEY_SESSION_TOKEN, "").orEmpty()
+            val roomCode = sessionPrefs.getString(KEY_SESSION_ROOM_CODE, "").orEmpty()
+            val userId = sessionPrefs.getString(KEY_SESSION_USER_ID, "").orEmpty()
+            val isHost = sessionPrefs.getBoolean(KEY_SESSION_IS_HOST, false)
+            val timestamp = sessionPrefs.getLong(KEY_SESSION_TIMESTAMP, 0L)
+
+            // Check if session is still valid (within grace period)
+            if (token.isNotEmpty() && roomCode.isNotEmpty() &&
+                (System.currentTimeMillis() - timestamp < SESSION_GRACE_PERIOD_MS)) {
+                sessionToken = token
+                storedRoomCode = roomCode
+                _userId.value = userId.ifEmpty { null }
+                wasHost = isHost
+                sessionStartTime = timestamp
+                log(LogLevel.INFO, "Loaded persisted session", "Room: $roomCode, Host: $isHost")
+            } else if (token.isNotEmpty()) {
+                log(LogLevel.WARNING, "Session expired", "Age: ${System.currentTimeMillis() - timestamp}ms")
+                clearPersistedSession()
+            }
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Failed to load persisted session", e.message)
+        }
+
+        // Also load blocked usernames
+        loadBlockedUsernames()
+    }
+
+    /**
+     * Load blocked usernames from storage
+     */
+    private fun loadBlockedUsernames() {
+        // PORT-NOTE: the blocked list is an AppSettings preference in Neiro; it
+        // is already loaded by the time the client constructs, so this is a read.
+        _blockedUsernames.value = AppSettings.listenTogetherBlockedUsers.value
+    }
+
+    /**
+     * Save blocked usernames to storage
+     */
+    private suspend fun saveBlockedUsernames() {
+        try {
+            AppSettings.setListenTogetherBlockedUsers(_blockedUsernames.value)
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Failed to save blocked usernames", e.message)
+        }
+    }
+
+    /**
+     * Save current session information to persistent storage
+     */
+    private fun savePersistedSession() {
+        try {
+            scope.launch {
+                sessionPrefs.edit().apply {
+                    if (sessionToken != null) {
+                        putString(KEY_SESSION_TOKEN, sessionToken)
+                        putString(KEY_SESSION_ROOM_CODE, storedRoomCode ?: "")
+                        putString(KEY_SESSION_USER_ID, _userId.value ?: "")
+                        putBoolean(KEY_SESSION_IS_HOST, wasHost)
+                        putLong(KEY_SESSION_TIMESTAMP, System.currentTimeMillis())
+                    }
+                }.apply()
+            }
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Failed to save persisted session", e.message)
+        }
+    }
+
+    /**
+     * Clear persisted session information
+     */
+    private fun clearPersistedSession() {
+        try {
+            scope.launch {
+                sessionPrefs.edit().clear().apply()
+            }
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Failed to clear persisted session", e.message)
+        }
+    }
+
+    // Message codec - starts with JSON (DEPRECATED) for backward compatibility
+    // Automatically upgrades to Protobuf when supported
+    private val codec = MessageCodec(MessageFormat.JSON, false)
+
+    private var webSocket: WebSocket? = null
+    private var pingJob: Job? = null
+    private var reconnectJob: Job? = null
+    private val connectionDeadline = ListenTogetherRequestDeadline(scope)
+    private val roomActionDeadline = ListenTogetherRequestDeadline(scope)
+    private var reconnectAttempts = 0
+
+    // Session info for reconnection
+    private var sessionToken: String? = null
+    private var storedUsername: String? = null
+    private var storedRoomCode: String? = null
+    private var wasHost: Boolean = false
+    private var sessionStartTime: Long = 0
+
+    // Pending actions to execute when connected
+    private var pendingAction: PendingAction? = null
+
+    private data class SentRoomAction(
+        val action: PendingAction,
+        val format: MessageFormat,
+        val sentAtMs: Long,
+        val connection: Long,
+        val roomRequest: Long,
+        val socket: WebSocket?,
+    )
+
+    @Volatile private var lastRoomAction: SentRoomAction? = null
+
+    // Wake lock to keep connection alive when in a room
+    private var wakeLock: PowerManager.WakeLock? = null
+
+    // Socket callbacks record these ids while Compose UI and notification actions clear them.
+    private val roomNotificationIds = ListenTogetherRoomNotificationIds()
+
+    /** Recent chat messages backing the conversation notification (MessagingStyle). */
+    private val chatNotificationHistory = ArrayDeque<ChatMessagePayload>()
+
+    private val chatHistoryLock = Any()
+
+    @Volatile
+    private var chatNotificationActive = false
+
+    private val _chatScreenVisible = MutableStateFlow(false)
+
+    /** Set by the chat screen so incoming messages don't notify while it is open. */
+    fun setChatScreenVisible(visible: Boolean) {
+        _chatScreenVisible.value = visible
+    }
+
+    // Network connectivity monitoring - use lazy to avoid initialization order issues
+    private val connectivityObserver: NetworkConnectivityObserver? by lazy {
+        try {
+            NetworkConnectivityObserver(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create NetworkConnectivityObserver")
+            null
+        }
+    }
+    private var isNetworkAvailable = try {
+        connectivityObserver?.isCurrentlyConnected() ?: true
+    } catch (e: Exception) {
+        true
+    }
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .pingInterval(30, TimeUnit.SECONDS)
+        .build()
+
+    init {
+        setInstance(this)
+        ensureNotificationChannel()
+        // Load persisted session info asynchronously after construction to avoid calling log() before flows are initialized
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            loadPersistedSession()
+            observeNetworkChanges()
+        }
+    }
+
+    private fun getServerUrl(): String {
+        // PORT-NOTE: a saved custom server URL is honoured here — the settings page
+        // offers custom servers, so the client has to take the saved value
+        // seriously; only a blank one falls back to the default.
+        val savedUrl = AppSettings.listenTogetherServerUrl.value.trim()
+        return if (savedUrl.startsWith("ws://") || savedUrl.startsWith("wss://")) {
+            savedUrl
+        } else {
+            DEFAULT_SERVER_URL
+        }
+    }
+
+    /**
+     * Calculate exponential backoff delay with jitter
+     */
+    private fun calculateBackoffDelay(attempt: Int): Long {
+        val exponentialDelay = INITIAL_RECONNECT_DELAY_MS * (2 shl (minOf(attempt - 1, 4)))
+        val cappedDelay = minOf(exponentialDelay, MAX_RECONNECT_DELAY_MS)
+        // Add 0-20% jitter to prevent thundering herd
+        val jitter = (cappedDelay * 0.2 * Math.random()).toLong()
+        return cappedDelay + jitter
+    }
+
+    private fun log(level: LogLevel, message: String, details: String? = null) {
+        val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
+        val entry = LogEntry(timestamp, level, message, details)
+
+        _logs.value = (_logs.value + entry).takeLast(MAX_LOG_ENTRIES)
+
+        when (level) {
+            LogLevel.ERROR -> Log.e(TAG, "$message ${details ?: ""}")
+            LogLevel.WARNING -> Log.w(TAG, "$message ${details ?: ""}")
+            LogLevel.DEBUG -> Log.d(TAG, "$message ${details ?: ""}")
+            LogLevel.INFO -> Log.i(TAG, "$message ${details ?: ""}")
+        }
+    }
+
+    fun clearLogs() {
+        _logs.value = emptyList()
+    }
+
+    /**
+     * Connect to the Listen Together server
+     */
+    fun connect() {
+        if (_connectionState.value == ConnectionState.CONNECTED ||
+            _connectionState.value == ConnectionState.CONNECTING) {
+            log(LogLevel.WARNING, "Already connected or connecting")
+            return
+        }
+
+        reconnectJob?.cancel()
+        reconnectJob = null
+        val attempt = connectionDeadline.start(CONNECTION_DEADLINE_MS) {
+            failPendingConnection(context.getString(R.string.listen_together_connection_timeout))
+        }
+
+        // Clean up previous websocket to prevent memory leaks and duplicate events
+        try {
+            webSocket?.cancel()
+            webSocket = null
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Error cancelling previous websocket", e.message)
+        }
+
+        _connectionState.value = ConnectionState.CONNECTING
+        val serverUrl = getServerUrl()
+        log(LogLevel.INFO, "Connecting to server", serverUrl)
+
+        // metroserver (The Meowery) is protobuf-only and answers JSON frames with
+        // an invalid_message error, so start the codec in the server's own protocol.
+        val serverProtocol = ListenTogetherServers.findByUrl(serverUrl)?.protocol ?: ListenTogetherProtocol.JSON
+        codec.format =
+            if (serverProtocol == ListenTogetherProtocol.PROTOBUF) MessageFormat.PROTOBUF else MessageFormat.JSON
+        codec.compressionEnabled = serverProtocol == ListenTogetherProtocol.PROTOBUF
+        log(LogLevel.INFO, "Codec configured", "${codec.format.name}, compression=${codec.compressionEnabled}")
+
+        val request = Request.Builder()
+            .url(serverUrl)
+            .build()
+
+        webSocket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                if (!connectionDeadline.isCurrent(attempt)) {
+                    webSocket.cancel()
+                    return
+                }
+                connectionDeadline.complete()
+                log(LogLevel.INFO, "Connected to server")
+                _connectionState.value = ConnectionState.CONNECTED
+                reconnectAttempts = 0
+                startPingJob()
+
+                // Try to reconnect to previous session if we have a valid token
+                if (sessionToken != null && storedRoomCode != null) {
+                    log(LogLevel.INFO, "Attempting to reconnect to previous session", "Room: $storedRoomCode")
+                    sendMessage(MessageTypes.RECONNECT, ReconnectPayload(sessionToken!!))
+                } else {
+                    // Execute any pending action
+                    executePendingAction()
+                }
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                if (!connectionDeadline.isCurrent(attempt)) return
+                // Handle text messages (JSON - DEPRECATED)
+                handleMessage(text.toByteArray())
+            }
+
+            override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) {
+                if (!connectionDeadline.isCurrent(attempt)) return
+                // Handle binary messages (Protobuf)
+                handleMessage(bytes.toByteArray())
+            }
+
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (!connectionDeadline.isCurrent(attempt)) return
+                log(LogLevel.INFO, "Server closing connection", "Code: $code, Reason: $reason")
+                webSocket.close(1000, null)
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                if (!connectionDeadline.isCurrent(attempt)) return
+                connectionDeadline.cancel()
+                log(LogLevel.INFO, "Connection closed", "Code: $code, Reason: $reason")
+                handleDisconnect()
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                if (!connectionDeadline.isCurrent(attempt)) return
+                connectionDeadline.cancel()
+                log(LogLevel.ERROR, "Connection failure", t.message)
+                handleConnectionFailure(t)
+            }
+        })
+    }
+
+    private fun executePendingAction() {
+        val action = pendingAction ?: return
+        pendingAction = null
+        executeRoomAction(action)
+    }
+
+    private fun executeRoomAction(action: PendingAction) {
+        val avatarIndex = AppSettings.listenTogetherAvatarIndex.value
+        lastRoomAction = SentRoomAction(action, codec.format, System.currentTimeMillis(),
+            connectionDeadline.currentAttempt(), roomActionDeadline.currentAttempt(), webSocket)
+        when (action) {
+            is PendingAction.CreateRoom -> {
+                log(LogLevel.INFO, "Executing pending create room", action.username)
+                sendMessage(MessageTypes.CREATE_ROOM, CreateRoomPayload(action.username, avatarIndex))
+            }
+            is PendingAction.JoinRoom -> {
+                log(LogLevel.INFO, "Executing pending join room", "${action.roomCode} as ${action.username}")
+                sendMessage(MessageTypes.JOIN_ROOM, JoinRoomPayload(action.roomCode.uppercase(), action.username, avatarIndex))
+            }
+        }
+    }
+
+    /**
+     * Safety net for servers whose protocol was misconfigured or unknown: if the
+     * create/join was sent as JSON but the server answered in protobuf (the
+     * reactive upgrade in [handleMessage] already flipped the codec), re-send the
+     * same action once in protobuf so the room code still arrives.
+     */
+    private fun maybeRetryRoomActionAfterProtocolUpgrade() {
+        val sent = lastRoomAction ?: return
+        lastRoomAction = null
+
+        val sentAsJson = sent.format == MessageFormat.JSON
+        val nowUpgraded = codec.format == MessageFormat.PROTOBUF
+        val recent = System.currentTimeMillis() - sent.sentAtMs < ROOM_ACTION_RETRY_WINDOW_MS
+        if (!sentAsJson || !nowUpgraded || !recent) return
+
+        val socket = sent.socket ?: return
+        log(LogLevel.WARNING, "Create/join was rejected as JSON after a protobuf upgrade", "Retrying in protobuf")
+        scope.launch {
+            delay(ROOM_ACTION_RETRY_DELAY_MS)
+            connectionDeadline.runIfCurrent(sent.connection) {
+                roomActionDeadline.runIfCurrent(sent.roomRequest, requirePending = true) {
+                    if (webSocket === socket && _connectionState.value == ConnectionState.CONNECTED &&
+                        codec.format == MessageFormat.PROTOBUF) {
+                        executeRoomAction(sent.action)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Disconnect from the server
+     */
+    fun disconnect() {
+        connectionDeadline.cancel()
+        roomActionDeadline.cancel()
+        reconnectJob?.cancel()
+        reconnectJob = null
+        log(LogLevel.INFO, "Disconnecting from server")
+        releaseWakeLock() // Release wake lock when disconnecting
+        pingJob?.cancel()
+        pingJob = null
+        webSocket?.close(1000, "User disconnected")
+        webSocket = null
+        _connectionState.value = ConnectionState.DISCONNECTED
+
+        // Clear session and state on explicit disconnect
+        sessionToken = null
+        storedRoomCode = null
+        storedUsername = null
+        pendingAction = null
+        _roomState.value = null
+        _role.value = RoomRole.NONE
+        _userId.value = null
+        _pendingJoinRequests.value = emptyList()
+        _bufferingUsers.value = emptyList()
+
+        roomNotificationIds.drainAndCancel(context)
+
+        // Clear from persistent storage
+        clearPersistedSession()
+        reconnectAttempts = 0
+
+        scope.launch { _events.emit(ListenTogetherEvent.Disconnected) }
+    }
+
+    private fun startPingJob() {
+        pingJob?.cancel()
+        pingJob = scope.launch {
+            while (true) {
+                delay(PING_INTERVAL_MS)
+                sendMessageNoPayload(MessageTypes.PING)
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun acquireWakeLock() {
+        if (wakeLock == null) {
+            val powerManager = context.getSystemService<PowerManager>()
+            wakeLock = powerManager?.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                // PORT-NOTE: wake-lock tag renamed from vivimusic:ListenTogether to
+                // BitChord's app tag.
+                "bitchord:ListenTogether"
+            )
+        }
+        if (wakeLock?.isHeld == false) {
+            // Acquire with timeout of 10 minutes instead of 30 to reduce battery drain
+            // Will be re-acquired if still in room and receiving messages
+            wakeLock?.acquire(10 * 60 * 1000L)
+            log(LogLevel.DEBUG, "Wake lock acquired")
+        }
+    }
+
+    private fun releaseWakeLock() {
+        if (wakeLock?.isHeld == true) {
+            wakeLock?.release()
+            log(LogLevel.DEBUG, "Wake lock released")
+        }
+    }
+
+    private fun ensureNotificationChannel() {
+        // Notification channels exist from API 26; below that the notifications post without one.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        try {
+            val nm = context.getSystemService(NotificationManager::class.java)
+            val existing = nm?.getNotificationChannel(NOTIFICATION_CHANNEL_ID)
+            if (existing == null) {
+                val channel = NotificationChannel(
+                    NOTIFICATION_CHANNEL_ID,
+                    context.getString(R.string.listen_together_notification_channel_name),
+                    NotificationManager.IMPORTANCE_HIGH
+                )
+                channel.description = context.getString(R.string.listen_together_notification_channel_desc)
+                nm?.createNotificationChannel(channel)
+            }
+        } catch (e: Exception) {
+            log(LogLevel.WARNING, "Failed to create notification channel", e.message)
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+    private fun showJoinRequestNotification(payload: JoinRequestPayload) {
+        val notifId = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
+
+        roomNotificationIds.trackJoinRequest(payload.userId, notifId)
+
+        val approveIntent = Intent(context, ListenTogetherActionReceiver::class.java).apply {
+            action = ACTION_APPROVE_JOIN
+            putExtra(EXTRA_USER_ID, payload.userId)
+            putExtra(EXTRA_NOTIFICATION_ID, notifId)
+        }
+        val rejectIntent = Intent(context, ListenTogetherActionReceiver::class.java).apply {
+            action = ACTION_REJECT_JOIN
+            putExtra(EXTRA_USER_ID, payload.userId)
+            putExtra(EXTRA_NOTIFICATION_ID, notifId)
+        }
+
+        val approvePI = PendingIntent.getBroadcast(context, payload.userId.hashCode(), approveIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val rejectPI = PendingIntent.getBroadcast(context, payload.userId.hashCode().inv(), rejectIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val content = context.getString(R.string.listen_together_join_request_notification, payload.username)
+
+        val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .setContentTitle(context.getString(R.string.listen_together))
+            .setContentText(content)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(0, context.getString(R.string.approve), approvePI)
+            .addAction(0, context.getString(R.string.reject), rejectPI)
+
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            NotificationManagerCompat.from(context).notify(notifId, builder.build())
+        }
+    }
+
+    private fun appendChatNotificationHistory(payload: ChatMessagePayload) {
+        synchronized(chatHistoryLock) {
+            chatNotificationHistory.addLast(payload)
+            while (chatNotificationHistory.size > MAX_CHAT_NOTIFICATION_HISTORY) {
+                chatNotificationHistory.removeFirst()
+            }
+        }
+    }
+
+    /**
+     * The vivi-style server echoes a sender's own message back to them, so a
+     * locally-appended copy (for instant shade feedback) and the echo would both
+     * land in the history. The echo is skipped when the last entry is the same
+     * self-sent text from within a few seconds.
+     */
+    private fun isSelfEchoAlreadyInHistory(payload: ChatMessagePayload): Boolean {
+        val selfId = _userId.value ?: return false
+        synchronized(chatHistoryLock) {
+            val last = chatNotificationHistory.lastOrNull() ?: return false
+            return last.userId == selfId &&
+                last.message == payload.message &&
+                kotlin.math.abs(last.timestamp - payload.timestamp) < 5000L
+        }
+    }
+
+    // Internally guarded by a POST_NOTIFICATIONS check — no annotation so that
+    // unguarded internal callers (message handler, reply receiver) stay lint-clean.
+    private fun postChatNotification(alert: Boolean) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+        val history = synchronized(chatHistoryLock) { chatNotificationHistory.toList() }
+        if (history.isEmpty()) return
+
+        val selfId = _userId.value
+        val me = Person.Builder()
+            .setName(storedUsername ?: context.getString(R.string.listen_together_chat_you))
+            .setKey("self:$selfId")
+            .build()
+        val style = NotificationCompat.MessagingStyle(me)
+        history.takeLast(8).forEach { msg ->
+            val sender = if (msg.userId == selfId) {
+                me
+            } else {
+                Person.Builder()
+                    .setName(msg.username)
+                    .setKey(msg.userId.ifBlank { msg.username })
+                    .build()
+            }
+            style.addMessage(
+                NotificationCompat.MessagingStyle.Message(msg.message.take(300), msg.timestamp, sender)
+            )
+        }
+
+        val replyRemoteInput = RemoteInput.Builder(KEY_TEXT_REPLY)
+            .setLabel(context.getString(R.string.listen_together_chat_reply_label))
+            .build()
+        val replyIntent = Intent(context, ListenTogetherActionReceiver::class.java).apply {
+            action = ACTION_REPLY_CHAT
+            putExtra(EXTRA_NOTIFICATION_ID, CHAT_NOTIFICATION_ID)
+        }
+        // FLAG_MUTABLE is required: the system attaches the RemoteInput results.
+        val replyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            CHAT_NOTIFICATION_ID,
+            replyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+
+        val contentIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            putExtra("navigate_to", "listen_together/chat")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val contentPendingIntent = contentIntent?.let {
+            PendingIntent.getActivity(
+                context,
+                CHAT_NOTIFICATION_ID + 1,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+
+        val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .setContentTitle(context.getString(R.string.listen_together))
+            .setStyle(style)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(!alert)
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    0,
+                    context.getString(R.string.listen_together_chat_reply_label),
+                    replyPendingIntent
+                ).addRemoteInput(replyRemoteInput).build()
+            )
+        contentPendingIntent?.let { builder.setContentIntent(it) }
+
+        NotificationManagerCompat.from(context).notify(CHAT_NOTIFICATION_ID, builder.build())
+        chatNotificationActive = true
+    }
+
+    private fun maybeNotifyChatMessage(payload: ChatMessagePayload) {
+        try {
+            val selfId = _userId.value
+            if (payload.userId == selfId) {
+                // Own echo — keep the shade conversation current without alerting.
+                if (chatNotificationActive) postChatNotification(alert = false)
+                return
+            }
+            if (!isInRoom) return
+            if (payload.username in _blockedUsernames.value) return
+            if (_chatScreenVisible.value) return
+            if (!AppSettings.listenTogetherChatNotifications.value) return
+            postChatNotification(alert = true)
+        } catch (e: Exception) {
+            log(LogLevel.WARNING, "Failed to show chat notification", e.message)
+        }
+    }
+
+    /** Cancels the conversation notification (chat opened / room left). */
+    fun cancelChatNotification() {
+        chatNotificationActive = false
+        try {
+            NotificationManagerCompat.from(context).cancel(CHAT_NOTIFICATION_ID)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun clearChatNotificationState() {
+        synchronized(chatHistoryLock) { chatNotificationHistory.clear() }
+        cancelChatNotification()
+    }
+
+    /**
+     * Routes a reply typed directly into the notification shade into the room's
+     * chat. Called from ListenTogetherActionReceiver on the main thread.
+     */
+    fun handleChatReplyFromNotification(rawText: CharSequence?) {
+        val text = rawText?.toString()?.trim().orEmpty()
+        if (text.isEmpty()) {
+            // Consume the empty RemoteInput so the shade doesn't keep the
+            // "reply" spinner; re-post the current conversation state.
+            if (chatNotificationActive) postChatNotification(alert = false)
+            return
+        }
+        if (!isInRoom || codec.format == MessageFormat.PROTOBUF) {
+            postChatReplyFailedNotification()
+            return
+        }
+        sendChatMessage(text)
+    }
+
+    private fun postChatReplyFailedNotification() {
+        try {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                return
+            }
+            val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification_logo)
+                .setContentTitle(context.getString(R.string.listen_together))
+                .setContentText(context.getString(R.string.listen_together_chat_reply_failed))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+            NotificationManagerCompat.from(context).notify(CHAT_NOTIFICATION_ID, builder.build())
+        } catch (_: Exception) {
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
+    private fun showSuggestionNotification(payload: SuggestionReceivedPayload) {
+        val notifId = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
+
+        roomNotificationIds.trackSuggestion(payload.suggestionId, notifId)
+
+        val approveIntent = Intent(context, ListenTogetherActionReceiver::class.java).apply {
+            action = ACTION_APPROVE_SUGGESTION
+            putExtra(EXTRA_SUGGESTION_ID, payload.suggestionId)
+            putExtra(EXTRA_NOTIFICATION_ID, notifId)
+        }
+        val rejectIntent = Intent(context, ListenTogetherActionReceiver::class.java).apply {
+            action = ACTION_REJECT_SUGGESTION
+            putExtra(EXTRA_SUGGESTION_ID, payload.suggestionId)
+            putExtra(EXTRA_NOTIFICATION_ID, notifId)
+        }
+
+        val approvePI = PendingIntent.getBroadcast(context, payload.suggestionId.hashCode(), approveIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val rejectPI = PendingIntent.getBroadcast(context, payload.suggestionId.hashCode().inv(), rejectIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val content = context.getString(R.string.listen_together_suggestion_received, payload.fromUsername, payload.trackInfo.title)
+
+        val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_logo)
+            .setContentTitle(context.getString(R.string.listen_together))
+            .setContentText(content)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(0, context.getString(R.string.approve), approvePI)
+            .addAction(0, context.getString(R.string.reject), rejectPI)
+
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            NotificationManagerCompat.from(context).notify(notifId, builder.build())
+        }
+    }
+
+    private fun handleDisconnect() {
+        pingJob?.cancel()
+        pingJob = null
+
+        // Don't clear room state - we might reconnect
+        // Only update connection state
+        _connectionState.value = ConnectionState.DISCONNECTED
+        _pendingJoinRequests.value = emptyList()
+        _bufferingUsers.value = emptyList()
+
+        // If we have a session, try to reconnect
+        if (sessionToken != null && _roomState.value != null) {
+            log(LogLevel.INFO, "Connection lost, will attempt to reconnect")
+            handleConnectionFailure(Exception("Connection lost"))
+        } else {
+            scope.launch { _events.emit(ListenTogetherEvent.Disconnected) }
+        }
+    }
+
+    private fun handleConnectionFailure(t: Throwable) {
+        pingJob?.cancel()
+        pingJob = null
+
+        // Always try to reconnect if we have a session token or pending action
+        val shouldReconnect = sessionToken != null || _roomState.value != null || pendingAction != null
+
+        if (!isNetworkAvailable) {
+            roomActionDeadline.cancel()
+            pendingAction = null
+            lastRoomAction = null
+            log(LogLevel.WARNING, "Connection failure, waiting for network", t.message)
+            _connectionState.value = ConnectionState.DISCONNECTED
+            return
+        }
+
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && shouldReconnect) {
+            reconnectAttempts++
+            _connectionState.value = ConnectionState.RECONNECTING
+
+            val delayMs = calculateBackoffDelay(reconnectAttempts)
+            val delaySeconds = delayMs / 1000
+
+            log(LogLevel.INFO, "Attempting reconnect",
+                "Attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS, waiting ${delaySeconds}s, reason: ${t.message}")
+
+            reconnectJob?.cancel()
+            reconnectJob = scope.launch {
+                _events.emit(ListenTogetherEvent.Reconnecting(reconnectAttempts, MAX_RECONNECT_ATTEMPTS))
+                delay(delayMs)
+
+                // Check if we're still supposed to be reconnecting
+                if (_connectionState.value == ConnectionState.RECONNECTING || _connectionState.value == ConnectionState.DISCONNECTED) {
+                    log(LogLevel.INFO, "Reconnecting after backoff", "Delay was ${delaySeconds}s")
+                    connect()
+                }
+            }
+        } else {
+            roomActionDeadline.cancel()
+            pendingAction = null
+            lastRoomAction = null
+            _connectionState.value = ConnectionState.ERROR
+
+            // If we had a session, notify user but keep session data for manual retry
+            if (sessionToken != null) {
+                log(LogLevel.ERROR, "Reconnection failed",
+                    "Max attempts reached, but session preserved for manual reconnect")
+                scope.launch {
+                    _events.emit(ListenTogetherEvent.ConnectionError(
+                        "Connection failed after $MAX_RECONNECT_ATTEMPTS attempts. ${t.message ?: "Unknown error"}"
+                    ))
+                }
+            } else {
+                // No session, so clear everything
+                sessionToken = null
+                storedRoomCode = null
+                storedUsername = null
+                _roomState.value = null
+                _role.value = RoomRole.NONE
+                clearPersistedSession()
+                roomNotificationIds.drainAndCancel(context)
+
+                scope.launch {
+                    _events.emit(ListenTogetherEvent.ConnectionError(t.message ?: "Unknown error"))
+                }
+            }
+        }
+    }
+
+    private fun handleMessage(data: ByteArray) {
+        log(LogLevel.DEBUG, "Received message", "${data.size} bytes")
+
+        try {
+            // Detect format and auto-upgrade codec if needed
+            val detectedFormat = MessageCodec.detectMessageFormat(data)
+            if (detectedFormat == MessageFormat.PROTOBUF && codec.format == MessageFormat.JSON) {
+                codec.format = MessageFormat.PROTOBUF
+                codec.compressionEnabled = true
+                log(LogLevel.INFO, "Upgraded to Protobuf", "with compression")
+            }
+
+            // Decode message
+            val (msgType, payloadBytes) = codec.decode(data)
+
+            when (msgType) {
+                MessageTypes.ROOM_CREATED -> {
+                    val payload = roomActionDeadline.completeWithPayload(
+                        codec.decodePayload(msgType, payloadBytes, detectedFormat) as? RoomCreatedPayload,
+                    ) ?: run {
+                        failPendingConnection(context.getString(R.string.listen_together_invalid_room_response))
+                        return
+                    }
+                    lastRoomAction = null
+                    _userId.value = payload.userId
+                    _role.value = RoomRole.HOST
+                    sessionToken = payload.sessionToken
+                    storedRoomCode = payload.roomCode
+                    wasHost = true
+                    sessionStartTime = System.currentTimeMillis()
+
+                    val hostAvatarIndex = AppSettings.listenTogetherAvatarIndex.value
+                    _roomState.value = RoomState(
+                        roomCode = payload.roomCode,
+                        hostId = payload.userId,
+                        users = listOf(UserInfo(payload.userId, storedUsername ?: "", true, avatarIndex = hostAvatarIndex)),
+                        isPlaying = false,
+                        position = 0,
+                        lastUpdate = System.currentTimeMillis(),
+                        volume = 1f
+                    )
+
+                    // Save session to persistent storage
+                    savePersistedSession()
+
+                    acquireWakeLock() // Keep connection alive while in room
+                    log(LogLevel.INFO, "Room created", "Code: ${payload.roomCode}")
+                    scope.launch { _events.emit(ListenTogetherEvent.RoomCreated(payload.roomCode, payload.userId)) }
+                    // Global toast for room creation so the host sees it regardless of UI
+                    if (AppSettings.listenTogetherInAppNotifications.value) {
+                        scope.launch(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.listen_together_room_created, payload.roomCode),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+
+                MessageTypes.JOIN_REQUEST -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? JoinRequestPayload ?: return
+
+                    // Check if user is blocked
+                    if (isUserBlocked(payload.username)) {
+                        log(LogLevel.INFO, "Join request from blocked user ignored", "User: ${payload.username}")
+                        // Silently reject blocked users
+                        rejectJoin(payload.userId, "You are blocked")
+                        return
+                    }
+
+                    _pendingJoinRequests.value += payload
+                    log(LogLevel.INFO, "Join request received", "User: ${payload.username}")
+
+                    // Check if auto-approval is enabled
+                    val autoApprovalEnabled = AppSettings.listenTogetherAutoApproval.value
+
+                    if (_role.value == RoomRole.HOST) {
+                        if (autoApprovalEnabled) {
+                            // Automatically approve the join request
+                            log(LogLevel.INFO, "Auto-approving join request", "User: ${payload.username}")
+                            approveJoin(payload.userId)
+                        } else {
+                            // Notify host with Approve/Reject actions
+                            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                                showJoinRequestNotification(payload)
+                            }
+                        }
+                    }
+                    scope.launch { _events.emit(ListenTogetherEvent.JoinRequestReceived(payload.userId, payload.username)) }
+                }
+
+                MessageTypes.JOIN_APPROVED -> {
+                    val payload = roomActionDeadline.completeWithPayload(
+                        codec.decodePayload(msgType, payloadBytes, detectedFormat) as? JoinApprovedPayload,
+                    ) ?: run {
+                        failPendingConnection(context.getString(R.string.listen_together_invalid_room_response))
+                        return
+                    }
+                    lastRoomAction = null
+                    _userId.value = payload.userId
+                    _role.value = RoomRole.GUEST
+                    sessionToken = payload.sessionToken
+                    storedRoomCode = payload.roomCode
+                    wasHost = false
+                    sessionStartTime = System.currentTimeMillis()
+
+                    _roomState.value = payload.state
+
+                    // Save session to persistent storage
+                    savePersistedSession()
+
+                    acquireWakeLock() // Keep connection alive while in room
+                    log(LogLevel.INFO, "Joined room", "Code: ${payload.roomCode}")
+                    scope.launch { _events.emit(ListenTogetherEvent.JoinApproved(payload.roomCode, payload.userId, payload.state)) }
+                }
+
+                MessageTypes.JOIN_REJECTED -> {
+                    val payload = roomActionDeadline.completeWithPayload(
+                        codec.decodePayload(msgType, payloadBytes, detectedFormat) as? JoinRejectedPayload,
+                    ) ?: run {
+                        failPendingConnection(context.getString(R.string.listen_together_invalid_room_response))
+                        return
+                    }
+                    lastRoomAction = null
+                    log(LogLevel.WARNING, "Join rejected", payload.reason)
+                    scope.launch { _events.emit(ListenTogetherEvent.JoinRejected(payload.reason)) }
+                }
+
+                MessageTypes.USER_JOINED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? UserJoinedPayload ?: return
+                    _roomState.value = _roomState.value?.copy(
+                        users = _roomState.value!!.users + UserInfo(payload.userId, payload.username, false, avatarIndex = payload.avatarIndex)
+                    )
+                    _pendingJoinRequests.value = _pendingJoinRequests.value.filter { it.userId != payload.userId }
+
+                    // Dismiss notification if it exists
+                    roomNotificationIds.forgetJoinRequest(payload.userId)?.let { notifId ->
+                        NotificationManagerCompat.from(context).cancel(notifId)
+                    }
+
+                    log(LogLevel.INFO, "User joined", payload.username)
+                    scope.launch { _events.emit(ListenTogetherEvent.UserJoined(payload.userId, payload.username)) }
+                }
+
+                MessageTypes.USER_LEFT -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? UserLeftPayload ?: return
+                    _roomState.value = _roomState.value?.copy(
+                        users = _roomState.value!!.users.filter { it.userId != payload.userId }
+                    )
+                    log(LogLevel.INFO, "User left", payload.username)
+                    scope.launch { _events.emit(ListenTogetherEvent.UserLeft(payload.userId, payload.username)) }
+                }
+
+                MessageTypes.HOST_CHANGED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? HostChangedPayload ?: return
+                    _roomState.value = _roomState.value?.copy(
+                        hostId = payload.newHostId,
+                        users = _roomState.value!!.users.map {
+                            it.copy(isHost = it.userId == payload.newHostId)
+                        }
+                    )
+                    if (payload.newHostId == _userId.value) {
+                        _role.value = RoomRole.HOST
+                    } else if (_role.value == RoomRole.HOST) {
+                        // Lost host role
+                        _role.value = RoomRole.GUEST
+                    }
+                    log(LogLevel.INFO, "Host changed", "New host: ${payload.newHostName}")
+                    scope.launch { _events.emit(ListenTogetherEvent.HostChanged(payload.newHostId, payload.newHostName)) }
+                }
+
+                MessageTypes.KICKED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? KickedPayload ?: return
+                    log(LogLevel.WARNING, "Kicked from room", payload.reason)
+                    releaseWakeLock() // Release wake lock when kicked
+                    sessionToken = null
+                    _roomState.value = null
+                    _role.value = RoomRole.NONE
+                    clearChatNotificationState()
+                    roomNotificationIds.drainAndCancel(context)
+                    scope.launch { _events.emit(ListenTogetherEvent.Kicked(payload.reason)) }
+                }
+
+                MessageTypes.SYNC_PLAYBACK -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? PlaybackActionPayload ?: return
+                    log(LogLevel.DEBUG, "Playback sync", "Action: ${payload.action}")
+
+                    // Update room state based on action
+                    when (payload.action) {
+                        PlaybackActions.PLAY -> {
+                            _roomState.value = _roomState.value?.copy(
+                                isPlaying = true,
+                                position = payload.position ?: _roomState.value!!.position
+                            )
+                        }
+                        PlaybackActions.PAUSE -> {
+                            _roomState.value = _roomState.value?.copy(
+                                isPlaying = false,
+                                position = payload.position ?: _roomState.value!!.position
+                            )
+                        }
+                        PlaybackActions.SEEK -> {
+                            _roomState.value = _roomState.value?.copy(
+                                position = payload.position ?: _roomState.value!!.position
+                            )
+                        }
+                        PlaybackActions.CHANGE_TRACK -> {
+                            _roomState.value = _roomState.value?.copy(
+                                currentTrack = payload.trackInfo,
+                                isPlaying = false,
+                                position = 0
+                            )
+                        }
+                        PlaybackActions.QUEUE_ADD -> {
+                            val ti = payload.trackInfo
+                            if (ti != null) {
+                                val currentQueue = _roomState.value?.queue ?: emptyList()
+                                _roomState.value = _roomState.value?.copy(
+                                    queue = if (payload.insertNext == true) listOf(ti) + currentQueue else currentQueue + ti
+                                )
+                            }
+                        }
+                        PlaybackActions.QUEUE_REMOVE -> {
+                            val id = payload.trackId
+                            if (!id.isNullOrEmpty()) {
+                                val currentQueue = _roomState.value?.queue ?: emptyList()
+                                _roomState.value = _roomState.value?.copy(
+                                    queue = currentQueue.filter { it.id != id }
+                                )
+                            }
+                        }
+                        PlaybackActions.QUEUE_CLEAR -> {
+                            _roomState.value = _roomState.value?.copy(queue = emptyList())
+                        }
+                        PlaybackActions.SET_VOLUME -> {
+                            val vol = payload.volume
+                            if (vol != null) {
+                                _roomState.value = _roomState.value?.copy(volume = vol.coerceIn(0f, 1f))
+                            }
+                        }
+                    }
+
+                    scope.launch { _events.emit(ListenTogetherEvent.PlaybackSync(payload)) }
+                }
+
+                MessageTypes.BUFFER_WAIT -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? BufferWaitPayload ?: return
+                    _bufferingUsers.value = payload.waitingFor
+                    log(LogLevel.DEBUG, "Waiting for buffering", "Users: ${payload.waitingFor.size}")
+                    scope.launch { _events.emit(ListenTogetherEvent.BufferWait(payload.trackId, payload.waitingFor)) }
+                }
+
+                MessageTypes.BUFFER_COMPLETE -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? BufferCompletePayload ?: return
+                    _bufferingUsers.value = emptyList()
+                    log(LogLevel.INFO, "All users buffered", "Track: ${payload.trackId}")
+                    scope.launch { _events.emit(ListenTogetherEvent.BufferComplete(payload.trackId)) }
+                }
+
+                MessageTypes.SYNC_STATE -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? SyncStatePayload ?: return
+                    log(LogLevel.INFO, "Sync state received", "Playing: ${payload.isPlaying}, Position: ${payload.position}")
+                    scope.launch { _events.emit(ListenTogetherEvent.SyncStateReceived(payload)) }
+                }
+
+                MessageTypes.SUGGESTION_RECEIVED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? SuggestionReceivedPayload ?: return
+                    // Only host should receive suggestions
+                    if (_role.value == RoomRole.HOST) {
+                        // Check if user is blocked
+                        if (isUserBlocked(payload.fromUsername)) {
+                            log(LogLevel.INFO, "Suggestion from blocked user ignored", "User: ${payload.fromUsername}")
+                            return
+                        }
+
+                        // Auto-approved suggestions take effect right away (the suggesting
+                        // guest has usually already changed their local track), while
+                        // manually approved ones are enqueued for the host to time.
+                        val suggestionAutoApprove =
+                            AppSettings.listenTogetherSuggestionAutoApprove.value
+                        if (suggestionAutoApprove) {
+                            log(LogLevel.INFO, "Auto-approving suggestion", "${payload.fromUsername}: ${payload.trackInfo.title}")
+                            sendMessage(MessageTypes.APPROVE_SUGGESTION, ApproveSuggestionPayload(payload.suggestionId))
+                            scope.launch {
+                                _events.emit(ListenTogetherEvent.LocalSuggestionApproved(payload, playImmediately = true))
+                            }
+                            return
+                        }
+
+                        _pendingSuggestions.value += payload
+                        log(LogLevel.INFO, "Suggestion received", "${payload.fromUsername}: ${payload.trackInfo.title}")
+                        // Show immediate in-app Toast so the host always sees it
+                        // (gated by the in-app notifications preference).
+                        if (AppSettings.listenTogetherInAppNotifications.value) {
+                            scope.launch(Dispatchers.Main) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(
+                                        R.string.listen_together_suggestion_toast,
+                                        payload.fromUsername,
+                                        payload.trackInfo.title,
+                                    ),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                        // Also try the actionable system notification if permission granted
+                        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                            showSuggestionNotification(payload)
+                        }
+                    }
+                }
+
+                MessageTypes.SUGGESTION_APPROVED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? SuggestionApprovedPayload ?: return
+                    log(LogLevel.INFO, "Suggestion approved", payload.trackInfo?.title ?: payload.suggestionId)
+
+                    // Dismiss notification if it exists (for host who approved via another device/modal)
+                    roomNotificationIds.forgetSuggestion(payload.suggestionId)?.let { notifId ->
+                        NotificationManagerCompat.from(context).cancel(notifId)
+                    }
+
+                    // For guests, optionally notify via events; UI can react if needed
+                }
+
+                MessageTypes.SUGGESTION_REJECTED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? SuggestionRejectedPayload ?: return
+                    log(LogLevel.WARNING, "Suggestion rejected", payload.reason ?: "")
+
+                    // Dismiss notification if it exists
+                    roomNotificationIds.forgetSuggestion(payload.suggestionId)?.let { notifId ->
+                        NotificationManagerCompat.from(context).cancel(notifId)
+                    }
+
+                    // Let the manager retry the same song later: the local one-shot dedup would
+                    // otherwise swallow every further suggestion of a track the host refused.
+                    scope.launch {
+                        _events.emit(ListenTogetherEvent.SuggestionRejected(payload.suggestionId, payload.reason))
+                    }
+                }
+
+                MessageTypes.ERROR -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? ErrorPayload ?: return
+                    if (payload.code != "invalid_message") {
+                        roomActionDeadline.complete()
+                        pendingAction = null
+                        lastRoomAction = null
+                    }
+                    log(LogLevel.ERROR, "Server error", "${payload.code}: ${payload.message}")
+
+                    // Handle specific error cases
+                    when (payload.code) {
+                        "invalid_message" -> {
+                            // The server could not parse our frame — typically a JSON
+                            // create/join sent to a protobuf-only server.
+                            maybeRetryRoomActionAfterProtocolUpgrade()
+                        }
+                        "session_not_found" -> {
+                            // Session expired on server, try to rejoin the room
+                            if (storedRoomCode != null && storedUsername != null && !wasHost) {
+                                log(LogLevel.WARNING, "Session expired on server",
+                                    "Attempting automatic rejoin to room: $storedRoomCode")
+                                // Try rejoining as a guest
+                                scope.launch {
+                                    delay(500) // Small delay before rejoin attempt
+                                    joinRoom(storedRoomCode!!, storedUsername!!)
+                                }
+                            } else if (storedRoomCode != null && storedUsername != null) {
+                                // Host session expired - would need to create new room
+                                log(LogLevel.WARNING, "Host session expired",
+                                    "Room: $storedRoomCode - manual intervention may be needed")
+                                clearPersistedSession()
+                                sessionToken = null
+                            } else {
+                                clearPersistedSession()
+                                sessionToken = null
+                            }
+                        }
+                        else -> {}
+                    }
+
+                    val message =
+                        if (payload.code == "host_not_allowed") {
+                            context.getString(R.string.listen_together_host_not_allowed)
+                        } else {
+                            payload.message
+                        }
+                    scope.launch { _events.emit(ListenTogetherEvent.ServerError(payload.code, message)) }
+                }
+
+                MessageTypes.PONG -> {
+                    log(LogLevel.DEBUG, "Pong received")
+                }
+
+                MessageTypes.RECONNECTED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? ReconnectedPayload ?: return
+                    _userId.value = payload.userId
+                    _role.value = if (payload.isHost) RoomRole.HOST else RoomRole.GUEST
+                    _roomState.value = payload.state
+
+                    // Update persisted session info
+                    wasHost = payload.isHost
+                    sessionStartTime = System.currentTimeMillis()
+                    savePersistedSession()
+
+                    // Reset reconnection attempts on successful reconnection
+                    reconnectAttempts = 0
+
+                    acquireWakeLock() // Re-acquire wake lock after reconnection
+                    log(LogLevel.INFO, "Successfully reconnected to room",
+                        "Code: ${payload.roomCode}, isHost: ${payload.isHost}, attempt was $reconnectAttempts")
+                    scope.launch { _events.emit(ListenTogetherEvent.Reconnected(payload.roomCode, payload.userId, payload.state, payload.isHost)) }
+                }
+
+                MessageTypes.USER_RECONNECTED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? UserReconnectedPayload ?: return
+                    // Mark user as connected in the room state
+                    _roomState.value = _roomState.value?.copy(
+                        users = _roomState.value!!.users.map { user ->
+                            if (user.userId == payload.userId) user.copy(isConnected = true) else user
+                        }
+                    )
+                    log(LogLevel.INFO, "User reconnected", payload.username)
+                    scope.launch { _events.emit(ListenTogetherEvent.UserReconnected(payload.userId, payload.username)) }
+                }
+
+                MessageTypes.USER_DISCONNECTED -> {
+                    val payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? UserDisconnectedPayload ?: return
+                    // Mark user as disconnected in the room state
+                    _roomState.value = _roomState.value?.copy(
+                        users = _roomState.value!!.users.map { user ->
+                            if (user.userId == payload.userId) user.copy(isConnected = false) else user
+                        }
+                    )
+                    log(LogLevel.INFO, "User temporarily disconnected", payload.username)
+                    scope.launch { _events.emit(ListenTogetherEvent.UserDisconnected(payload.userId, payload.username)) }
+                }
+
+                MessageTypes.CHAT -> {
+                    var payload = codec.decodePayload(msgType, payloadBytes, detectedFormat) as? ChatMessagePayload ?: return
+
+                    // Custom profile pictures piggyback on the chat relay: a
+                    // magic-prefixed base64 payload that never renders as a chat bubble.
+                    ListenTogetherAvatar.decodeAvatarBroadcast(payload.message)?.let { avatarBytes ->
+                        _customAvatars.value = _customAvatars.value + (payload.userId to avatarBytes)
+                        log(LogLevel.INFO, "Custom avatar received", "From: ${payload.username} (${avatarBytes.size} bytes)")
+                        return
+                    }
+
+                    // Reactions / edits / deletes / pins / typing indicators ride the
+                    // same relay with their own magic envelope; never chat bubbles.
+                    decodeChatControl(payload.message)?.let { control ->
+                        log(
+                            LogLevel.DEBUG,
+                            "Chat control received",
+                            "${control.action} from ${payload.username}",
+                        )
+                        scope.launch {
+                            _events.emit(ListenTogetherEvent.ChatControlReceived(payload.userId, payload.username, control))
+                        }
+                        return
+                    }
+
+                    if (payload.message.startsWith("\u200B[RPLY:")) {
+                        try {
+                            val endIdx = payload.message.indexOf("]\u200B")
+                            if (endIdx != -1) {
+                                val encoded = payload.message.substring(7, endIdx)
+                                val decoded = String(Base64.decode(encoded, Base64.NO_WRAP))
+                                val parts = decoded.split("|", limit = 2)
+                                if (parts.size == 2) {
+                                    val replyTo = RepliedMessage(parts[0], parts[1])
+                                    val actualMessage = payload.message.substring(endIdx + 2)
+                                    payload = payload.copy(message = actualMessage, replyTo = replyTo)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            log(LogLevel.WARNING, "Failed to decode embedded reply", e.message)
+                        }
+                    }
+
+                    // A shared song rides in an [LTS:base64 TrackInfo] envelope in
+                    // front of the (possibly empty) message text.
+                    decodeSharedTrack(payload.message)?.let { (track, remainingText) ->
+                        payload = payload.copy(message = remainingText, sharedTrack = track)
+                    }
+
+                    log(LogLevel.INFO, "Chat message received", "From: ${payload.username}")
+
+                    val isSelfEcho = payload.userId == _userId.value
+                    if (!isSelfEcho || !isSelfEchoAlreadyInHistory(payload)) {
+                        appendChatNotificationHistory(payload)
+                    }
+                    maybeNotifyChatMessage(payload)
+
+                    scope.launch { _events.emit(ListenTogetherEvent.ChatMessageReceived(payload)) }
+                }
+
+                else -> {
+                    log(LogLevel.WARNING, "Unknown message type", msgType)
+                }
+            }
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Error parsing message", e.message)
+        }
+    }
+
+    private inline fun <reified T> sendMessage(type: String, payload: T?) {
+        try {
+            val data = codec.encode(type, payload)
+            log(LogLevel.DEBUG, "Sending message", "$type (${codec.format.name})")
+
+            val success = webSocket?.send(okio.ByteString.of(*data)) ?: false
+            if (!success) {
+                log(LogLevel.ERROR, "Failed to send message", type)
+            }
+        } catch (e: Exception) {
+            log(LogLevel.ERROR, "Error encoding message", "$type: ${e.message}")
+        }
+    }
+
+    private fun sendMessageNoPayload(type: String) {
+        sendMessage<Unit>(type, null)
+    }
+
+    // Public API methods
+
+    /**
+     * Create a new listening room.
+     * If not connected, will queue the action and connect first.
+     */
+    fun createRoom(username: String) {
+        roomActionDeadline.startIfIdle(ROOM_ACTION_DEADLINE_MS) {
+            failPendingConnection(context.getString(R.string.listen_together_room_request_timeout))
+        } ?: return
+        // Clear any existing session to ensure we create a new room instead of reconnecting
+        clearPersistedSession()
+        sessionToken = null
+        storedRoomCode = null
+        wasHost = false
+
+        storedUsername = username
+
+        if (_connectionState.value == ConnectionState.CONNECTED) {
+            executeRoomAction(PendingAction.CreateRoom(username))
+        } else {
+            log(LogLevel.INFO, "Not connected, queueing create room action")
+            pendingAction = PendingAction.CreateRoom(username)
+            if (_connectionState.value == ConnectionState.DISCONNECTED ||
+                _connectionState.value == ConnectionState.ERROR) {
+                connect()
+            }
+            // If CONNECTING or RECONNECTING, the action will be executed when connected
+        }
+    }
+
+    /**
+     * Join an existing room.
+     * If not connected, will queue the action and connect first.
+     * Returns false, without touching the current session, while another room request is still
+     * waiting for its answer.
+     */
+    fun joinRoom(roomCode: String, username: String): Boolean {
+        roomActionDeadline.startIfIdle(ROOM_ACTION_DEADLINE_MS) {
+            failPendingConnection(context.getString(R.string.listen_together_room_request_timeout))
+        } ?: run {
+            log(LogLevel.WARNING, "Join for room $roomCode ignored: another room request is in progress")
+            return false
+        }
+        // Clear any existing session to ensure we join the new room instead of reconnecting
+        clearPersistedSession()
+        sessionToken = null
+        storedRoomCode = null
+        wasHost = false
+
+        storedUsername = username
+
+        if (_connectionState.value == ConnectionState.CONNECTED) {
+            executeRoomAction(PendingAction.JoinRoom(roomCode, username))
+        } else {
+            log(LogLevel.INFO, "Not connected, queueing join room action")
+            pendingAction = PendingAction.JoinRoom(roomCode, username)
+            if (_connectionState.value == ConnectionState.DISCONNECTED ||
+                _connectionState.value == ConnectionState.ERROR) {
+                connect()
+            }
+            // If CONNECTING or RECONNECTING, the action will be executed when connected
+        }
+        return true
+    }
+
+    /**
+     * Leave the current room
+     */
+    fun leaveRoom() {
+        roomActionDeadline.cancel()
+        sendMessageNoPayload(MessageTypes.LEAVE_ROOM)
+
+        // Clear session info on intentional leave
+        sessionToken = null
+        storedRoomCode = null
+        storedUsername = null
+        pendingAction = null
+        _roomState.value = null
+        _role.value = RoomRole.NONE
+        _userId.value = null
+        _pendingJoinRequests.value = emptyList()
+        _bufferingUsers.value = emptyList()
+
+        clearChatNotificationState()
+        roomNotificationIds.drainAndCancel(context)
+
+        // Clear from persistent storage
+        clearPersistedSession()
+
+        releaseWakeLock()
+    }
+
+    /**
+     * Approve a join request (host only)
+     */
+    fun approveJoin(userId: String) {
+        if (_role.value != RoomRole.HOST) {
+            log(LogLevel.ERROR, "Cannot approve join", "Not host")
+            return
+        }
+        sendMessage(MessageTypes.APPROVE_JOIN, ApproveJoinPayload(userId))
+
+        // Dismiss notification immediately when approved from UI
+        roomNotificationIds.forgetJoinRequest(userId)?.let { notifId ->
+            NotificationManagerCompat.from(context).cancel(notifId)
+        }
+    }
+
+    /**
+     * Reject a join request (host only)
+     */
+    fun rejectJoin(userId: String, reason: String? = null) {
+        if (_role.value != RoomRole.HOST) {
+            log(LogLevel.ERROR, "Cannot reject join", "Not host")
+            return
+        }
+        sendMessage(MessageTypes.REJECT_JOIN, RejectJoinPayload(userId, reason))
+        _pendingJoinRequests.value = _pendingJoinRequests.value.filter { it.userId != userId }
+
+        // Dismiss notification immediately when rejected from UI
+        roomNotificationIds.forgetJoinRequest(userId)?.let { notifId ->
+            NotificationManagerCompat.from(context).cancel(notifId)
+        }
+    }
+
+    /**
+     * Kick a user from the room (host only)
+     */
+    fun kickUser(userId: String, reason: String? = null) {
+        if (_role.value != RoomRole.HOST) {
+            log(LogLevel.ERROR, "Cannot kick user", "Not host")
+            return
+        }
+        sendMessage(MessageTypes.KICK_USER, KickUserPayload(userId, reason))
+    }
+
+    /**
+     * Transfer host role to another user (host only)
+     */
+    fun transferHost(newHostId: String) {
+        if (_role.value != RoomRole.HOST) {
+            log(LogLevel.ERROR, "Cannot transfer host", "Not host")
+            return
+        }
+        sendMessage(MessageTypes.TRANSFER_HOST, TransferHostPayload(newHostId))
+    }
+
+    /**
+     * Send a playback action (host only)
+     */
+    fun sendPlaybackAction(
+        action: String,
+        trackId: String? = null,
+        position: Long? = null,
+        trackInfo: TrackInfo? = null,
+        insertNext: Boolean? = null,
+        queue: List<TrackInfo>? = null,
+        queueTitle: String? = null,
+        volume: Float? = null
+    ) {
+        if (_role.value != RoomRole.HOST) {
+            log(LogLevel.ERROR, "Cannot control playback", "Not host")
+            return
+        }
+        sendMessage(
+            MessageTypes.PLAYBACK_ACTION,
+            PlaybackActionPayload(action, trackId, position, trackInfo, insertNext, queue, queueTitle, volume)
+        )
+    }
+
+    /**
+     * Send a chat message to the room, optionally carrying a shared track
+     */
+    fun sendChatMessage(
+        message: String,
+        replyTo: RepliedMessage? = null,
+        sharedTrack: TrackInfo? = null,
+    ) {
+        if (message.isBlank() && sharedTrack == null) {
+            return
+        }
+        if (!isInRoom) {
+            log(LogLevel.ERROR, "Cannot send chat message", "Not in room")
+            return
+        }
+
+        // metroserver (The Meowery) has no chat relay; its codec is protobuf-only
+        // and ChatPayload has no protobuf mapping. Surfaces as a toast (never a
+        // silent drop) — though the chat entry point is hidden on such servers.
+        if (codec.format == MessageFormat.PROTOBUF) {
+            log(LogLevel.WARNING, "Chat is not supported by this server", null)
+            scope.launch(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.listen_together_chat_unsupported_server),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            return
+        }
+
+        var finalMessage = message
+        sharedTrack?.let { track ->
+            val encoded = sharedTrackJson.encodeToString(TrackInfo.serializer(), track)
+            finalMessage =
+                SharedTrackEnvelopePrefix +
+                    Base64.encodeToString(encoded.toByteArray(), Base64.NO_WRAP) +
+                    SharedTrackEnvelopeSuffix +
+                    finalMessage
+        }
+        if (replyTo != null) {
+            val metadata = "${replyTo.username}|${replyTo.message}"
+            val encoded = Base64.encodeToString(metadata.toByteArray(), Base64.NO_WRAP)
+            finalMessage = "\u200B[RPLY:$encoded]\u200B$finalMessage"
+        }
+
+        sendMessage(MessageTypes.CHAT, ChatPayload(finalMessage, replyTo))
+
+        // Local echo for the notification shade's conversation (the server's own
+        // echo is deduped in the CHAT branch); re-post silently so a reply sent
+        // straight from the shade appears there immediately.
+        appendChatNotificationHistory(
+            ChatMessagePayload(
+                userId = _userId.value ?: "",
+                username = storedUsername ?: context.getString(R.string.listen_together_chat_you),
+                message = message,
+                timestamp = System.currentTimeMillis(),
+                replyTo = replyTo,
+                sharedTrack = sharedTrack,
+            )
+        )
+        if (chatNotificationActive) postChatNotification(alert = false)
+    }
+
+    /**
+     * Sends a reactions/edit/delete/pin/typing control event over the chat relay.
+     * Control frames never enter any local history — the sender applies the local
+     * effect itself (idempotently) and ignores its own server echo.
+     */
+    fun sendChatControl(event: ChatControlEvent) {
+        if (!isInRoom) return
+        if (codec.format == MessageFormat.PROTOBUF) {
+            log(LogLevel.WARNING, "Chat controls are not supported by this server", null)
+            return
+        }
+        val encoded = chatControlJson.encodeToString(ChatControlEvent.serializer(), event)
+        val wrapped = ChatControlEnvelopePrefix +
+            Base64.encodeToString(encoded.toByteArray(), Base64.NO_WRAP) +
+            ChatControlEnvelopeSuffix
+        sendMessage(MessageTypes.CHAT, ChatPayload(wrapped, null))
+    }
+
+    /** The username this client joined/created the room with, for chat-history bookkeeping. */
+    val currentUsername: String? get() = storedUsername
+
+    private val _customAvatars = kotlinx.coroutines.flow.MutableStateFlow<Map<String, ByteArray>>(emptyMap())
+
+    /** Custom profile pictures received from other room members, keyed by user id. */
+    val customAvatars: kotlinx.coroutines.flow.StateFlow<Map<String, ByteArray>> = _customAvatars.asStateFlow()
+
+    fun sendCustomAvatar(bytes: ByteArray) {
+        if (!isInRoom) {
+            log(LogLevel.ERROR, "Cannot broadcast custom avatar", "Not in room")
+            return
+        }
+        if (codec.format == MessageFormat.PROTOBUF) {
+            log(LogLevel.WARNING, "Custom avatars are not supported by this server", null)
+            return
+        }
+        sendMessage(
+            MessageTypes.CHAT,
+            ChatPayload(ListenTogetherAvatar.encodeAvatarBroadcast(bytes), null),
+        )
+    }
+    fun sendBufferReady(trackId: String) {
+        sendMessage(MessageTypes.BUFFER_READY, BufferReadyPayload(trackId))
+    }
+
+    /**
+     * Suggest a track to the host (guest only)
+     */
+    fun suggestTrack(trackInfo: TrackInfo) {
+        if (!isInRoom) {
+            log(LogLevel.ERROR, "Cannot suggest track", "Not in room")
+            return
+        }
+        if (_role.value == RoomRole.HOST) {
+            log(LogLevel.WARNING, "Host should not suggest tracks")
+            return
+        }
+        sendMessage(MessageTypes.SUGGEST_TRACK, SuggestTrackPayload(trackInfo))
+        scope.launch(Dispatchers.Main) {
+            Toast.makeText(context, context.getString(R.string.listen_together_suggestion_sent), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Approve a suggestion (host only)
+     */
+    fun approveSuggestion(suggestionId: String, playImmediately: Boolean = false) {
+        if (_role.value != RoomRole.HOST) {
+            log(LogLevel.ERROR, "Cannot approve suggestion", "Not host")
+            return
+        }
+
+        // Find the suggestion before removing it
+        val suggestion = _pendingSuggestions.value.find { it.suggestionId == suggestionId }
+
+        sendMessage(MessageTypes.APPROVE_SUGGESTION, ApproveSuggestionPayload(suggestionId))
+
+        // Emit internal event so manager can update local player
+        if (suggestion != null) {
+            scope.launch { _events.emit(ListenTogetherEvent.LocalSuggestionApproved(suggestion, playImmediately)) }
+        }
+
+        // Remove locally from pending list
+        _pendingSuggestions.value = _pendingSuggestions.value.filter { it.suggestionId != suggestionId }
+
+        // Dismiss notification immediately when approved from UI
+        roomNotificationIds.forgetSuggestion(suggestionId)?.let { notifId ->
+            NotificationManagerCompat.from(context).cancel(notifId)
+        }
+    }
+
+    /**
+     * Reject a suggestion (host only)
+     */
+    fun rejectSuggestion(suggestionId: String, reason: String? = null) {
+        if (_role.value != RoomRole.HOST) {
+            log(LogLevel.ERROR, "Cannot reject suggestion", "Not host")
+            return
+        }
+        sendMessage(MessageTypes.REJECT_SUGGESTION, RejectSuggestionPayload(suggestionId, reason))
+        _pendingSuggestions.value = _pendingSuggestions.value.filter { it.suggestionId != suggestionId }
+
+        // Dismiss notification immediately when rejected from UI
+        roomNotificationIds.forgetSuggestion(suggestionId)?.let { notifId ->
+            NotificationManagerCompat.from(context).cancel(notifId)
+        }
+    }
+
+    /**
+     * Request current playback state from server (for guest re-sync)
+     */
+    fun requestSync() {
+        if (_roomState.value == null) {
+            log(LogLevel.ERROR, "Cannot request sync", "Not in room")
+            return
+        }
+        log(LogLevel.INFO, "Requesting sync state from server")
+        sendMessageNoPayload(MessageTypes.REQUEST_SYNC)
+    }
+
+    /**
+     * Block a user permanently (internal list). Prevents their join requests and suggestions from appearing.
+     */
+    fun blockUser(username: String) {
+        val updated = _blockedUsernames.value.toMutableSet()
+        updated.add(username)
+        _blockedUsernames.value = updated
+
+        // Filter out blocked users from pending requests and suggestions
+        _pendingJoinRequests.value = _pendingJoinRequests.value
+            .filter { it.username !in _blockedUsernames.value }
+        _pendingSuggestions.value = _pendingSuggestions.value
+            .filter { it.fromUsername !in _blockedUsernames.value }
+
+        // Save to storage
+        scope.launch {
+            saveBlockedUsernames()
+        }
+
+        log(LogLevel.INFO, "User blocked", username)
+    }
+
+    /**
+     * Unblock a previously blocked user
+     */
+    fun unblockUser(username: String) {
+        val updated = _blockedUsernames.value.toMutableSet()
+        updated.remove(username)
+        _blockedUsernames.value = updated
+
+        // Save to storage
+        scope.launch {
+            saveBlockedUsernames()
+        }
+
+        log(LogLevel.INFO, "User unblocked", username)
+    }
+
+    /**
+     * Check if a user is blocked
+     */
+    fun isUserBlocked(username: String): Boolean = username in _blockedUsernames.value
+
+    /**
+     * Check if currently in a room
+     */
+    val isInRoom: Boolean
+        get() = _roomState.value != null
+
+    /**
+     * Check if current user is host
+     */
+    val isHost: Boolean
+        get() = _role.value == RoomRole.HOST
+
+    /**
+     * Force reconnection to server (useful for manual recovery)
+     */
+    fun forceReconnect() {
+        connectionDeadline.cancel()
+        roomActionDeadline.cancel()
+        pendingAction = null
+        lastRoomAction = null
+        reconnectJob?.cancel()
+        reconnectJob = null
+        log(LogLevel.INFO, "Forcing reconnection to server")
+        reconnectAttempts = 0  // Reset attempts to retry from start
+
+        if (webSocket != null) {
+            try {
+                webSocket?.close(1000, "Forcing reconnection")
+            } catch (e: Exception) {
+                log(LogLevel.DEBUG, "Error closing WebSocket", e.message)
+            }
+            webSocket = null
+        }
+
+        _connectionState.value = ConnectionState.DISCONNECTED
+
+        // Attempt connection with reset backoff
+        reconnectJob = scope.launch {
+            delay(500)
+            connect()
+        }
+    }
+
+    private fun failPendingConnection(message: String) {
+        connectionDeadline.cancel()
+        roomActionDeadline.cancel()
+        reconnectJob?.cancel()
+        reconnectJob = null
+        pingJob?.cancel()
+        pingJob = null
+        pendingAction = null
+        lastRoomAction = null
+        webSocket?.cancel()
+        webSocket = null
+        _connectionState.value = ConnectionState.ERROR
+        scope.launch { _events.emit(ListenTogetherEvent.ConnectionError(message)) }
+    }
+
+    /**
+     * Check if there's a persisted session available for recovery
+     */
+    val hasPersistedSession: Boolean
+        get() = sessionToken != null && storedRoomCode != null
+
+    /**
+     * Get the persisted room code if available
+     */
+    fun getPersistedRoomCode(): String? = storedRoomCode
+
+    /**
+     * Get current session age in milliseconds
+     */
+    fun getSessionAge(): Long = if (sessionStartTime > 0) {
+        System.currentTimeMillis() - sessionStartTime
+    } else {
+        0L
+    }
+}

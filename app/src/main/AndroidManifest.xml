@@ -2,11 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- The ported ArchiveTune lyrics screens use mocharealm's accompanist
-         lyrics-ui, which declares minSdk 29 while this app ships 26 — the
-         same override ArchiveTune's own manifest carries. The karaoke view
-         renders fine on 26 (it only draws text and gradients). -->
-    <uses-sdk tools:overrideLibrary="com.mocharealm.accompanist.lyrics.ui" />
+    <!--
+      Glasmio (the JitPack fork) ships with minSdk 31 — its glass rendering is
+      built for Android 12 and newer, falling back to simpler materials on 12
+      itself. This app keeps minSdk 26, so the manifest merge is told to accept
+      the library anyway: every Glasmio surface is additionally gated at
+      runtime on isGlassSupported() (API 31+), the same gate the previous
+      vendored glass stack sat behind, so the library's API-31+ surface is never
+      reached on Android 8-11 where the Haze and plain fallbacks apply.
+    -->
+    <uses-sdk
+        tools:overrideLibrary="io.github.neoruaa.glasmio.core,io.github.neoruaa.glasmio.icons,io.github.neoruaa.glasmio.glass,io.github.neoruaa.glasmio.ui,io.github.neoruaa.glasmio.scaffold" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Tells Wi-Fi from mobile data, so the matching quality ceiling applies. -->
@@ -223,27 +229,29 @@
                 <data android:host="youtu.be" />
             </intent-filter>
 
-            <!-- Public Listen Together invites. autoVerify makes a tap open
-                 BitChord directly once the domain publishes its assetlinks
-                 association for the production signing certificate. -->
-            <intent-filter android:autoVerify="true">
+            <!-- Listen Together invite links: the share URL handed out by the
+                 room screen (https://<server host>/listen?code=…) and the direct
+                 custom scheme (bitchord://listen?code=…) — a tap on either
+                 opens straight onto the join flow with the code. The hosts
+                 mirror ListenTogetherServers.inviteHosts: the JSON servers that
+                 serve a web client at /listen, so a link opened in a browser
+                 can still fall through to the app. -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="bitchord.kushagrasingh.in"
-                    android:pathPattern="/invite/......" />
+                <data android:scheme="https" />
+                <data android:host="devilmi-vivi-music-listen-together.hf.space" />
+                <data android:host="vivimusic-listen-together.onrender.com" />
+                <data android:pathPrefix="/listen" />
             </intent-filter>
-
-            <!-- Custom scheme for Listen Together invites on custom server deployments. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="bitchord"
-                    android:host="party" />
+                    android:host="listen" />
             </intent-filter>
 
             <!--
@@ -676,6 +684,15 @@
         <!-- The tap on a "new songs in this playlist" notification. See PlaylistSync. -->
         <receiver
             android:name=".download.PlaylistSyncApproval"
+            android:exported="false" />
+
+        <!--
+          Receiver for Listen Together notification actions (Approve / Reject /
+          chat quick reply) — its PendingIntents are this app's own, so it never
+          needs to answer another app.
+        -->
+        <receiver
+            android:name=".data.listentogether.ListenTogetherActionReceiver"
             android:exported="false" />
 
         <!--

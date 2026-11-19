@@ -225,7 +225,6 @@ fun AodPlayerScreen(
     sliderPosition: Long?,
     canSkipPrevious: Boolean,
     canSkipNext: Boolean,
-    thumbnailCornerRadius: Float,
     onPlayPause: () -> Unit,
     onSkipPrevious: () -> Unit,
     onSkipNext: () -> Unit,
@@ -456,7 +455,7 @@ fun AodPlayerScreen(
     val supportsArtworkGlowShadow = thumbnailShapeType.supportsArtworkGlowShadow()
     val thumbnailShape =
         thumbnailShapeType.toComposeShape(
-            cornerRadius = thumbnailCornerRadius,
+            cornerRadius = 8f,
             startAngle = thumbnailShapeRotation,
         )
     val artworkSize = thumbnailSize.coerceIn(160f, 340f).dp

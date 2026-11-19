@@ -2,6 +2,7 @@ package com.music.bitchord.download
 
 import com.music.bitchord.data.DebugLog as Log
 import com.music.bitchord.data.Http
+import com.music.bitchord.data.deezer.DeezerService
 import com.music.bitchord.data.innertube.PlayerClient
 import com.music.bitchord.data.innertube.StreamResolver
 import kotlinx.coroutines.CancellationException
@@ -175,6 +176,14 @@ object Downloader {
         sink: OutputStream,
         onProgress: (written: Long, total: Long) -> Unit,
     ): Long = withContext(Dispatchers.IO) {
+        if (url.startsWith("file:")) {
+            return@withContext copyLocal(url, sink, onProgress)
+        }
+        if (url.startsWith("deezer:")) {
+            val ref = DeezerService.parseStreamUri(url)
+                ?: error("Download failed: unreadable Deezer stream URI")
+            return@withContext DeezerService.fetchDecrypted(ref, sink, onProgress)
+        }
         val request = Request.Builder().url(url)
             .apply { headers.forEach { (name, value) -> header(name, value) } }
             .build()
@@ -265,6 +274,12 @@ object Downloader {
         headers: Map<String, String>,
         statedCodec: String? = null,
     ): Probe? = withContext(Dispatchers.IO) {
+        if (url.startsWith("file:")) {
+            return@withContext localProbe(url, statedCodec)
+        }
+        if (url.startsWith("deezer:")) {
+            return@withContext deezerProbe(url, statedCodec)
+        }
         runCatching {
             val request = Request.Builder().url(url)
                 .header("Range", "bytes=0-${PROBE_BYTES - 1}")
@@ -308,6 +323,42 @@ object Downloader {
                 if (continuation.isActive) continuation.resume(response) else response.close()
             }
         })
+    }
+
+    /**
+     * [probe] for a URL a source already resolved to a local file — the
+     * manifests Tidal writes into the cache rather than serving over HTTP.
+     * Same judgement as the network probe ([sniff] on the opening bytes, the
+     * length off the file), because a download treats both identically.
+     */
+    private fun localProbe(url: String, statedCodec: String?): Probe? {
+        val file = runCatching { java.io.File(java.net.URI(url).path) }.getOrNull() ?: return null
+        if (!file.isFile) return null
+        return runCatching {
+            file.inputStream().use { input ->
+                val head = ByteArray(PROBE_BYTES)
+                var read = 0
+                while (read < head.size) {
+                    val n = input.read(head, read, head.size - read)
+                    if (n < 0) break
+                    read += n
+                }
+                sniff(head.copyOf(read), "", statedCodec, file.length().takeIf { it > 0 })
+            }
+        }.getOrNull()
+    }
+
+    /**
+     * [probe] for a Deezer stream, whose opening bytes are Blowfish-striped
+     * and arrive meaningless until the first chunk has been decrypted with
+     * the track's key — see [DeezerService.probeDecryptedHead]. The judgement
+     * is the same [sniff] every other probe makes, on the plain bytes.
+     */
+    private suspend fun deezerProbe(url: String, statedCodec: String?): Probe? {
+        val ref = DeezerService.parseStreamUri(url) ?: return null
+        val probed = DeezerService.probeDecryptedHead(ref, PROBE_BYTES) ?: return null
+        val (head, total) = probed
+        return sniff(head, "", statedCodec, total)
     }
 
     /** [probe]'s judgement, apart from the request so it can be tested on bytes alone. */
@@ -373,6 +424,30 @@ object Downloader {
      * don't — the extraction failsafe can produce one — and reads the total out
      * of the `Content-Range` header of a one-byte response.
      */
+    /** [fetchDirect] for a source URL that already resolved to a local file. */
+    private suspend fun copyLocal(
+        url: String,
+        sink: OutputStream,
+        onProgress: (written: Long, total: Long) -> Unit,
+    ): Long {
+        val file = runCatching { java.io.File(java.net.URI(url).path) }
+            .getOrElse { error("Download failed: unreadable local file") }
+        if (!file.isFile) error("Download failed: local file is gone")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(BUFFER_BYTES)
+            var written = 0L
+            while (true) {
+                coroutineContext.ensureActive()
+                val read = input.read(buffer)
+                if (read == -1) break
+                sink.write(buffer, 0, read)
+                written += read
+                onProgress(written, file.length())
+            }
+        }
+        return file.length()
+    }
+
     private fun contentLength(url: String): Long? {
         url.toHttpUrlOrNull()?.queryParameter("clen")?.toLongOrNull()
             ?.takeIf { it > 0 }

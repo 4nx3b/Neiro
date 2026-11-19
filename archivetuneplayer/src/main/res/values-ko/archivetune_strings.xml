@@ -32,7 +32,6 @@
   <string name="close">닫기</string>
   <string name="minimum_volume">최소 볼륨</string>
   <string name="maximum_volume">최대 볼륨</string>
-  <string name="hide_player_thumbnail">플레이어 썸네일 숨기기</string>
   <plurals name="n_element">
     <item quantity="other">%d개 항목</item>
   </plurals>

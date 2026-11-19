@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.motion.releaseOrigin
 import com.music.bitchord.ui.components.trackArtSize
 import androidx.compose.ui.layout.ContentScale
 import com.music.bitchord.data.model.toSong
@@ -1025,6 +1026,7 @@ private fun BrowseRow(item: BrowseItem, onClick: () -> Unit, onLongPress: (() ->
             contentDescription = null,
             modifier = Modifier
                 .size(52.dp)
+                .releaseOrigin(item.browseId)
                 .clip(
                     if (item.type == BrowseType.ARTIST) CircleShape
                     else RoundedCornerShape(8.dp),

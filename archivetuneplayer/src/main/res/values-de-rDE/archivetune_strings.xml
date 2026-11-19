@@ -22,7 +22,6 @@
   <string name="close">Schließen</string>
   <string name="minimum_volume">Minimale Lautstärke</string>
   <string name="maximum_volume">Maximale Lautstärke</string>
-  <string name="hide_player_thumbnail">Spieler-Miniaturansicht ausblenden</string>
   <plurals name="n_element">
     <item quantity="one">%d-Element</item>
     <item quantity="other">%d Elemente</item>

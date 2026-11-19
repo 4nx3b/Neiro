@@ -22,7 +22,6 @@
   <string name="close">Закрити</string>
   <string name="minimum_volume">Мінімальна гучність</string>
   <string name="maximum_volume">Максимальна гучність</string>
-  <string name="hide_player_thumbnail">Приховати мініатюру відтворювача</string>
   <plurals name="n_element">
     <item quantity="one">%d елемент</item>
     <item quantity="few">%d елементи</item>

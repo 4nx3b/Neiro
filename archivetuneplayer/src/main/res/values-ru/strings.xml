@@ -116,11 +116,6 @@
   <string name="next">Следующий</string>
   <string name="copy_link">Скопировать ссылку</string>
   <string name="got_it">Ясно</string>
-  <string name="slider_style_standard">Стандартный</string>
-  <string name="slider_style_wavy">Волнистый</string>
-  <string name="slider_style_thick">Толстый</string>
-  <string name="slider_style_circular">Круговой</string>
-  <string name="slider_style_simple">Простой</string>
   <string name="pin_to_speed_dial">Закрепить на быстром наборе</string>
   <string name="remove_from_speed_dial">Убрать с быстрого набора</string>
   <string name="removed_song_from_queue">\"%s\" убрано из очереди</string>

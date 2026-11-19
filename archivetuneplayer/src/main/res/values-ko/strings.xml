@@ -89,11 +89,6 @@
   <string name="repeat_mode_all">전체 반복</string>
   <string name="queue_continue_playing">대기열 이어서 듣기</string>
   <string name="queue_autoplaying_similar">유사한 음악 자동 재생</string>
-  <string name="slider_style_standard">표준</string>
-  <string name="slider_style_wavy">물결 모양</string>
-  <string name="slider_style_thick">두껍게</string>
-  <string name="slider_style_circular">원형</string>
-  <string name="slider_style_simple">심플</string>
   <string name="login">로그인</string>
   <string name="playback_confirmation_required">재생 승인 필요</string>
   <string name="playback_requires_youtube_music_confirmation">YouTube Music에서 재생 여부를 확인한 후 ArchiveTune으로 돌아오세요.</string>

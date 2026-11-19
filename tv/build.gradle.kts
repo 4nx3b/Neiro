@@ -34,23 +34,11 @@ val lastfmSecret: String = (
         ?: ""
     ).trim()
 
-/*
- * Where Listen Together's party server lives. Not a credential — it is a public
- * URL, and every device in a party has to be pointed at the same one — but it is
- * deployment-specific rather than a property of the source, which is what puts
- * it here beside the others instead of in a constant.
- *
- * Empty is a supported state, not a broken build: the field below is only the
- * *default* the address box on the Listen Together screen starts with, and
- * anything typed there wins and persists. So a fresh checkout without this line
- * builds and runs, and simply asks for an address the first time somebody opens
- * the screen. See ListenTogether.DEFAULT_SERVER.
- */
-val listenTogetherServer: String = (
-    localProps.getProperty("LISTEN_TOGETHER_SERVER")
-        ?: System.getenv("LISTEN_TOGETHER_SERVER")
-        ?: "https://bitchord-listen-together.onrender.com"
-    ).trim().trimEnd('/')
+val togetherBearerToken: String = (
+    localProps.getProperty("TOGETHER_BEARER_TOKEN")
+        ?: System.getenv("TOGETHER_BEARER_TOKEN")
+        ?: ""
+    ).trim()
 
 /*
  * Bump this by hand before cutting each sideloaded test build ("beta2",
@@ -92,8 +80,8 @@ android {
         buildConfigField("String", "LASTFM_SECRET", "\"${lastfmSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField(
             "String",
-            "LISTEN_TOGETHER_SERVER",
-            "\"${listenTogetherServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+            "TOGETHER_BEARER_TOKEN",
+            "\"${togetherBearerToken.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
         // TV has no addons; AddonAuth only reaches the compiler through the
         // shared phone sources, so it gets no server.
@@ -248,6 +236,9 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        // AGP 9 disables custom resource values by default; the flavors below
+        // set app_name with resValue().
+        resValues = true
     }
     testOptions {
         unitTests {
@@ -359,6 +350,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     // ProcessLifecycleOwner: whether the app is on screen, for the open-app count.
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    // Janky frames into the crash ring buffer (JankLog).
+    implementation("androidx.metrics:metrics-performance:1.0.0")
     // The scheduled check behind "Keep playlists updated"; see PlaylistSync.
     implementation("androidx.work:work-runtime-ktx:2.10.1")
     implementation("androidx.core:core-ktx:1.15.0")
@@ -419,6 +412,19 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze:1.3.1")
     implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
 
+    // ---- Glasmio: iOS 27 Liquid Glass components and motion ----
+    // Mirrored from app/build.gradle.kts, which this module's sources are
+    // shared with — the app's MainActivity wires GlasmioTheme, the backdrop
+    // provider and the icon resolver, GlassNavBar rides the fork's tab bar,
+    // and the settings' switches and sliders are the fork's controls, so the
+    // TV app compiling those sources needs the fork's artifacts on its own
+    // classpath just as the phone app does. The TV UI itself draws none of
+    // the glass (TvGlass is a colour palette, not a backdrop); the manifest's
+    // tools:overrideLibrary accepts the fork's minSdk 31 against this
+    // module's 26 for exactly that reason.
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-ui:v0.2.1")
+    implementation("com.github.myself-tsuki.Glasmio:glasmio-scaffold:v0.2.1")
+
     // ---- QR encoding, for the party invite ----
     // `core` only: the `android-core`/`zxing-android-embedded` artifacts bring
     // a camera scanner and an Activity with it, and nothing here reads a code —
@@ -445,6 +451,14 @@ dependencies {
 
     // ---- Discord Rich Presence: the gateway is a WebSocket, so Ktor needs the plugin ----
     implementation("io.ktor:ktor-client-websockets:3.5.2")
+
+    // ---- Music Together: the host IS the server, an embedded Ktor CIO engine ----
+    // The shared phone sources carry TogetherServer, so TV compiles the same
+    // relay-shaped stack: `core` for routing and the embedded-server plumbing,
+    // `cio` for the engine, `websockets` for the /together upgrade.
+    implementation("io.ktor:ktor-server-core:3.5.2")
+    implementation("io.ktor:ktor-server-cio:3.5.2")
+    implementation("io.ktor:ktor-server-websockets:3.5.2")
 
     // ---- YouTube stream extraction: live-benchmarked client catalog + cipher tiers ----
     implementation("com.github.MetrolistGroup.innertubex:innertubex-android:v0.7.0")

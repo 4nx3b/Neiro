@@ -86,6 +86,25 @@ object BridgedPreferences {
         return adapters[key] as? Adapter<T>
     }
 
+    /**
+     * The host's current value for [key], in the store's wire format (an
+     * enum's name for an enum-valued key), or null when the host does not
+     * own the key.
+     */
+    @PublishedApi
+    internal fun <T> bridgedValue(key: Preferences.Key<T>): T? {
+        adapterFor(key)?.let { adapter ->
+            val value = runCatching { adapter.read() }.getOrNull()
+            // "Nothing chosen" on the host (a blank custom-font uri, say)
+            // reads as an absent key, as it would from a fresh store.
+            return if (value is String && value.isBlank()) null else value
+        }
+        @Suppress("UNCHECKED_CAST")
+        val enumAdapter = enumAdapters[key as Preferences.Key<String>] ?: return null
+        @Suppress("UNCHECKED_CAST")
+        return runCatching { (enumAdapter.read() as Enum<*>).name as T }.getOrNull()
+    }
+
     @PublishedApi
     internal fun <T : Enum<T>> enumAdapterFor(key: Preferences.Key<String>): Adapter<T>? {
         @Suppress("UNCHECKED_CAST")
@@ -145,6 +164,8 @@ object PreferenceStore {
 }
 
 operator fun <T> DataStore<Preferences>.get(key: Preferences.Key<T>): T? {
+    // A key the host owns answers from the host, as rememberPreference does.
+    BridgedPreferences.bridgedValue(key)?.let { return it }
     val snapshot = PreferenceStore.snapshot
     if (snapshot != null) return snapshot[key]
 
@@ -289,6 +310,61 @@ inline fun <reified T : Enum<T>> rememberEnumPreference(
             override fun component1() = value
 
             override fun component2(): (T) -> Unit = { value = it }
+        }
+    }
+}
+
+/**
+ * Writes every bridged key's host value into this module's DataStore, so
+ * vendored code that reads `dataStore.data` flows directly (rather than
+ * through rememberPreference) sees the host's value. All current values go
+ * in one edit at install; after that each key writes only when it changes
+ * (each flow's first emission is skipped when it equals what the batch
+ * wrote). One way only — host to store — so it can never
+ * loop back into the host. A blank String clears the key rather than
+ * storing "", matching what [BridgedPreferences.bridgedValue] answers.
+ */
+fun mirrorBridgedPreferences(context: Context) {
+    val store = context.applicationContext.dataStore
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    fun MutablePreferences.put(key: Preferences.Key<*>, value: Any?, isEnum: Boolean) {
+        @Suppress("UNCHECKED_CAST")
+        val typed = key as Preferences.Key<Any>
+        val wire: Any? = if (isEnum) (value as? Enum<*>)?.name else value
+        if (wire == null || (wire is String && wire.isBlank())) remove(typed) else this[typed] = wire
+    }
+
+    val entries =
+        BridgedPreferences.adapters.map { (key, adapter) -> Triple<Preferences.Key<*>, BridgedPreferences.Adapter<*>, Boolean>(key, adapter, false) } +
+            BridgedPreferences.enumAdapters.map { (key, adapter) -> Triple<Preferences.Key<*>, BridgedPreferences.Adapter<*>, Boolean>(key, adapter, true) }
+
+    scope.launch {
+        val written = HashMap<Preferences.Key<*>, Any?>()
+        runCatching {
+            store.edit { prefs ->
+                entries.forEach { (key, adapter, isEnum) ->
+                    runCatching {
+                        val value = adapter.read()
+                        written[key] = value
+                        prefs.put(key, value, isEnum)
+                    }
+                }
+            }
+        }
+        entries.forEach { (key, adapter, isEnum) ->
+            launch {
+                var first = true
+                runCatching {
+                    adapter.changes.collect { value ->
+                        // A flow's first value is the current one, which the
+                        // batch above already wrote — unless it changed since.
+                        val skip = first && written.containsKey(key) && written[key] == value
+                        first = false
+                        if (!skip) store.edit { it.put(key, value, isEnum) }
+                    }
+                }
+            }
         }
     }
 }

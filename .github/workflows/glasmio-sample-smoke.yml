@@ -1,0 +1,135 @@
+name: Glasmio Sample Smoke
+
+# Builds the myself-tsuki/Glasmio sample at third_party/glasmio-patches/UPSTREAM_SHA
+# with the crash harness (and, unless apply_fix is false, the fix patches), then
+# taps every control and scrolls every page on API 34/35/36 emulators.
+# See docs/glasmio-crash-2026-11-19.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_fix:
+        description: Apply third_party/glasmio-patches/fix before building
+        type: boolean
+        default: true
+      upstream_ref:
+        description: Glasmio commit or tag to build (empty = UPSTREAM_SHA)
+        type: string
+        default: ''
+  pull_request:
+    paths:
+      - third_party/glasmio-patches/**
+      - .github/workflows/glasmio-sample-smoke.yml
+      - .github/scripts/glasmio-sample-smoke.sh
+
+concurrency:
+  group: glasmio-sample-smoke-${{ github.ref }}-${{ inputs.apply_fix }}-${{ inputs.upstream_ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build the sample (${{ (github.event_name != 'workflow_dispatch' || inputs.apply_fix) && 'fixed' || 'unfixed' }})
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.mode.outputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: mode
+        name: Pick the upstream commit and patches
+        run: |
+          ref="${{ inputs.upstream_ref }}"
+          [ -n "$ref" ] || ref="$(tr -d '[:space:]' < third_party/glasmio-patches/UPSTREAM_SHA)"
+          fix=true
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apply_fix }}" = "false" ]; then fix=false; fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "fix=$fix" >> "$GITHUB_OUTPUT"
+          echo "label=$([ "$fix" = true ] && echo fixed || echo unfixed)" >> "$GITHUB_OUTPUT"
+
+      - name: Clone Glasmio and apply the patches
+        run: |
+          git clone https://github.com/myself-tsuki/Glasmio.git glasmio-src
+          cd glasmio-src
+          git checkout "${{ steps.mode.outputs.ref }}"
+          git config user.name "Neiro CI"
+          git config user.email "ci@neiro.invalid"
+          if [ "${{ steps.mode.outputs.fix }}" = "true" ]; then
+            git am ../third_party/glasmio-patches/fix/*.patch
+          fi
+          git am ../third_party/glasmio-patches/harness/*.patch
+          if [ "${{ steps.mode.outputs.fix }}" = "true" ]; then
+            git am ../third_party/glasmio-patches/harness-fixed/*.patch
+          fi
+          git log --oneline -6
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Library unit tests
+        if: steps.mode.outputs.fix == 'true'
+        working-directory: glasmio-src
+        run: ./gradlew --no-daemon :glasmio-core:testDebugUnitTest :glasmio-glass:testDebugUnitTest
+
+      - name: Build the debug sample (not minified)
+        working-directory: glasmio-src
+        run: ./gradlew --no-daemon :sample:assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glasmio-sample-${{ steps.mode.outputs.label }}
+          path: glasmio-src/sample/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  smoke:
+    name: Walk the sample on API ${{ matrix.api-level }}${{ matrix.opt_in && ' (cachedGlass on)' || '' }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [34, 35, 36]
+        opt_in: [false]
+        include:
+          - api-level: 36
+            opt_in: true
+    continue-on-error: ${{ matrix.opt_in }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: glasmio-sample-${{ needs.build.outputs.label }}
+          path: apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Walk every page
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          EXTRA_ARGS: ${{ matrix.opt_in && '--ez glasmio_cached true' || '' }}
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          ram-size: 4096M
+          disk-size: 6G
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 4096
+          disable-animations: false
+          script: bash .github/scripts/glasmio-sample-smoke.sh "$(ls apk/*.apk | head -1)" "${{ needs.build.outputs.label }}-api${{ matrix.api-level }}${{ matrix.opt_in && '-optin' || '' }}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: glasmio-sample-smoke-${{ needs.build.outputs.label }}-api${{ matrix.api-level }}${{ matrix.opt_in && '-optin' || '' }}
+          path: sample-smoke-out
+          if-no-files-found: ignore

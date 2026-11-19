@@ -13,7 +13,7 @@
     "@bitchord/shared": "workspace:*",
     "@tanstack/react-query": "^5.104.3",
     "@tanstack/react-virtual": "^3.14.19",
-    "@uimaxbai/am-lyrics": "^1.8.2",
+    "@uimaxbai/am-lyrics": "^1.9.1",
     "bgutils-js": "^4.0.3",
     "essentia.js": "^0.1.3",
     "googlevideo": "^4.1.1",

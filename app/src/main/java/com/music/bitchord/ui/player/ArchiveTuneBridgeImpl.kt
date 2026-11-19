@@ -1,13 +1,17 @@
 package com.music.bitchord.ui.player
 
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.MediaMetadata as Media3Metadata
 import androidx.media3.session.MediaController
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.Song
-import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.data.settings.PlayerDesignStyle
+import com.music.bitchord.download.Downloads
 import com.music.bitchord.playback.beginRadioQueue
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.toMediaItem
@@ -15,20 +19,18 @@ import com.music.bitchord.ui.MainViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import moe.rukamori.archivetune.bridge.ArchiveTuneHostBridge
-import moe.rukamori.archivetune.constants.PlayerButtonsStyleKey
-import moe.rukamori.archivetune.constants.PlayerDesignStyleKey
-import moe.rukamori.archivetune.constants.SliderStyleKey
 import moe.rukamori.archivetune.db.entities.LyricsEntity
 import moe.rukamori.archivetune.db.entities.PlaylistEntity
 import moe.rukamori.archivetune.db.entities.SongEntity
 import moe.rukamori.archivetune.models.MediaMetadata
-import moe.rukamori.archivetune.utils.BridgedPreferences
 
 /**
  * The app's answers to the ported ArchiveTune player: BitChord's controller
@@ -39,42 +41,118 @@ class ArchiveTuneBridgeImpl(
     private val controller: MediaController,
     private val viewModel: MainViewModel,
     @Suppress("unused") scope: CoroutineScope,
+    private val context: Context,
     private val onOpenArtist: (String) -> Unit,
     private val onOpenAlbum: (String) -> Unit,
     private val onOpenSearch: () -> Unit,
 ) : ArchiveTuneHostBridge {
-    /** Controller commands ride the main looper, as MediaController requires. */
-    private val main = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    /*
+     * THREADING. A MediaController may only be called on its application
+     * looper (main, for this app's controller). The vendored player stack
+     * calls into this bridge from wherever it happens to be — composition,
+     * its own Dispatchers.IO lookups (MusicDatabase.song → song()), menu
+     * callbacks — so every controller read or command here goes through
+     * [onMain] / [main], and the synchronous answers read [currentItem], a
+     * snapshot the controller's own listener keeps current on its looper.
+     *
+     * The lyrics collector used to run on Dispatchers.Default and read
+     * controller.currentMediaItem: StateFlow.collect hands over the current
+     * value at once, so the very first emission threw "MediaController
+     * method is called from a wrong thread" on every launch with a ported
+     * style saved. (R8 merges lambda classes, so release traces named
+     * PartySync / PlaylistSync for it.)
+     */
+    private val looper: Looper = controller.applicationLooper
+    private val handler = Handler(looper)
+
+    /** Runs [block] on the controller's looper: inline when already there, else posted. */
+    private fun onMain(block: () -> Unit) {
+        if (Looper.myLooper() === looper) block() else handler.post(block)
+    }
+
+    /** Coroutines that command the controller run on its looper. */
+    private val main = CoroutineScope(SupervisorJob() + LooperDispatcher(handler))
+
+    /** The current item, as last seen on the controller's looper. */
+    @Volatile
+    private var currentItem: MediaItem? = null
+
+    private val itemListener =
+        object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                currentItem = controller.currentMediaItem
+            }
+
+            override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                currentItem = controller.currentMediaItem
+            }
+
+            override fun onMediaMetadataChanged(mediaMetadata: Media3Metadata) {
+                currentItem = controller.currentMediaItem
+            }
+        }
+
+    @Volatile
+    private var released = false
 
     /** The lyrics translated into ArchiveTune's LRC-shaped store format. */
     private val bridgedLyrics = MutableStateFlow<LyricsEntity?>(null)
 
     init {
-        installPreferenceAdapters()
-
-        // Follow the app's lyrics and re-emit them in ArchiveTune's format.
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
-            viewModel.lyrics.collect { lines ->
-                val id = controller.currentMediaItem?.mediaId
-                bridgedLyrics.value =
-                    if (lines == null || id == null) {
-                        null
-                    } else {
-                        LyricsEntity(
-                            id = id,
-                            lyrics = lines.toArchiveTuneLrc(),
-                            source = LyricsEntity.Source.REMOTE.value,
-                            providerName = viewModel.lyricsSource.value?.label ?: "",
-                        )
-                    }
+        onMain {
+            if (!released) {
+                currentItem = controller.currentMediaItem
+                controller.addListener(itemListener)
             }
         }
+
+        // Follow the app's lyrics and re-emit them in ArchiveTune's format.
+        // Collected on the controller's looper; the id comes from the
+        // snapshot and the LRC is rendered off main, with no controller in
+        // sight of the background block. lyricsChecked is watched too so a
+        // lookup that came back with nothing reads as the module's own
+        // "not found" marker instead of an endless shimmer.
+        main.launch {
+            combine(viewModel.lyrics, viewModel.lyricsChecked) { lines, checked -> lines to checked }
+                .collect { (lines, checked) ->
+                    val id = currentItem?.mediaId
+                    bridgedLyrics.value =
+                        if (id == null) {
+                            null
+                        } else if (lines != null) {
+                            val providerName = viewModel.lyricsSource.value?.label ?: ""
+                            val lrc = withContext(Dispatchers.Default) { lines.toArchiveTuneLrc() }
+                            LyricsEntity(
+                                id = id,
+                                lyrics = lrc,
+                                source = LyricsEntity.Source.REMOTE.value,
+                                providerName = providerName,
+                            )
+                        } else if (checked) {
+                            LyricsEntity(
+                                id = id,
+                                lyrics = LyricsEntity.LYRICS_NOT_FOUND,
+                                source = LyricsEntity.Source.REMOTE.value,
+                                providerName = "",
+                            )
+                        } else {
+                            null
+                        }
+                }
+        }
+    }
+
+    /** Detaches from the controller and stops the collectors. Called when the host unmounts. */
+    fun release() {
+        released = true
+        main.cancel()
+        onMain { controller.removeListener(itemListener) }
     }
 
     override fun player(): androidx.media3.common.Player = controller
 
     override fun pauseFromSleepTimer() {
-        controller.pause()
+        onMain { controller.pause() }
     }
 
     override fun playItems(items: List<MediaItem>, startIndex: Int) {
@@ -95,6 +173,7 @@ class ArchiveTuneBridgeImpl(
         enqueue(items) { at -> (at + index + 1).coerceIn(0, controller.mediaItemCount) }
     }
 
+    /** [where] runs inside the launched block, on the controller's looper. */
     private fun enqueue(items: List<MediaItem>, where: (Int) -> Int) {
         val songs = items.map { it.toNeiroSong() }
         if (songs.isEmpty()) return
@@ -114,22 +193,36 @@ class ArchiveTuneBridgeImpl(
     }
 
     override fun toggleLike() {
-        controller.currentMediaItem?.mediaId?.let(viewModel::toggleLike)
+        val item = currentItem ?: return
+        // The auto download on like setting answers here too — this heart is
+        // the ported player's, and a like through it is as much a like as one
+        // through the native player's (whose funnel is MainActivity's
+        // toggleLikeOf). Only a like that landed queues anything.
+        if (viewModel.toggleLike(item.mediaId) == LikeStatus.LIKE) {
+            Downloads.autoDownloadOnLike(context, item.toNeiroSong(), true)
+        }
     }
 
     override fun likeSong(mediaId: String, liked: Boolean) {
-        viewModel.toggleLike(mediaId)
+        if (viewModel.toggleLike(mediaId) == LikeStatus.LIKE) {
+            currentItem
+                ?.takeIf { it.mediaId == mediaId }
+                ?.toNeiroSong()
+                ?.let { Downloads.autoDownloadOnLike(context, it, true) }
+        }
     }
 
     override fun stopAndClearPlayback() {
-        controller.clearMediaItems()
-        controller.stop()
+        onMain {
+            controller.clearMediaItems()
+            controller.stop()
+        }
     }
 
     override fun song(mediaId: String): SongEntity? {
-        val item = controller.currentMediaItem ?: return null
+        val item = currentItem ?: return null
         if (item.mediaId != mediaId) return null
-        val meta = item.mediaMetadata ?: return null
+        val meta = item.mediaMetadata
         return SongEntity(
             id = mediaId,
             title = meta.title?.toString() ?: "",
@@ -154,7 +247,7 @@ class ArchiveTuneBridgeImpl(
     override fun addToPlaylist(playlistId: String, mediaId: String) {
         val playlist = viewModel.playlists.value.firstOrNull { it.playlistId == playlistId } ?: return
         val song =
-            controller.currentMediaItem?.takeIf { it.mediaId == mediaId }?.toNeiroSong()
+            currentItem?.takeIf { it.mediaId == mediaId }?.toNeiroSong()
                 ?: Song(videoId = mediaId, title = "", artist = "", thumbnailUrl = null)
         viewModel.addToPlaylists(listOf(playlist), song)
     }
@@ -168,6 +261,19 @@ class ArchiveTuneBridgeImpl(
     override fun openAlbum(browseId: String) = onOpenAlbum(browseId)
 
     override fun openSearch() = onOpenSearch()
+}
+
+/**
+ * Dispatches onto one Handler's looper, inline when already on it — the
+ * controller's own thread, for the bridge's coroutines.
+ */
+private class LooperDispatcher(private val handler: Handler) : CoroutineDispatcher() {
+    override fun isDispatchNeeded(context: kotlin.coroutines.CoroutineContext): Boolean =
+        Looper.myLooper() !== handler.looper
+
+    override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+        handler.post(block)
+    }
 }
 
 /**
@@ -199,6 +305,24 @@ private fun MediaMetadata.toNeiroSong(): Song =
  * The app's lyric lines rendered into the LRC dialect ArchiveTune's player
  * parses: `[mm:ss.xx]` per line, `<mm:ss.xx>` per word where the app has
  * word timings.
+ *
+ * The A2 convention the receiving parser keeps verbatim: a word's run
+ * carries its own trailing space (`<00:27.39>I `), so the reconstructed
+ * text keeps its inter-word gaps — a run without one is a syllable of the
+ * word before it, and serialising the app's trimmed words without them is
+ * what fused every line into "Ibeentrynacall". The last run is closed by a
+ * bare terminator stamp at the line's end, which the parser reads as the
+ * final word's end and nothing else, so the sweep stops where the line
+ * stops instead of drifting into the next one.
+ *
+ * A word stamp is angle brackets and *nothing else* — `<mm:ss.xx>`. The
+ * first port wrapped the time in the line stamp's square brackets too
+ * (`<[mm:ss.xx]>`), which matches neither the enhanced-LRC word regex nor
+ * any of the inline-timing cleaners, so the receiving parser fell through
+ * to the line-synced branch and drew every stamp as literal text: each word
+ * arrived on screen wearing its own `<[0:27.61]>`. Writing the bare time —
+ * the format the parser's own docs promise — is what makes the ported
+ * styles sweep word by word the way the app's own player does.
  */
 internal fun List<LyricLine>.toArchiveTuneLrc(): String =
     joinToString("\n") { line ->
@@ -206,11 +330,10 @@ internal fun List<LyricLine>.toArchiveTuneLrc(): String =
         if (line.words.isEmpty()) {
             "$stamp ${line.text}".trimEnd()
         } else {
-            val words =
-                line.words.joinToString("") { word ->
-                    "<${formatLrcTime(word.startMs)}>${word.text}"
-                }
-            "$stamp $words".trimEnd()
+            val runs = line.words.joinToString("") { word ->
+                "<${formatWordTime(word.startMs)}>${word.text} "
+            }
+            "$stamp $runs".trimEnd() + "<${formatWordTime(line.endMs)}>"
         }
     }
 
@@ -222,86 +345,11 @@ private fun formatLrcTime(ms: Long): String {
     return "[%d:%02d.%02d]".format(minutes, seconds, hundredths)
 }
 
-/**
- * The preference adapters that keep the two apps' settings one source of
- * truth: the design style (whose enum names differ), and the slider and
- * button styles the earlier appearance round already ported.
- */
-private fun ArchiveTuneBridgeImpl.installPreferenceAdapters() {
-    // Design style: ArchiveTune's V-names map onto this app's descriptive
-    // names; everything else is one-to-one.
-    fun toAt(style: PlayerDesignStyle): moe.rukamori.archivetune.constants.PlayerDesignStyle =
-        when (style) {
-            PlayerDesignStyle.BITCHORD -> moe.rukamori.archivetune.constants.PlayerDesignStyle.BITCHORD
-            PlayerDesignStyle.CINEMATIC -> moe.rukamori.archivetune.constants.PlayerDesignStyle.V4
-            PlayerDesignStyle.LITTLE -> moe.rukamori.archivetune.constants.PlayerDesignStyle.V5
-            PlayerDesignStyle.IMMERSIVE -> moe.rukamori.archivetune.constants.PlayerDesignStyle.V7
-            PlayerDesignStyle.MATERIAL_EXTENDED -> moe.rukamori.archivetune.constants.PlayerDesignStyle.V9
-            PlayerDesignStyle.EDITORIAL -> moe.rukamori.archivetune.constants.PlayerDesignStyle.V10
-            PlayerDesignStyle.APPLE_MUSIC -> moe.rukamori.archivetune.constants.PlayerDesignStyle.APPLE_MUSIC
-            PlayerDesignStyle.TIKTOK -> moe.rukamori.archivetune.constants.PlayerDesignStyle.TIKTOK
-            PlayerDesignStyle.SIMPMUSIC -> moe.rukamori.archivetune.constants.PlayerDesignStyle.SIMPMUSIC
-            PlayerDesignStyle.SPATIALFLOW -> moe.rukamori.archivetune.constants.PlayerDesignStyle.SPATIALFLOW
-            PlayerDesignStyle.LOOPER -> moe.rukamori.archivetune.constants.PlayerDesignStyle.LOOPER
-        }
-
-    fun fromAt(style: moe.rukamori.archivetune.constants.PlayerDesignStyle): PlayerDesignStyle =
-        when (style) {
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.BITCHORD -> PlayerDesignStyle.BITCHORD
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.V4 -> PlayerDesignStyle.CINEMATIC
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.V5 -> PlayerDesignStyle.LITTLE
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.V7 -> PlayerDesignStyle.IMMERSIVE
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.V9 -> PlayerDesignStyle.MATERIAL_EXTENDED
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.V10 -> PlayerDesignStyle.EDITORIAL
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.APPLE_MUSIC -> PlayerDesignStyle.APPLE_MUSIC
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.TIKTOK -> PlayerDesignStyle.TIKTOK
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.SIMPMUSIC -> PlayerDesignStyle.SIMPMUSIC
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.SPATIALFLOW -> PlayerDesignStyle.SPATIALFLOW
-            moe.rukamori.archivetune.constants.PlayerDesignStyle.LOOPER -> PlayerDesignStyle.LOOPER
-        }
-
-    BridgedPreferences.bridgeEnum(
-        key = PlayerDesignStyleKey,
-        read = { toAt(AppSettings.playerDesignStyle.value) },
-        write = { AppSettings.setPlayerDesignStyle(fromAt(it)) },
-        changes = AppSettings.playerDesignStyle.map(::toAt).distinctUntilChanged(),
-    )
-
-    fun toAtSlider(style: com.music.bitchord.data.settings.PlayerSliderStyle): moe.rukamori.archivetune.constants.SliderStyle =
-        when (style) {
-            com.music.bitchord.data.settings.PlayerSliderStyle.STANDARD -> moe.rukamori.archivetune.constants.SliderStyle.Standard
-            com.music.bitchord.data.settings.PlayerSliderStyle.WAVY -> moe.rukamori.archivetune.constants.SliderStyle.Wavy
-            com.music.bitchord.data.settings.PlayerSliderStyle.THICK -> moe.rukamori.archivetune.constants.SliderStyle.Thick
-            com.music.bitchord.data.settings.PlayerSliderStyle.CIRCULAR -> moe.rukamori.archivetune.constants.SliderStyle.Circular
-            com.music.bitchord.data.settings.PlayerSliderStyle.SIMPLE -> moe.rukamori.archivetune.constants.SliderStyle.Simple
-        }
-
-    fun fromAtSlider(style: moe.rukamori.archivetune.constants.SliderStyle): com.music.bitchord.data.settings.PlayerSliderStyle =
-        when (style) {
-            moe.rukamori.archivetune.constants.SliderStyle.Standard -> com.music.bitchord.data.settings.PlayerSliderStyle.STANDARD
-            moe.rukamori.archivetune.constants.SliderStyle.Wavy -> com.music.bitchord.data.settings.PlayerSliderStyle.WAVY
-            moe.rukamori.archivetune.constants.SliderStyle.Thick -> com.music.bitchord.data.settings.PlayerSliderStyle.THICK
-            moe.rukamori.archivetune.constants.SliderStyle.Circular -> com.music.bitchord.data.settings.PlayerSliderStyle.CIRCULAR
-            moe.rukamori.archivetune.constants.SliderStyle.Simple -> com.music.bitchord.data.settings.PlayerSliderStyle.SIMPLE
-        }
-
-    BridgedPreferences.bridgeEnum(
-        key = SliderStyleKey,
-        read = { toAtSlider(AppSettings.playerSliderStyle.value) },
-        write = { AppSettings.setPlayerSliderStyle(fromAtSlider(it)) },
-        changes = AppSettings.playerSliderStyle.map(::toAtSlider).distinctUntilChanged(),
-    )
-
-    fun toAtButtons(style: com.music.bitchord.data.settings.PlayerButtonsStyle): moe.rukamori.archivetune.constants.PlayerButtonsStyle =
-        moe.rukamori.archivetune.constants.PlayerButtonsStyle.valueOf(style.name)
-
-    fun fromAtButtons(style: moe.rukamori.archivetune.constants.PlayerButtonsStyle): com.music.bitchord.data.settings.PlayerButtonsStyle =
-        com.music.bitchord.data.settings.PlayerButtonsStyle.valueOf(style.name)
-
-    BridgedPreferences.bridgeEnum(
-        key = PlayerButtonsStyleKey,
-        read = { toAtButtons(AppSettings.playerButtonsStyle.value) },
-        write = { AppSettings.setPlayerButtonsStyle(fromAtButtons(it)) },
-        changes = AppSettings.playerButtonsStyle.map(::toAtButtons).distinctUntilChanged(),
-    )
+/** The word stamp's own shape: the same time, bare, without the line stamp's square brackets. */
+private fun formatWordTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    val hundredths = (ms % 1000) / 10
+    return "%d:%02d.%02d".format(minutes, seconds, hundredths)
 }

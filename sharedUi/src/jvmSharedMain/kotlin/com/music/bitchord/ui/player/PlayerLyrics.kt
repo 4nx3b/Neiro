@@ -2118,7 +2118,11 @@ internal fun LyricsPanel(
             // the same floor rather than fading to nothing.
             val falloff = if (centerFocus) LINE_FALLOFF_ALPHA else LINE_FALLOFF_ALPHA_PHONE
             val step = distance.coerceAtMost(falloff.lastIndex)
-            val blur by animateDpAsState(
+            // A State, read only in the draw phase (lyricBlur below): read in
+            // composition, every row recomposed on every frame of the 0.6 s
+            // settle that follows each line change — the whole visible list,
+            // several times a second while a song plays.
+            val blur = animateDpAsState(
                 targetValue = when {
                     !isSynced || reduceDynamicBlur || !lyricsBlur || browsing || isActive -> 0.dp
                     else -> LINE_FALLOFF_BLUR[step.coerceAtMost(LINE_FALLOFF_BLUR.lastIndex)]
@@ -2178,7 +2182,7 @@ internal fun LyricsPanel(
                 ) {
                 Box(
                     modifier = Modifier
-                        .blur(blur, BlurredEdgeTreatment.Unbounded)
+                        .lyricBlur(blur)
                         .clip(RoundedCornerShape(10.dp))
                         // A gap is nothing to pick, so it only ever seeks — and
                         // not even that while a pick is open, where a stray tap
@@ -2320,7 +2324,7 @@ internal fun LyricsPanel(
                                 )
                         }
                     }
-                    .blur(blur, BlurredEdgeTreatment.Unbounded)
+                    .lyricBlur(blur)
                     .clip(RoundedCornerShape(10.dp))
                     // The chosen lines are marked on the row itself rather
                     // than with a mark beside it: a lane down the side would
@@ -3280,3 +3284,19 @@ internal fun rememberLyricsTranslation(
         toggleRomanization = toggleRomanization,
     )
 }
+
+/**
+ * [Modifier.blur] with its radius read in the draw phase, so an animating
+ * radius redraws the row's layer rather than recomposing it. Unbounded, as the
+ * rows' blur always was: the glyphs' glow runs past the row's bounds.
+ */
+private fun Modifier.lyricBlur(radius: androidx.compose.runtime.State<androidx.compose.ui.unit.Dp>): Modifier =
+    graphicsLayer {
+        val px = radius.value.toPx()
+        renderEffect = if (px > 0.5f) {
+            androidx.compose.ui.graphics.BlurEffect(px, px, androidx.compose.ui.graphics.TileMode.Decal)
+        } else {
+            null
+        }
+        clip = false
+    }

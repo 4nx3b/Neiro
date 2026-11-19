@@ -22,7 +22,6 @@
   <string name="close">Cerrar</string>
   <string name="minimum_volume">Volumen minino</string>
   <string name="maximum_volume">Volumen máximo</string>
-  <string name="hide_player_thumbnail">Ocultar miniatura del reproductor</string>
   <plurals name="n_element">
     <item quantity="one">%d elemento</item>
     <item quantity="many">%d elementos</item>

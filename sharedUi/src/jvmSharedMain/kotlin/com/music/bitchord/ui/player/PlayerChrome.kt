@@ -19,9 +19,8 @@ internal val LocalPlayerChrome = compositionLocalOf { false }
 
 /**
  * The colour the player's chrome is drawn in — white, as it always has been,
- * or the theme's secondary colour while the player's buttons style (ported
- * from ArchiveTune's PlayerButtonsStyle) says otherwise. Provided around the
- * player, beside [LocalPlayerChrome].
+ * the player's own fixed white chrome. Provided around the player, beside
+ * [LocalPlayerChrome].
  */
 internal val LocalPlayerChromeTint = compositionLocalOf { Color.White }
 

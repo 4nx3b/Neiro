@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.provider.OpenableColumns
 import com.music.bitchord.data.DebugLog as Log
 import androidx.core.content.ContextCompat
 import com.music.bitchord.data.innertube.StreamResolver
@@ -214,6 +215,22 @@ object Downloads {
             synchronized(lock) { pending.remove(id) }
             fail(id, "Downloads can't start right now")
         }
+    }
+
+    /**
+     * The auto download on like setting's one caller: called with the rating
+     * a tap just left behind, it queues the song when that rating is a like.
+     * A track already saved, queued or running is left alone rather than
+     * doubled, and a track with a local file needs nothing downloaded. The
+     * Wi-Fi-only rule is [enqueue]'s to enforce, as it is for every other
+     * caller.
+     */
+    fun autoDownloadOnLike(context: Context, song: Song, likedNow: Boolean) {
+        if (!likedNow || !AppSettings.autoDownloadOnLike.value) return
+        if (song.localUri != null) return
+        if (song.videoId in _saved.value) return
+        if (song.videoId in _active.value) return
+        enqueue(context, song, null)
     }
 
     /**
@@ -519,6 +536,38 @@ object Downloads {
             .forEach { videoId -> if (delete(context, videoId)) any = true }
         forgetCollection(id)
         return any
+    }
+
+    /**
+     * Delete every finished download on this device, files and release records
+     * together. What is still in the queue or running is left to finish — a
+     * download in flight is a promise this app made, and clearing the list is
+     * not the same as calling it off. [bytesInUse] answers what this is about
+     * to reclaim.
+     */
+    suspend fun clearAll(context: Context): Boolean = withContext(Dispatchers.IO) {
+        var any = false
+        _saved.value.keys.toList().forEach { videoId -> if (delete(context, videoId)) any = true }
+        _collections.value.keys.toList().forEach { forgetCollection(it) }
+        any
+    }
+
+    /**
+     * The disk the finished downloads are holding, once per distinct file —
+     * a music video and the catalogue track it resolved to share one, and
+     * summing both would double-count it.
+     */
+    suspend fun bytesInUse(context: Context): Long = withContext(Dispatchers.IO) {
+        _savedMetadata.value.values.map { it.uri }.distinct().sumOf { uriString ->
+            val uri = uriString.toUri()
+            when (uri.scheme) {
+                "file" -> uri.path?.let(::File)?.length() ?: 0L
+                else -> context.contentResolver
+                    .query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)
+                    ?.use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }
+                    ?: 0L
+            }
+        }
     }
 
     /**
