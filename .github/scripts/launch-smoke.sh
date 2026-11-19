@@ -27,7 +27,78 @@ if [ "$count" -lt 2 ] || ! printf '%s\n' "$apks" | grep -q -- '-dev-' || ! print
   echo "MISSING APKS: expected one -dev- and one -prod- APK in $apk_dir, found $count"
   exit 1
 fi
+for apk in $apks; do
+  case "$apk" in
+    *-prod-*)
+      if unzip -l "$apk" | grep -E 'assets/dexopt/baseline\.prof'; then
+        echo "BASELINE PROFILE: present in $(basename "$apk")"
+      else
+        echo "BASELINE PROFILE MISSING: $(basename "$apk") has no assets/dexopt/baseline.prof"
+        failed=1
+      fi
+      ;;
+  esac
+done
 launched=0
+
+screen_size() {
+  adb shell wm size | tr -d '\r' | awk -F': ' '/Override size/ {o=$2} /Physical size/ {p=$2} END {print (o != "" ? o : p)}'
+}
+
+interact() {
+  local pkg="$1" tag="$2"
+  local size w h cx top bottom bar_y i
+  size="$(screen_size)"
+  w="${size%x*}"
+  h="${size#*x}"
+  cx=$((w / 2))
+  top=$((h * 3 / 10))
+  bottom=$((h * 7 / 10))
+  bar_y=$((h * 93 / 100))
+  echo "INTERACT $tag: screen ${w}x${h}"
+  for i in 1 2 3 4 5 6; do
+    echo "swipe $i up+down"
+    adb shell input swipe "$cx" "$bottom" "$cx" "$top" 300
+    sleep 0.4
+    adb shell input swipe "$cx" "$top" "$cx" "$bottom" 300
+    sleep 0.4
+  done
+  for frac in 12 30 50 70 88; do
+    echo "tap bar x=${frac}%"
+    adb shell input tap $((w * frac / 100)) "$bar_y"
+    sleep 1.5
+    adb shell input swipe "$cx" "$bottom" "$cx" "$top" 300
+    sleep 0.5
+  done
+  echo "tap mini player area"
+  adb shell input tap "$cx" $((h * 85 / 100))
+  sleep 2
+  adb shell input swipe "$cx" "$top" "$cx" "$bottom" 300
+  sleep 0.5
+  adb shell input keyevent 4
+  sleep 1
+  echo "settle 10 s"
+  sleep 10
+}
+
+perf_block() {
+  local pkg="$1" tag="$2" label="$3"
+  local activity run
+  activity="$(adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$pkg" | tr -d '\r' | tail -1)"
+  {
+    echo "== perf $tag $label"
+    for run in 1 2 3; do
+      adb shell am force-stop "$pkg"
+      sleep 2
+      adb shell am start -W -n "$activity" | tr -d '\r' | grep -E 'TotalTime|WaitTime' | sed "s/^/cold-start run $run: /"
+      sleep 8
+    done
+    adb shell dumpsys gfxinfo "$pkg" reset > /dev/null
+    interact "$pkg" "$tag-$label" > /dev/null
+    adb shell dumpsys gfxinfo "$pkg" | tr -d '\r' | grep -E 'Total frames rendered|Janky frames|50th percentile|90th percentile|95th percentile|99th percentile' | head -6
+  } | tee -a "$out/perf-$tag.txt"
+  adb shell am force-stop "$pkg"
+}
 
 # One launch attempt for one APK. Echoes the diagnostics the old inline block
 # printed, into $out files suffixed by the attempt, and returns:
@@ -45,9 +116,18 @@ launch_once() {
   sleep 25
   pid="$(adb shell pidof "$pkg" | tr -d '\r')"
   adb exec-out screencap -p > "$out/shot-$tag$attempt.png" 2>/dev/null || true
+  if [ -n "$pid" ]; then
+    interact "$pkg" "$tag$attempt"
+    adb exec-out screencap -p > "$out/shot-$tag$attempt-interacted.png" 2>/dev/null || true
+    pid="$(adb shell pidof "$pkg" | tr -d '\r')"
+    if [ -z "$pid" ]; then
+      echo "DIED DURING INTERACTION: $pkg"
+      adb shell dumpsys activity exit-info "$pkg" 2>/dev/null | tr -d '\r' | head -40 || true
+    fi
+  fi
   adb logcat -d -v threadtime > "$out/logcat-$tag$attempt.txt"
   if [ -z "$pid" ]; then
-    echo "DEAD: $pkg is not running 25 s after launch"
+    echo "DEAD: $pkg is not running after launch + interaction"
   else
     echo "ALIVE: $pkg pid $pid"
   fi
@@ -107,6 +187,11 @@ for apk in $apks; do
   fi
   if [ "$verdict" -ne 0 ]; then
     failed=1
+  elif [ "$pkg" = "com.music.bitchord" ]; then
+    perf_block "$pkg" "$tag" "as-installed" || true
+    adb shell cmd package compile -m speed-profile -f "$pkg" || true
+    adb shell dumpsys package dexopt | tr -d '\r' | grep -A3 "\[$pkg\]" | tee -a "$out/perf-$tag.txt" || true
+    perf_block "$pkg" "$tag" "speed-profile" || true
   fi
   echo "::endgroup::"
 done

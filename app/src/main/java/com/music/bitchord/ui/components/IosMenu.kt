@@ -4,10 +4,10 @@ import android.provider.Settings
 import com.music.bitchord.ui.player.PlayerBackHandler
 import com.music.bitchord.ui.player.additiveChrome
 import com.music.bitchord.ui.utils.containSheetGestures
-import io.github.neoruaa.glasmio.glass.render.Backdrop
-import io.github.neoruaa.glasmio.glass.render.drawBackdrop
-import io.github.neoruaa.glasmio.glass.render.effects.blur
-import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -218,7 +218,7 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
     effects = {
         // iOS menus carry the page's hue through more strongly than the page
         // has it.
-        vibrancy(1.8f)
+        colorControls(saturation = 1.8f)
         blur(MENU_BLUR.toPx() * MENU_BACKDROP_SCALE)
     },
     highlight = null,

@@ -49,20 +49,16 @@ class GlassMorphTest {
     }
 
     @Test
-    fun rowsFadeInThroughTheGrowthsMiddleStretch() {
-        // Glasmio's content curve — ((progress − 0.12) / 0.64) — starts early,
-        // inside the growth's own first stretch, and is sharp by 0.76.
-        assertEquals(0f, morphFrame(0.1f, button, menu).contentAlpha, 0f)
-        assertEquals(MORPH_CONTENT_BLUR_DP, morphFrame(0.1f, button, menu).contentBlurDp, 0f)
-        assertEquals(MORPH_CONTENT_SCALE, morphFrame(0.1f, button, menu).contentScale, 1e-4f)
-        val mid = morphFrame(0.5f, button, menu)
+    fun rowsComeInOversizedAndBlurredOnlyOnceTheGlassHasMostlyGrown() {
+        assertEquals(0f, morphFrame(0.2f, button, menu).contentAlpha, 0f)
+        assertEquals(MORPH_CONTENT_BLUR_DP, morphFrame(0.3f, button, menu).contentBlurDp, 0f)
+        assertEquals(MORPH_CONTENT_SCALE, morphFrame(0.3f, button, menu).contentScale, 1e-4f)
+        val mid = morphFrame(0.7f, button, menu)
         assertTrue(mid.contentAlpha in 0.1f..0.9f)
-        val sharp = morphFrame(0.76f, button, menu)
-        assertEquals(1f, sharp.contentAlpha, 0f)
-        assertEquals(0f, sharp.contentBlurDp, 0f)
-        assertEquals(1f, sharp.contentScale, 1e-4f)
         val end = morphFrame(1f, button, menu)
         assertEquals(1f, end.contentAlpha, 0f)
+        assertEquals(0f, end.contentBlurDp, 0f)
+        assertEquals(1f, end.contentScale, 1e-4f)
     }
 
     @Test

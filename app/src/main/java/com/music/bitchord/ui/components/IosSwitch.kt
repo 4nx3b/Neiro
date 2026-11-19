@@ -33,14 +33,14 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
-import io.github.neoruaa.glasmio.ui.GlasmioSwitch
+import com.music.bitchord.ui.components.liquid.LiquidGlassSwitch
 
 /**
- * The app's settings switch: Glasmio's iOS 27 liquid toggle where Liquid
- * Glass is on — the 63×28 track with the 37×24 elastic glass thumb whose
- * lens lifts under the finger, ported from the fork — and the plain iOS 26
- * capsule everywhere the glass isn't drawn (Android 8-11, Liquid Glass off
- * in Settings, or a row that owns its own tap and passes no callback).
+ * The app's settings switch: the AndroidLiquidGlass toggle where Liquid
+ * Glass is on — the 64×28 track with the 40×24 elastic glass thumb whose
+ * lens lifts under the finger — and the plain iOS 26 capsule everywhere
+ * the glass isn't drawn (Android 8-11, Liquid Glass off in Settings, or a
+ * row that owns its own tap and passes no callback).
  *
  * It takes Material3's `Switch` call shape so a settings row adopts it by name
  * alone. [thumbContent] and [colors] are accepted and ignored: on is iOS green
@@ -74,9 +74,9 @@ fun IosSwitch(
 
     if (onCheckedChange != null && LocalLiquidGlassEnabled.current && isGlassSupported()) {
         // The glass switch keeps the app-wide tuning's green off a cold
-        // start: GlasmioSwitch reads its own iOS tint, its backdrop and its
-        // drag physics straight off the fork.
-        GlasmioSwitch(
+        // start: the toggle reads its own iOS tint, its backdrop and its
+        // drag physics straight off the vendored renderer.
+        LiquidGlassSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             modifier = modifier,

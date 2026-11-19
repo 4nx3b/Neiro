@@ -75,7 +75,7 @@ jobs:
         run: |
           echo "== app prodReleaseRuntimeClasspath (what the phone runs)"
           ./gradlew -q :app:dependencies --configuration prodReleaseRuntimeClasspath \
-            | grep -E 'androidx.compose|org.jetbrains.compose|haze|richtext|lottie-compose|reorderable|shimmer|coil-compose|glasmio|kyant' \
+            | grep -E 'androidx.compose|org.jetbrains.compose|haze|richtext|lottie-compose|reorderable|shimmer|coil-compose|kyant' \
             | sed 's/^[ |\\+-]*//' | sort -u
           echo "== sharedUi releaseCompileClasspath, material3 (what sharedUi was compiled against)"
           ./gradlew -q :sharedUi:dependencies --configuration releaseCompileClasspath \
@@ -107,6 +107,7 @@ jobs:
     name: Launch on API ${{ matrix.api-level }}
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

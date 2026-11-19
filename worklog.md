@@ -2266,3 +2266,204 @@ Work Log:
 Stage Summary:
 - Pushed with the frost wiring's head; the next Launch Smoke round is the
   evidence. Check, TV and the Release APK stayed green throughout.
+
+## Task: the Glasmio exodus — every liquid glass, slider, toggle and bar onto AndroidLiquidGlass
+
+The Glasmio fork is gone entirely: no JitPack coordinates, no
+io.github.neoruaa imports, no manifest overrides, no version guard, no
+sample-smoke workflow, no crash patches, no crash doc. Every glass
+surface now draws through the vendored AndroidLiquidGlass backdrop
+module instead.
+
+- The renderer is `:backdrop` — guozhiqiang123/AndroidLiquidGlass's
+  backdrop module (Kyant's fork) vendored at 0ed8b08, commonMain + the
+  Android actuals with the expect/actual pairs collapsed. One
+  deliberate change: drawBackdrop/drawPlainBackdrop take a per-surface
+  `samplingScale` multiplied with the global BackdropRendering.scale
+  (the fork exposes the scale only globally; the app's surfaces are
+  tuned per call site — a third, a quarter under frost). The fork is
+  published nowhere its Gradle can be consumed from (no Maven Central,
+  no JitPack build — AGP 9.3.2/KMP/publishToMavenCentral), which is
+  why it's vendored and compiled by this repo's own toolchain; its one
+  Maven dependency, io.github.kyant0:shapes, resolves normally.
+- The liquid controls are the fork's own catalog, ported into
+  app/…/ui/components/liquid with BitChord's theme, backdrop and
+  tuning: LiquidGlassSlider (6dp track, 40×24 lens thumb, damped drag,
+  press blur-out, velocity squish), LiquidGlassSwitch (64×28 capsule,
+  40×24 lens thumb, drag-to-commit), LiquidGlassTabBar (the capsule
+  platter with the selection indicator as a control lens over an
+  accent-tinted recorded copy, damped drag-to-switch, the tracking
+  highlight, BitChord's split-search trailing circle and the fold
+  morph), plus the DampedDragAnimation / DragGestureInspector /
+  InteractiveHighlight utils they ride. IosSwitch, GlassNavBar,
+  GlassControls' GlassSlider, the SettingsSheet's sliders and
+  sharedUi's LocalGlassSlider slot all render these now.
+- The render-level glue swapped namespaces: app LiquidGlass.kt,
+  SnapshotBackdrop, IosMenu's menuBackdropFrost and the eight
+  archivetuneplayer files import com.kyant.backdrop.* (vibrancy(x) →
+  colorControls(saturation = x); the fork's vibrancy() is fixed at
+  1.5). GlasmioMotion.kt → LiquidMorphMotion.kt, the constants the
+  menus morph on renamed with it. The motions the app had ported
+  (IosNavigationMotion, IosPageTransitions, GlassMorph) are untouched
+  code — only their Glasmio mentions were reworded.
+- MainActivity lost the fork wrappers (GlasmioTheme, the icon
+  provider, the backdrop provider, the performance-tier effect);
+  BitChordApplication lost both GlasmioPerformance installs. The
+  frost switch (glassPerformance) is honoured per surface instead —
+  the lens goes, the blur doubles, the sampling drops to a quarter —
+  the same trade Modifier.liquidGlass always made.
+- The three manifests lost their tools:overrideLibrary (the vendored
+  module minSdks 21, below the app's 26). check.yml's Android job,
+  android.yml and the launch smoke are the CI that has to carry it.
+
+Stage Summary:
+- GlasmioVersionGuardTest deleted (its coordinate scan has nothing to
+  guard); GlassMorphTest and PageMotionTest untouched in substance —
+  the pure math they pin didn't change. AGENTS.md's library section
+  rewritten around :backdrop. Nothing else moved: the motions, the
+  tuning, the settings pages and every call site's glass parameters
+  are the values they were under the fork.
+
+---
+Task ID: curialy/zenith-liquid (partial)
+Agent: Curialy Engineer
+Task: Remove Glasmio traces; Zenith nav bar + mini player; AndroidLiquidGlass controls; fix the user's RenderThread SIGSEGV.
+Work Log:
+- Branched curialy/zenith-liquid off origin/dev 5a1853b (never main).
+- Found that LiquidGlassSwitch and LiquidGlassSlider defaulted `backdrop` to
+  LocalAppBackdrop (= appBackdrop). Both live inside pages that
+  layerBackdrop(appBackdrop) records: one instance of the
+  glass-samples-its-own-recorder pattern removed. Whether it was the user's
+  crash is unproven (the log has no backtrace; LSPosed/UnityDisplayTweaker is
+  also injected into the app). Their default is now emptyBackdrop(); the thumb still
+  refracts its own track through the catalog's combined track backdrop.
+Stage Summary:
+- One instance of the glass-samples-its-recorder pattern removed; whether it was the user's crash is unproven (no backtrace; LSPosed/UnityDisplayTweaker is injected on that phone).
+- Only the crash fix landed in this round. The Zenith GlassNavBar/floatingtabbar/MiniPlayer port,
+  the catalog toggle/slider rebuild, the Glasmio text purge (GlassMorph.kt, AGENTS.md)
+  and the launch-smoke interaction phase are still to do.
+- Still suspect: FrostedTopBar -> Modifier.liquidGlass samples LocalAppBackdrop too;
+  check whether it is drawn inside the recorded page.
+
+---
+Task ID: curialy/zenith-liquid (round 2, partial)
+Agent: Curialy Engineer
+Task: Reviewer round 1 fixes.
+Work Log:
+- Glasmio purge: LiquidMorphMotion.kt and IosNavigationMotion.kt deleted;
+  GlassMorph.kt, IosPageTransitions.kt, PageMotion.kt and their tests restored
+  to a150d33^; ArchiveTune BottomSheetMenu.kt and LyricsMenu.kt are
+  byte-identical to a150d33^ again; MainActivity tab swaps back to no
+  transition; AGENTS.md rewritten; the purge grep is empty.
+- LiquidGlassDefaults.kt added (catalog @0ed8b08 values); LiquidGlass.kt reads
+  its blur/lens/alpha from it (same numbers as before).
+- A Zenith nav-bar port was started, then reverted, because MainActivity
+  wiring, AppSettings.glassIndicator and PlayerDock pill fields could not be
+  finished this round. Not compiled.
+Stage Summary:
+- Still open: Zenith GlassNavBar/floatingtabbar/MiniPlayer port (removes
+  LiquidGlassTabBar + NavigationBarScroll), catalog rebuild of the
+  toggle/slider, Modifier.liquidGlass call-site audit, launch-smoke
+  interaction phase, push + CI.
+
+---
+Task ID: curialy/zenith-liquid (round 3)
+Agent: Curialy Engineer
+Task: Reviewer round 2 fixes.
+Work Log:
+- MainActivity imports point back at ui/components (NavigationBarScroll.kt),
+  where FloatingTabBarInlineBehavior and rememberFloatingTabBarScrollConnection
+  live; the non-glass MiniPlayer gets compactFraction again.
+- Unused PlayerDock pill members and LiquidGlassDefaults.LiquidTabIndicator
+  were removed (leftovers of the reverted port).
+- Recursion audit: Modifier.liquidGlass is the only appBackdrop reader besides
+  the tab bar. FrostedTopBar, the nav bar and the compact circles are drawn
+  outside the recorded AnimatedContent; lightweightLiquidGlass samples nothing.
+  The page content lambda now provides LocalAppBackdrop = emptyBackdrop(), so
+  no glass inside a recorded page can sample its recorder. Pinned by the new
+  GlassRecursionGuardTest.
+Stage Summary:
+- Zenith nav bar/mini player port, catalog toggle/slider rebuild and the
+  launch-smoke interaction phase are still open; not compiled or pushed.
+
+---
+Task ID: curialy/zenith-liquid (round 4, follow-up #1)
+Agent: Curialy Engineer
+Task: Finish the Zenith nav bar / mini player port; startup and rendering performance.
+Work Log:
+- 4e2d703: GlassNavBar.kt, floatingtabbar/{FloatingTabBar,GlassSelectionPill,RubberStretch}.kt,
+  FloatingBottomBar.kt and MiniPlayer.kt are Zenith@01e2ab1 verbatim (package mapped,
+  comments stripped per Rule 3, licence headers kept). LiquidGlassTabBar.kt and
+  NavigationBarScroll.kt deleted; MainActivity uses floatingtabbar's
+  rememberFloatingTabBarScrollConnection(expandThreshold = 250.dp) as Zenith does,
+  with MiniPlayerBarBehavior.ADAPTIVE -> OnScrollDown.
+- Edges adapted: AppSettings.glassIndicator (data/settings/GlassIndicator.kt, Zenith's
+  DEFAULT preset values, no settings UI); lens(chromaticStrength) added to :backdrop
+  (additive, default 1f = upstream behaviour); Zenith's panel morph (panelShown /
+  reportMiniPill) is not ported, so playerDockPill keeps the pill visible; Neiro's
+  compactFraction fold grafted onto Zenith's MiniPlayer; Neiro's
+  CompactControlCircles moved to its own file.
+- GlassRecursionGuardTest pins the bar outside the recorded page.
+- Baseline profile extended to com/kyant/backdrop and ArchiveTune ui; profileinstaller
+  1.4.1 added to :app and :tv; tv/src/main/baseline-prof.txt added.
+Stage Summary:
+- Not compiled (no SDK) and not pushed (no push tool in this run).
+- Still open: catalog-verbatim toggle/slider rebuild, RuntimeShaderPool + prewarm,
+  appBackdrop recording skip, per-frame read moves, deferred startup work,
+  launch-smoke interaction + perf phase, AGENTS.md glass section rewrite.
+
+---
+Task ID: curialy/zenith-liquid (follow-up 1, round 2)
+Agent: Curialy Engineer
+Task: Finish the open items; make startup and steady-state rendering fast without lowering quality.
+Work Log:
+- 4e2d703: Zenith@01e2ab1 GlassNavBar + floatingtabbar/{FloatingTabBar,GlassSelectionPill,RubberStretch}
+  + FloatingBottomBar + MiniPlayer ported. LiquidGlassTabBar.kt and NavigationBarScroll.kt deleted.
+  GlassIndicator = Zenith DEFAULT preset. Lens gained chromaticStrength (default 1f = upstream).
+- 50a60ca: profileinstaller 1.4.1 for :app/:tv; baseline-prof.txt also covers com/kyant/backdrop
+  and the ArchiveTune UI.
+- This round: RuntimeShaderPool in :backdrop (per-node exclusive instances, returned on onDetach
+  only) + prewarmBackdropShaders() from BitChordApplication on Dispatchers.Default; ShaderPoolTest
+  (also run locally with kotlinc 2.1.0: all pass). backdrop/PATCHES.md. Toggle/slider sizes and thumb
+  blur now read LiquidGlassDefaults; DampedDragAnimation/InteractiveHighlight/DragGestureInspector
+  already equal the catalog except visibility, withFrameNanos and System.currentTimeMillis.
+  launch-smoke: interaction phase (6 swipes, 5 bar taps, mini player tap + back, 10 s settle) before
+  the crash checks, a perf block (am start -W x3, gfxinfo) as-installed and after speed-profile into
+  smoke-out/perf-*.txt, and a baseline.prof presence check on the prod APK; android.yml verifies it too.
+Stage Summary:
+- Not done: skipping appBackdrop recording while unseen, moving per-frame reads out of the BitChordApp
+  scope, and deferring non-visual startup work. player.position is already a separate holder
+  (PlaybackPosition), so ticks do not recompose BitChordApp.
+- Nothing compiled: the sandbox has no Android SDK and no push tool in this round. Perf numbers
+  come from the first launch-smoke run after the push.
+
+---
+Task ID: curialy/zenith-liquid (perf round 2)
+Agent: Curialy Engineer
+Task: First-seconds lag; review round 2 fixes.
+Work Log:
+- Moved per-frame reads out of BitChordApp's composition (MainActivity.kt):
+  - bottomUiCompactFraction (spring, every frame of the fold) is now held as
+    State (bottomUiCompactState, ~l.726). MiniPlayer takes compactFraction as
+    a `() -> Float` and reads it inside its own scope (MiniPlayer.kt); 
+    CompactControlCircles takes `fraction: () -> Float` and reads it only in
+    graphicsLayer {} (CompactControlCircles.kt). The show/hide test is a
+    derivedStateOf Boolean (bottomUiCompactShown), so BitChordApp recomposes
+    twice per fold instead of once per frame. FloatingBottomBar's
+    graphicsLayer read was already draw-phase.
+  - player.position is already a separate PlaybackPosition holder (not part
+    of PlayerState equality), so it does not recompose BitChordApp per tick.
+- Deferred startup work: AppUpdateChecker.clearCache + check moved from
+  MainViewModel.init into onFirstFramesDrawn(), called from a
+  LaunchedEffect(Unit) after two withFrameNanos in BitChordApp; runs once per
+  ViewModel. BitChordApplication's ordered startup is untouched.
+- 7.1 (skip layerBackdrop(appBackdrop) while nothing samples it): deliberately
+  deferred. The nav bar (always composed above pages) samples appBackdrop on
+  every tab, so the only off state is "full player fully covers the page".
+  Swapping the modifier there risks one empty-glass frame when the sheet
+  starts collapsing, which cannot be checked without CI screenshots. Do it
+  after the first green launch-smoke round.
+- launch-smoke: perf block runs only for the prod APK; launch job timeout 60 min.
+- Push/PR: not possible in this run (no push tool exposed); branch is local.
+Stage Summary:
+- Unverified by a compiler: nothing on this branch has gone through CI yet.

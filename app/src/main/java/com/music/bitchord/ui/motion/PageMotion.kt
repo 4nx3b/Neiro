@@ -2,16 +2,13 @@ package com.music.bitchord.ui.motion
 
 import kotlin.math.max
 
-/*
- * The album-opening card geometry — the zoom out of the cover the row shows
- * — is the app's own (ui/motion/PageMotion) and stays; the slide between
- * pages now runs Glasmio's navigation motion (IosNavigationMotion.kt),
- * including the under-page dim the fork prescribes.
- */
 object PageMotion {
 
-    /* Glasmio's native ten-percent dimming of the covered page. */
-    const val UNDER_DIM = 0.10f
+    const val SLIDE_MS = 220
+
+    const val UNDER_SHIFT = 0.30f
+
+    const val UNDER_DIM = 0.22f
 
     const val OPEN_MS = 260
 
@@ -23,6 +20,8 @@ object PageMotion {
     const val CLOSE_EASE_K = 2.5f
 
     const val CARD_CORNER_DP = 12f
+
+    fun slideEase(t: Float): Float = cubicBezier(0.25f, 1f, 0.5f, 1f, t.coerceIn(0f, 1f))
 
     fun zoomEase(t: Float): Float = expEase(t, ZOOM_EASE_K)
 
