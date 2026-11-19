@@ -7,7 +7,7 @@ import kotlin.math.sin
 /**
  * The geometry of a popup morphing out of the control that opened it, after
  * iOS 26 Apple Music's Liquid Glass (docs/bottom-stack-reference.md, clips
- * 15-57-35 and 02-46-29) and now carrying Glasmio's iOS 27 liquid-morph
+ * 15-57-35 and 02-46-29) and now carrying the iOS 27 liquid-morph
  * motion (the myself-tsuki fork's IosMenus DropdownMorphSpring): the pressed
  * glass control itself swells into the panel — its rect travels from the
  * control's bounds to the panel's, stretching a little along the way it
@@ -43,10 +43,10 @@ data class MenuFrame(
     val contentScale: Float,
 )
 
-/** Where the rows start to come in, as a share of the morph — Glasmio's gate. */
+/** Where the rows start to come in, as a share of the morph. */
 const val MORPH_CONTENT_START = 0.12f
 
-/** The span of the rows' fade-in, as a share of the morph — Glasmio's window. */
+/** The span of the rows' fade-in, as a share of the morph. */
 const val MORPH_CONTENT_SPAN = 0.64f
 
 /** The rows' blur at the start of their fade-in, dp. */
@@ -59,7 +59,7 @@ const val MORPH_CONTENT_SCALE = 1.12f
 const val MORPH_STRETCH = 0.06f
 
 /*
- * Glasmio's DropdownMorphSpring, verbatim — the spring UIKitCore/AnimationKit's
+ * The dropdown morph spring, verbatim — the spring UIKitCore/AnimationKit's
  * MorphAnimationSettings.liquidMorph copies to width, height, position and
  * transform on iOS 27: stiffness (2π/response)² for the native 0.3 s response
  * and unit mass, damping 0.8 (a light settle), visible from 0.1% of travel.
@@ -68,10 +68,10 @@ const val MORPH_STRETCH = 0.06f
 const val MORPH_DAMPING = 0.8f
 const val MORPH_STIFFNESS = 438.64908f
 
-/** The close, Glasmio's liquid-morph collapse: ≈300 ms. */
+/** The close, the liquid-morph collapse: ≈300 ms. */
 const val MORPH_CLOSE_MS = 300
 
-/** The rows' progress (0..1) for a morph [progress] — Glasmio's content curve. */
+/** The rows' progress (0..1) for a morph [progress]. */
 fun morphContentFraction(progress: Float): Float =
     ((progress - MORPH_CONTENT_START) / MORPH_CONTENT_SPAN).coerceIn(0f, 1f)
 

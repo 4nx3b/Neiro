@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
  * The fold driver for the glass navigation bar, kept app-local from the days
  * the bar was the vendored Echo FloatingTabBar (GPL-3.0): a
  * [NestedScrollConnection] the page dispatches its scroll into, which flips
- * [isInline] once a run of scrolling crosses the threshold. The Glasmio
+ * [isInline] once a run of scrolling crosses the threshold. The glass bar
  * navigation bar that replaced the Echo shell reads the same state as its
  * compact progress — the platter-to-circle morph — so the fold behaves
  * exactly as it always has: down past a thumb's width collapses the bar to

@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <uses-sdk tools:overrideLibrary="io.github.neoruaa.glasmio.core,io.github.neoruaa.glasmio.glass,io.github.neoruaa.glasmio.icons,io.github.neoruaa.glasmio.ui" />
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- No components of its own: the player stack is mounted by the hosting
          activity (see ArchiveTunePlayerHost). The AOD screen the copied

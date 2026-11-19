@@ -1,14 +1,13 @@
 /*
- * The glass rendering itself is Glasmio — the myself-tsuki fork served from
- * JitPack — whose glasmio-glass module owns backdrop recording and material
- * rendering under io.github.neoruaa.glasmio.glass.render (itself adapted from
- * AndroidLiquidGlass, so no separate Kyant Backdrop dependency is required;
- * see that module's upstream attributions). This file is the integration
- * glue, adapted from EchoMusicApp/Echo-Music's GlassEffectConfig /
- * Modifier.liquidGlass (GPL-3.0), cut down from Echo's full
- * per-component/vibrancy-slider config to the single on/off switch BitChord
- * exposes in Settings. It is used by the floating nav bar and, while enabled,
- * the app-wide floating top controls.
+ * The glass rendering itself is the vendored AndroidLiquidGlass backdrop
+ * module (github.com/guozhiqiang123/AndroidLiquidGlass, Kyant's fork —
+ * Apache-2.0; see backdrop/build.gradle.kts) whose com.kyant.backdrop
+ * package owns backdrop recording and material rendering. This file is
+ * the integration glue, adapted from EchoMusicApp/Echo-Music's
+ * GlassEffectConfig / Modifier.liquidGlass (GPL-3.0), cut down from Echo's
+ * full per-component/vibrancy-slider config to the single on/off switch
+ * BitChord exposes in Settings. It is used by the floating nav bar and,
+ * while enabled, the app-wide floating top controls.
  */
 package com.music.bitchord.ui.components
 
@@ -39,15 +38,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.LiquidGlassIntensity
-import io.github.neoruaa.glasmio.glass.render.Backdrop
-import io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop
-import io.github.neoruaa.glasmio.glass.render.backdrops.emptyBackdrop
-import io.github.neoruaa.glasmio.glass.render.drawBackdrop
-import io.github.neoruaa.glasmio.glass.render.effects.blur
-import io.github.neoruaa.glasmio.glass.render.effects.lens
-import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
-import io.github.neoruaa.glasmio.glass.render.highlight.Highlight
-import io.github.neoruaa.glasmio.glass.render.shadow.Shadow
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.emptyBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.Shadow
 import androidx.compose.ui.unit.dp
 
 /** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
@@ -183,10 +182,10 @@ internal fun rememberLiquidGlassTuning(): LiquidGlassTuning {
  * shader, on as many as six surfaces at once in the middle of a fold, and the
  * blur is what hides the upscale.
  *
- * Glasmio multiplies whatever a surface asks for here by its own
- * performance-tier sampling scale — full-size surfaces stay at their own
- * scale, exactly the fork's behaviour — so on a mid-range tier the frost
- * records smaller still.
+ * The vendored backdrop module multiplies whatever a surface asks for here
+ * by its global BackdropRendering scale — a tier every glass surface in
+ * the app can be stepped down at once — so a lowered global tier records
+ * the frost smaller still.
  */
 private const val GLASS_RESOLUTION_SCALE = 0.33f
 
@@ -350,7 +349,7 @@ fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            vibrancy(1f + 0.5f * VIBRANCY * tuning.vibrancyFactor)
+            if (tuning.vibrancyFactor > 0f) colorControls(saturation = 1f + 0.5f * VIBRANCY * tuning.vibrancyFactor)
             blur(blurPx)
             if (!glassPerformance && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(

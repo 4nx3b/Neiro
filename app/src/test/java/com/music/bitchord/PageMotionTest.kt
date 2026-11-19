@@ -10,8 +10,8 @@ import org.junit.Test
 
 class PageMotionTest {
     @Test
-    fun pushIsOnTheGlasmioCriticalSpring() {
-        // The ported slide: Glasmio's unnormalised critical spring (damping 1,
+    fun pushIsOnTheCriticalSpring() {
+        // The ported slide: the unnormalised critical spring (damping 1,
         // ω = 2π/0.3) sampled over the 350 ms coordinator window — so a frame
         // is a frame of that window: 15% of the travel after one, settled by
         // 170 ms, monotonic throughout.
@@ -32,7 +32,7 @@ class PageMotionTest {
 
     @Test
     fun theUnderlayTravelsTheParallaxRemainder() {
-        // Glasmio's parallax offset: the covered page moves the width minus
+        // The ported parallax offset: the covered page moves the width minus
         // seventy percent of it, pixel-exact through the density round-trip.
         assertEquals(1080 - (1080 / 3f * 0.7f).toInt() * 3, iosNavigationParallaxOffset(1080, 3f))
         val width = 1080

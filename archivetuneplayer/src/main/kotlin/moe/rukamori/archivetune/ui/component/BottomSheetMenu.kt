@@ -51,10 +51,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
-import io.github.neoruaa.glasmio.glass.render.drawBackdrop
-import io.github.neoruaa.glasmio.glass.render.effects.blur
-import io.github.neoruaa.glasmio.glass.render.effects.vibrancy
-import io.github.neoruaa.glasmio.glass.render.effects.lens
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
+import com.kyant.backdrop.effects.lens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
@@ -134,16 +134,16 @@ fun BottomSheetMenu(
             enterProgress.snapTo(0f)
             enterProgress.animateTo(
                 targetValue = 1f,
-                // Glasmio's DropdownMorphSpring, ported: the spring
+                // The dropdown morph spring, ported: the spring
                 // UIKitCore/AnimationKit's liquidMorph copies to width,
                 // height, position and transform on iOS 27 — stiffness
                 // (2π/response)² for the 0.3 s response, damping 0.8.
-                animationSpec = GlasmioDropdownMorphSpring,
+                animationSpec = LiquidDropdownMorphSpring,
             )
         } else if (renderState) {
             enterProgress.animateTo(
                 targetValue = 0f,
-                // Glasmio's liquid-morph collapse: ≈300 ms.
+                // The liquid-morph collapse: ≈300 ms.
                 animationSpec = tween(durationMillis = 300),
             )
             focusManager.clearFocus()
@@ -177,7 +177,7 @@ fun BottomSheetMenu(
                 Modifier.drawBackdrop(
                     backdrop = liquidGlassBackdrop,
                     effects = {
-                        vibrancy(saturation = glassTuning.saturation)
+                        colorControls(saturation = glassTuning.saturation)
 
                         blur((20f * glassTuning.blurFactor).dp.toPx())
 
