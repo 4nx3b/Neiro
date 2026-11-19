@@ -2467,3 +2467,50 @@ Work Log:
 - Push/PR: not possible in this run (no push tool exposed); branch is local.
 Stage Summary:
 - Unverified by a compiler: nothing on this branch has gone through CI yet.
+
+---
+Task ID: PR #28 conflicts + leftovers
+Agent: Curialy Engineer
+Task: Clear PR #28's merge conflicts (head curialy/fix, base main); resolve
+the open items left by the earlier rounds.
+Work Log:
+- PR #28 head 8c5fc9e (one commit on d549f39) has the same tree as the local
+  curialy/zenith-liquid@5846497. main@bd51e1e (PR #27) has the same tree as
+  dev 5a1853b, which this branch already contains. The 18 merge-tree
+  conflicts come from the same work arriving along two histories.
+- Resolution: `git merge -s ours --no-ff origin/main` on curialy/fix ->
+  519d975 (parents 8c5fc9e, bd51e1e). Proof: `git diff --quiet 8c5fc9e 519d975`
+  passes (tree unchanged); `git diff origin/main 519d975 --stat` equals
+  `git diff origin/dev curialy/zenith-liquid --stat`; `git merge-tree
+  --write-tree origin/main 519d975` exits 0 with no CONFLICT. No Glasmio file
+  (NavigationBarScroll.kt, IosNavigationMotion.kt, the JitPack fork) comes back.
+- Item 7.1 (skip the appBackdrop recording while the player covers the page):
+  already in place on dev. The page root's `drawWithContent { if
+  (!coveredByPlayer) drawContent() }` (MainActivity ~l.3100, content box
+  l.3102-6665) holds the recorder (l.3203) and GlassNavBar (l.4512).
+  coveredByPlayer is a derivedStateOf on openFraction() >= 1f, so recording
+  resumes on the first frame of a collapse. grep shows no LocalAppBackdrop or
+  liquidGlass reader in ui/player or sharedUi. No code change; this corrects
+  the earlier "deliberately deferred" note.
+- Zenith's PlayerDock.panelShown / reportMiniPill panel morph: not ported, on
+  purpose. It belongs to Zenith's PlayerPanel side panel, which Neiro does not
+  have (Neiro's player is a ModalBottomSheet). Known difference.
+- Codex review on PR #28: completed on 8c5fc9e with one P1 finding
+  (discussion_r4635985090). LiquidGlassSlider read its `value: Float`
+  parameter inside a once-started snapshotFlow, so the effect never saw the
+  parent's new value. The drag delta was computed from that frozen
+  targetValue, and onDragStopped wrote it back, so glass sliders (settings,
+  player scrubbing) did not follow the finger and reverted on release.
+  Fixed (LiquidGlassSlider.kt):
+  - the effect reads rememberUpdatedState(value), like the catalog's
+    `value: () -> Float`;
+  - the callbacks go through rememberUpdatedState;
+  - the drag accumulates the finger position itself, so callers that snap to
+    steps (GlassSlider, the SettingsSheet sliders) cannot pin a slow drag to
+    one step;
+  - release reports the finger value.
+  The call sites are unchanged.
+Stage Summary:
+- Not yet verified: the push of 519d975 and every CI round (Check, TV,
+  Launch Smoke) wait for the Reviewer's approval. Perf numbers stay pending
+  until the first green launch-smoke run.

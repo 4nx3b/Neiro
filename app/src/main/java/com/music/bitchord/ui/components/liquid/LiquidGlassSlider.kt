@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -116,6 +117,10 @@ fun LiquidGlassSlider(
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
         val animationScope = rememberCoroutineScope()
         var didDrag by remember { mutableStateOf(false) }
+        val latestValue = rememberUpdatedState(value)
+        val latestOnValueChange = rememberUpdatedState(onValueChange)
+        val latestOnValueChangeFinished = rememberUpdatedState(onValueChangeFinished)
+        val fingerValue = remember { floatArrayOf(0f) }
         val dampedDragAnimation = remember(animationScope, valueRange) {
             DampedDragAnimation(
                 animationScope = animationScope,
@@ -127,25 +132,26 @@ fun LiquidGlassSlider(
                 onDragStarted = {},
                 onDragStopped = {
                     if (didDrag) {
-                        onValueChange(targetValue)
+                        latestOnValueChange.value(fingerValue[0])
                     }
                     didDrag = false
-                    onValueChangeFinished?.invoke()
+                    latestOnValueChangeFinished.value?.invoke()
                 },
                 onDrag = { _, dragAmount ->
                     if (!didDrag) {
+                        fingerValue[0] = targetValue
                         didDrag = dragAmount.x != 0f
                     }
                     val delta = (valueRange.endInclusive - valueRange.start) * (dragAmount.x / trackWidth)
-                    onValueChange(
-                        if (isLtr) (targetValue + delta).coerceIn(valueRange)
-                        else (targetValue - delta).coerceIn(valueRange)
-                    )
+                    fingerValue[0] =
+                        if (isLtr) (fingerValue[0] + delta).coerceIn(valueRange)
+                        else (fingerValue[0] - delta).coerceIn(valueRange)
+                    latestOnValueChange.value(fingerValue[0])
                 }
             )
         }
         LaunchedEffect(dampedDragAnimation) {
-            snapshotFlow { value.coerceIn(valueRange) }
+            snapshotFlow { latestValue.value.coerceIn(valueRange) }
                 .collectLatest { value ->
                     if (dampedDragAnimation.targetValue != value) {
                         dampedDragAnimation.updateValue(value)
@@ -166,7 +172,7 @@ fun LiquidGlassSlider(
                                 else valueRange.endInclusive - delta)
                                     .coerceIn(valueRange)
                             dampedDragAnimation.animateToValue(targetValue)
-                            onValueChange(targetValue)
+                            latestOnValueChange.value(targetValue)
                         }
                     }
                     .height(LiquidGlassDefaults.SliderTrackHeight)

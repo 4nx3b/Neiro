@@ -223,6 +223,13 @@ its own source system. Porting rules:
   per-frame values in layout/draw lambdas only. launch-smoke runs an
   interaction phase and prints a perf block (cold start ×3, gfxinfo),
   as installed and after speed-profile.
+- While a portrait player is fully up, MainActivity's page root skips
+  `drawContent()` (`coveredByPlayer`, a derivedStateOf on
+  `playerDock.openFraction() >= 1f`). That box holds both the
+  `layerBackdrop(appBackdrop)` recorder and `GlassNavBar`, so the page is not
+  recorded while covered, and recording resumes on the first frame the sheet
+  moves down. Nothing in the player (its own dialog window) samples
+  `appBackdrop`. Keep both inside that box.
 - `shared/…/data/model/Models.kt` owns `Song`; the app module has no model file.
 - Source system: `app/…/data/sources/` — `MusicSource` (search + stream),
   `SourceKind` (rank-ordered), `SourceRegistry` (encrypted-prefs persistence,
