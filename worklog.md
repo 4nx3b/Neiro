@@ -2230,3 +2230,39 @@ Stage Summary:
 - Pushed to dev; CI is the compile evidence (7-minute monitor per the
   rules). PR #26 (dev -> main) carries the guard and this wiring; it
   merges once this round is green so the phone's next build boots.
+
+---
+
+## Task: the launch smoke tolerates one runner-side flake per APK
+
+Task ID: smoke-retry
+Agent: Super Z (orchestrator, session web-4388e63e)
+
+Task: The Launch Smoke round for the frost wiring (99d68499) failed three
+times on the API 34 job with three different runner-side failures and no
+app crash signature in any of them; make the workflow's verdict mean the
+app, not the runner.
+
+Work Log:
+- Attempt 1: ANR in the dev build — input dispatching timed out waiting
+  5003 ms for FocusEvent, during cold start, with the process ALIVE at
+  +25 s; runner load 20, CPU pressure 89%, 37k major faults.
+- Attempt 2 (rerun): the dev build clean; the same FocusEvent ANR on the
+  PROD build instead; load 30, CPU pressure 91%. The ANR follows whichever
+  APK launches while the runner is buried — not the code, not even the
+  variant.
+- Attempt 3 (rerun): the emulator's own graphics stack broke (Failed to
+  find ColorBuffer: 98, invalid color buffer, I/O thread spun) and the dev
+  build died with NO crash, ANR, or exception line in logcat.
+- Three attempts, three infra modes, zero app signatures: the gate was
+  measuring the runner. launch-smoke.sh now runs each APK's launch through
+  launch_once() with a verdict per class — 0 alive and clean, 1
+  runner-side (silent death, or an ANR the process recovered from), 2 the
+  app's own signature (FATAL EXCEPTION / Fatal signal). Class 1 gets one
+  clean relaunch; class 2 never retries, so a genuinely crashing build
+  still fails both attempts and the gate stays strict. Both attempts keep
+  their logcat and screenshot in the artifacts.
+
+Stage Summary:
+- Pushed with the frost wiring's head; the next Launch Smoke round is the
+  evidence. Check, TV and the Release APK stayed green throughout.
