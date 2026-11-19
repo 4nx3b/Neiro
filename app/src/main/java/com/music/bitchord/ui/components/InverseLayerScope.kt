@@ -1,15 +1,4 @@
 /*
-<<<<<<<< HEAD:glasmio/glass/src/main/java/io/github/neoruaa/glasmio/glass/render/internal/InverseLayerScope.kt
- * Copyright 2025 Kyant
- * Copyright 2026 Glasmio contributors
- * SPDX-License-Identifier: Apache-2.0
- *
- * Adapted from AndroidLiquidGlass 2.0.1 generic capture/effect infrastructure.
- * Modified for Glasmio's owned namespace and Android material renderer.
- */
-
-package io.github.neoruaa.glasmio.glass.render.internal
-========
  * An app-local inverse of a GraphicsLayerScope block, kept from the days the
  * app vendored Kyant0/backdrop (Apache-2.0) — that package is gone now that
  * the app renders glass through Glasmio's own backdrop (the fork's
@@ -18,7 +7,6 @@ package io.github.neoruaa.glasmio.glass.render.internal
  * here. No dependency on either glass library: this is plain Compose.
  */
 package com.music.bitchord.ui.components
->>>>>>>> origin/curialy/glassmio:app/src/main/java/com/music/bitchord/ui/components/InverseLayerScope.kt
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
