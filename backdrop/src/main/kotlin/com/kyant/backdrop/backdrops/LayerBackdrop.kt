@@ -41,6 +41,14 @@ class LayerBackdrop internal constructor(
 
     internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
 
+    /**
+     * The coordinates the recorded layer sits at — read-only, for hosts that
+     * draw extras aligned to a recorded copy of it (the selection pill's
+     * rim). Null while the recording layer is unplaced.
+     */
+    val recordedLayerCoordinates: LayoutCoordinates?
+        get() = layerCoordinates
+
     private var inverseLayerScope: InverseLayerScope? = null
 
     override fun DrawScope.drawBackdrop(
