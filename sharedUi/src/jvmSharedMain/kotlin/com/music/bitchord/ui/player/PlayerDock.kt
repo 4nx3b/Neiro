@@ -96,6 +96,19 @@ class PlayerDock {
         return (1f - offset / travel).coerceIn(0f, 1f)
     }
 
+    /*
+     * The floating tab bar's chrome asks these how far the panel's own
+     * motion should shove it aside while the player opens: the px the
+     * chrome should travel toward that side, or NaN when the panel's
+     * geometry has nothing to add — the bar then falls back to its own
+     * open-fraction easing, which is this dock's panel exactly: it rises
+     * straight up from below and never travels sideways, so the side push
+     * always defers to the easing and the down push rides it too.
+     */
+    fun panelSideTravel(toRight: Boolean): Float = Float.NaN
+
+    fun panelBottomTravel(): Float = Float.NaN
+
     val coversMiniArt: Boolean
         get() = coversMiniArtState.value
 
