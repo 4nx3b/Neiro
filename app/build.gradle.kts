@@ -642,5 +642,8 @@ composeCompiler {
 baselineProfile {
     automaticGenerationDuringBuild = false
     saveInSrc = true
-    mergeIntoMain = true
+    mergeIntoMain = false
+    warnings {
+        maxAgpVersion = false
+    }
 }

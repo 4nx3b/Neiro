@@ -2627,3 +2627,23 @@ Stage Summary:
   cornerFactor(1) = 2 and cornerFactor(0) = 0. refractionWidth stays on the lens height: that is
   Zenith's own mapping (Zenith ui/components/LiquidGlass.kt:240, lensHeightPx × custom.refractionWidth).
   values-zh-rHK and values-b+zh+Hant got the 16 new liquid_glass_* placeholders too.
+
+---
+Task ID: curialy/drift-lyrics-acrylic-perf (cold start fix)
+Agent: Curialy Engineer
+Task: Make the baseline/startup profile generation actually run (PR #36).
+Work Log:
+- Cause: Baseline Profile run 44741076223 stopped with "Cannot locate tasks that match
+  ':app:generateProdReleaseBaselineProfile'". app/build.gradle.kts had `mergeIntoMain = true`;
+  per the Android docs that registers only a single `generateBaselineProfile` task, and
+  per-variant tasks exist only with false.
+- Fix: `mergeIntoMain = false` (saveInSrc stays true; `warnings { maxAgpVersion = false }`), so
+  :app:generateProdReleaseBaselineProfile exists and writes
+  app/src/prodRelease/generated/baselineProfiles/.
+- baseline-profile.yml: generation is strict; the benchmark is its own report-only step;
+  the log and step summary print both rule counts, the first 30 rules and the
+  StartupTimingMetric/FrameTimingMetric summary (.github/scripts/bench_summary.py); a
+  github-actions[bot] commit pushes the generated profiles back to the PR branch (contents:
+  write, checkout of the head ref); triggers also on app/build.gradle.kts.
+Stage Summary:
+- Rule counts and benchmark numbers: pending the first green run.

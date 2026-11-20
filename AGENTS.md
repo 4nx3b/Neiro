@@ -394,8 +394,15 @@ its own source system. Porting rules:
 - **Startup (curialy/drift-lyrics-acrylic-perf).** `:baselineprofile` (com.android.test →
   :app, androidx.baselineprofile 1.5.0) holds `BaselineProfileGenerator` (startup profile
   included) and `StartupBenchmark` (None vs Partial(Require)); `.github/workflows/baseline-profile.yml`
-  runs both on an API 34 emulator and uploads `app/src/**/generated/baselineProfiles/`. Commit
-  the generated files; the hand-written `app/src/main/baseline-prof.txt` stays until then.
+  runs both on an API 34 emulator. `app/build.gradle.kts` keeps `mergeIntoMain = false`: with
+  true the plugin registers only `:app:generateBaselineProfile` (every variant, dev included,
+  against a generator that targets com.music.bitchord) and no per-variant task. The task is
+  `:app:generateProdReleaseBaselineProfile`; it writes
+  `app/src/prodRelease/generated/baselineProfiles/{baseline,startup}-prof.txt`, packaged into
+  the shipped prodRelease APK only. The workflow commits those files back to the branch as
+  github-actions[bot] (fast-forward the local branch before the next push). To regenerate,
+  dispatch baseline-profile.yml. `app/src/main/baseline-prof.txt` stays the hand-written
+  fallback for every other variant. The benchmark step is report-only.
   The shader prewarm and the ArchiveTune player host start two frames after the first frame;
   `ReportDrawnWhen` fires once the home feed leaves Loading.
 - **Liquid Glass fine tuning.** `data/settings/LiquidGlassUpstream.kt` holds the upstream
