@@ -103,6 +103,18 @@ tab_cycles() {
   sleep 3
 }
 
+first10_swipes() {
+  local size w h cx i
+  size="$(screen_size)"
+  w="${size%x*}"
+  h="${size#*x}"
+  cx=$((w / 2))
+  for i in 1 2 3 4 5; do
+    adb shell input swipe "$cx" $((h * 7 / 10)) "$cx" $((h * 3 / 10)) 300
+    sleep 1.5
+  done
+}
+
 perf_block() {
   local pkg="$1" tag="$2" label="$3"
   local activity run
@@ -115,6 +127,15 @@ perf_block() {
       adb shell am start -W -n "$activity" | tr -d '\r' | grep -E 'TotalTime|WaitTime' | sed "s/^/cold-start run $run: /"
       sleep 8
     done
+    echo "-- first 10 s after a cold start ($label)"
+    adb shell am force-stop "$pkg"
+    sleep 2
+    adb shell am start -n "$activity" > /dev/null
+    sleep 1
+    adb shell dumpsys gfxinfo "$pkg" reset > /dev/null
+    first10_swipes
+    adb shell dumpsys gfxinfo "$pkg" | tr -d '\r' | grep -E 'Total frames rendered|Janky frames|50th percentile|90th percentile|95th percentile|99th percentile|Slow UI thread|Missed Vsync|Frame deadline missed' | sed 's/^/first-10s: /'
+    adb shell dumpsys package dexopt 2>/dev/null | tr -d '\r' | grep -A4 "\[$pkg\]" | grep -E 'status=|\[' | head -3 | sed 's/^/dexopt: /'
     adb shell dumpsys gfxinfo "$pkg" reset > /dev/null
     interact "$pkg" "$tag-$label" > /dev/null
     adb shell dumpsys gfxinfo "$pkg" | tr -d '\r' | grep -E 'Total frames rendered|Janky frames|50th percentile|90th percentile|95th percentile|99th percentile' | head -6
@@ -219,7 +240,8 @@ for apk in $apks; do
   if [ "$verdict" -ne 0 ]; then
     failed=1
   elif [ "$pkg" = "com.music.bitchord" ]; then
-    perf_block "$pkg" "$tag" "as-installed" || true
+    adb shell cmd package compile --reset "$pkg" > /dev/null 2>&1 || true
+    perf_block "$pkg" "$tag" "uncompiled" || true
     adb shell cmd package compile -m speed-profile -f "$pkg" || true
     adb shell dumpsys package dexopt | tr -d '\r' | grep -A3 "\[$pkg\]" | tee -a "$out/perf-$tag.txt" || true
     perf_block "$pkg" "$tag" "speed-profile" || true

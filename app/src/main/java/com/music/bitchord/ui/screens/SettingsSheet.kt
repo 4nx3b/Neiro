@@ -1741,6 +1741,17 @@ fun SettingsScreen(
                     onClick = { onOpenChoice(SettingsChoiceKind.NAVIGATION_BAR) },
                 )
             }
+            val acrylicTitle = stringResource(R.string.acrylic_blur)
+            row(acrylicTitle, "acrylic", "blur", "frost") {
+                val acrylicBlur by AppSettings.acrylicBlur.collectAsStateWithLifecycle()
+                SettingsRow(
+                    icon = SfIcons.AutoAwesome,
+                    title = acrylicTitle,
+                    subtitle = stringResource(R.string.acrylic_blur_subtitle),
+                    trailing = { IosSwitch(checked = acrylicBlur, onCheckedChange = AppSettings::setAcrylicBlur) },
+                    onClick = { AppSettings.setAcrylicBlur(!acrylicBlur) },
+                )
+            }
         }
 
         // ---- The ported Extras group ----
@@ -4427,6 +4438,14 @@ private fun LiquidGlassTuningPage() {
     val tintOpacity by AppSettings.liquidGlassTintOpacity.collectAsStateWithLifecycle()
     val shadowDepth by AppSettings.liquidGlassShadowDepth.collectAsStateWithLifecycle()
     val depth3D by AppSettings.liquidGlassDepth3D.collectAsStateWithLifecycle()
+    val glassCornerRadius by AppSettings.liquidGlassCornerRadius.collectAsStateWithLifecycle()
+    val glassChromaticAmount by AppSettings.liquidGlassChromaticAmount.collectAsStateWithLifecycle()
+    val glassClarity by AppSettings.liquidGlassClarity.collectAsStateWithLifecycle()
+    val glassSaturation by AppSettings.liquidGlassSaturation.collectAsStateWithLifecycle()
+    val glassRefractionWidth by AppSettings.liquidGlassRefractionWidth.collectAsStateWithLifecycle()
+    val glassRainbow by AppSettings.liquidGlassRainbow.collectAsStateWithLifecycle()
+    val glassRim by AppSettings.liquidGlassRim.collectAsStateWithLifecycle()
+    val glassQuality by AppSettings.liquidGlassQuality.collectAsStateWithLifecycle()
     val chromaticAberration by AppSettings.liquidGlassChromaticAberration.collectAsStateWithLifecycle()
     val backdropVibrancy by AppSettings.liquidGlassBackdropVibrancy.collectAsStateWithLifecycle()
     val adaptiveLuminance by AppSettings.liquidGlassAdaptiveLuminance.collectAsStateWithLifecycle()
@@ -4564,6 +4583,96 @@ private fun LiquidGlassTuningPage() {
             onSliderValue = { AppSettings.setLiquidGlassShadowDepth((it * 100f).roundToInt() / 100f) },
             valueRange = 0f..1f,
             steps = 19,
+        )
+    }
+
+    SettingsGroup(header = stringResource(R.string.liquid_glass_fine_tuning)) {
+        SliderRow(
+            icon = SfIcons.Gradient,
+            title = stringResource(R.string.liquid_glass_corner_radius),
+            subtitle = stringResource(R.string.liquid_glass_corner_radius_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassCornerRadius * 100f).roundToInt()),
+            sliderValue = glassCornerRadius,
+            onSliderValue = { AppSettings.setLiquidGlassCornerRadius((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Waves,
+            title = stringResource(R.string.liquid_glass_chromatic_amount),
+            subtitle = stringResource(R.string.liquid_glass_chromatic_amount_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassChromaticAmount * 100f).roundToInt()),
+            sliderValue = glassChromaticAmount,
+            onSliderValue = { AppSettings.setLiquidGlassChromaticAmount((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Gradient,
+            title = stringResource(R.string.liquid_glass_clarity),
+            subtitle = stringResource(R.string.liquid_glass_clarity_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassClarity * 100f).roundToInt()),
+            sliderValue = glassClarity,
+            onSliderValue = { AppSettings.setLiquidGlassClarity((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Gradient,
+            title = stringResource(R.string.liquid_glass_saturation),
+            subtitle = stringResource(R.string.liquid_glass_saturation_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassSaturation * 100f).roundToInt()),
+            sliderValue = glassSaturation,
+            onSliderValue = { AppSettings.setLiquidGlassSaturation((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..2f,
+            steps = 39,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Waves,
+            title = stringResource(R.string.liquid_glass_refraction_width),
+            subtitle = stringResource(R.string.liquid_glass_refraction_width_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassRefractionWidth * 100f).roundToInt()),
+            sliderValue = glassRefractionWidth,
+            onSliderValue = { AppSettings.setLiquidGlassRefractionWidth((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Waves,
+            title = stringResource(R.string.liquid_glass_rainbow),
+            subtitle = stringResource(R.string.liquid_glass_rainbow_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassRainbow * 100f).roundToInt()),
+            sliderValue = glassRainbow,
+            onSliderValue = { AppSettings.setLiquidGlassRainbow((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Gradient,
+            title = stringResource(R.string.liquid_glass_rim),
+            subtitle = stringResource(R.string.liquid_glass_rim_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassRim * 100f).roundToInt()),
+            sliderValue = glassRim,
+            onSliderValue = { AppSettings.setLiquidGlassRim((it * 100f).roundToInt() / 100f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        RowDivider()
+        SliderRow(
+            icon = SfIcons.Waves,
+            title = stringResource(R.string.liquid_glass_quality),
+            subtitle = stringResource(R.string.liquid_glass_quality_desc),
+            value = stringResource(R.string.liquid_glass_percent_value, (glassQuality * 100f).roundToInt()),
+            sliderValue = glassQuality,
+            onSliderValue = { AppSettings.setLiquidGlassQuality((it * 100f).roundToInt() / 100f) },
+            valueRange = 0.2f..1f,
+            steps = 15,
         )
     }
 

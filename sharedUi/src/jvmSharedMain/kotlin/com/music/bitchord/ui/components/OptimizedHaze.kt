@@ -1,7 +1,11 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.ExperimentalHazeApi
 import dev.chrisbanes.haze.HazeEffectScope
@@ -29,7 +33,7 @@ fun Modifier.optimizedHazeEffect(
     state: HazeState,
     style: HazeStyle = HazeStyle.Unspecified,
     block: (HazeEffectScope.() -> Unit)? = null,
-): Modifier = hazeEffect(state, style) {
+): Modifier = hazeEffect(state, if (AcrylicMaterial.enabled && style.backgroundColor.isSpecified) acrylicFrost(style.backgroundColor) else style) {
     inputScale = HazeInputScale.Fixed(0.33f)
     block?.invoke(this)
 }
@@ -70,3 +74,21 @@ const val MENU_FROST_ALPHA = 0.80f
 
 /** The menu panel's charcoal, and the player's — which is dark whatever the theme. */
 val MenuFrostDark = Color(0xFF1C1C1E)
+
+/** ArchiveTune dev's ACRYLIC material (FloatingBarBlurBackground.kt): wide blur, grain, a heavy surface tint. */
+const val ACRYLIC_BLUR_DP = 32f
+const val ACRYLIC_NOISE = 0.12f
+const val ACRYLIC_TINT_ALPHA = 0.72f
+
+/** Mirrors AppSettings.acrylicBlur so sharedUi's frosts can read it; set by AppSettings on load and on change. */
+object AcrylicMaterial {
+    var enabled by mutableStateOf(false)
+}
+
+fun acrylicFrost(surface: Color): HazeStyle = HazeStyle(
+    backgroundColor = surface,
+    tints = listOf(HazeTint(surface.copy(alpha = ACRYLIC_TINT_ALPHA))),
+    blurRadius = ACRYLIC_BLUR_DP.dp,
+    noiseFactor = ACRYLIC_NOISE,
+    fallbackTint = HazeTint(surface),
+)

@@ -75,6 +75,14 @@ data class LiquidGlassTuning(
     val chromaticAberration: Boolean = true,
     val backdropVibrancy: Boolean = true,
     val adaptiveLuminance: Boolean = true,
+    val cornerRadius: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.CORNER_RADIUS_DEFAULT,
+    val chromaticAmount: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.CHROMATIC_AMOUNT_DEFAULT,
+    val clarity: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.CLARITY_DEFAULT,
+    val saturation: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.SATURATION_DEFAULT,
+    val refractionWidth: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.REFRACTION_WIDTH_DEFAULT,
+    val rainbow: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.RAINBOW_DEFAULT,
+    val rim: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.RIM_DEFAULT,
+    val quality: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.QUALITY_DEFAULT,
 ) {
     private val presetRefraction: Float =
         when (intensity) {
@@ -105,6 +113,13 @@ data class LiquidGlassTuning(
     val vibrancyFactor: Float = if (backdropVibrancy) 1f else 0f
 
     val adaptiveLuminanceFactor: Float = if (adaptiveLuminance) 1f else 0.44f
+
+    val cornerFactor: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.cornerFactor(cornerRadius)
+    val clarityBlurFactor: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.clarityBlurFactor(clarity)
+    val clarityTintFactor: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.clarityTintFactor(clarity)
+    val qualityFactor: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.clarityResolutionFactor(clarity) * quality
+    val refractionWidthFactor: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.refractionWidthFactor(refractionWidth)
+    val dispersionStrength: Float = com.music.bitchord.data.settings.LiquidGlassUpstream.dispersionStrength(chromaticAmount, rainbow)
 }
 
 @Composable
@@ -119,6 +134,14 @@ internal fun rememberLiquidGlassTuning(): LiquidGlassTuning {
     val chromaticAberration by AppSettings.liquidGlassChromaticAberration.collectAsStateWithLifecycle()
     val backdropVibrancy by AppSettings.liquidGlassBackdropVibrancy.collectAsStateWithLifecycle()
     val adaptiveLuminance by AppSettings.liquidGlassAdaptiveLuminance.collectAsStateWithLifecycle()
+    val cornerRadius by AppSettings.liquidGlassCornerRadius.collectAsStateWithLifecycle()
+    val chromaticAmount by AppSettings.liquidGlassChromaticAmount.collectAsStateWithLifecycle()
+    val clarity by AppSettings.liquidGlassClarity.collectAsStateWithLifecycle()
+    val saturation by AppSettings.liquidGlassSaturation.collectAsStateWithLifecycle()
+    val refractionWidth by AppSettings.liquidGlassRefractionWidth.collectAsStateWithLifecycle()
+    val rainbow by AppSettings.liquidGlassRainbow.collectAsStateWithLifecycle()
+    val rim by AppSettings.liquidGlassRim.collectAsStateWithLifecycle()
+    val quality by AppSettings.liquidGlassQuality.collectAsStateWithLifecycle()
     return remember(
         intensity,
         refractionHeight,
@@ -130,6 +153,14 @@ internal fun rememberLiquidGlassTuning(): LiquidGlassTuning {
         chromaticAberration,
         backdropVibrancy,
         adaptiveLuminance,
+        cornerRadius,
+        chromaticAmount,
+        clarity,
+        saturation,
+        refractionWidth,
+        rainbow,
+        rim,
+        quality,
     ) {
         LiquidGlassTuning(
             intensity = intensity,
@@ -142,6 +173,14 @@ internal fun rememberLiquidGlassTuning(): LiquidGlassTuning {
             chromaticAberration = chromaticAberration,
             backdropVibrancy = backdropVibrancy,
             adaptiveLuminance = adaptiveLuminance,
+            cornerRadius = cornerRadius,
+            chromaticAmount = chromaticAmount,
+            clarity = clarity,
+            saturation = saturation,
+            refractionWidth = refractionWidth,
+            rainbow = rainbow,
+            rim = rim,
+            quality = quality,
         )
     }
 }
@@ -222,10 +261,15 @@ fun Modifier.liquidGlass(
     val backdrop = LocalAppBackdrop.current
     val exportedBackdrop = LocalGlassExport.current
     val density = LocalDensity.current
-    val resolutionScale = if (glassPerformance) FROST_RESOLUTION_SCALE else GLASS_RESOLUTION_SCALE
-    val blurRadiusDp = (if (glassPerformance) FROST_BLUR_RADIUS_DP else BLUR_RADIUS_DP) * tuning.blurFactor
+    val resolutionScale = ((if (glassPerformance) FROST_RESOLUTION_SCALE else GLASS_RESOLUTION_SCALE) * tuning.qualityFactor).coerceIn(0.1f, 1f)
+    val acrylic = AcrylicMaterial.enabled
+    val blurRadiusDp = if (acrylic) {
+        ACRYLIC_BLUR_DP
+    } else {
+        (if (glassPerformance) FROST_BLUR_RADIUS_DP else BLUR_RADIUS_DP) * tuning.blurFactor * tuning.clarityBlurFactor
+    }
     val blurPx = with(density) { blurRadiusDp.dp.toPx() } * resolutionScale
-    val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP * tuning.refractionHeightFactor).dp.toPx() } * resolutionScale
+    val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP * tuning.refractionHeightFactor * tuning.refractionWidthFactor).dp.toPx() } * resolutionScale
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP * tuning.refractionAmountFactor).dp.toPx() } * resolutionScale
     val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFAFAFA)
@@ -233,13 +277,18 @@ fun Modifier.liquidGlass(
         Color(0xFF121212)
     }
     val surfaceTintColor = surfaceTint
-        ?: themeTint.copy(alpha = (SURFACE_OPACITY * tuning.tintFactor * tuning.adaptiveLuminanceFactor).coerceIn(0f, 1f))
+        ?: themeTint.copy(alpha = (SURFACE_OPACITY * tuning.tintFactor * tuning.clarityTintFactor * tuning.adaptiveLuminanceFactor).coerceIn(0f, 1f))
+    val acrylicTint = MaterialTheme.colorScheme.surface.copy(alpha = ACRYLIC_TINT_ALPHA)
+    val glassShape = remember(shape, tuning.cornerFactor) { scaledCorners(shape, tuning.cornerFactor) }
+    val highlightSpec = remember(tuning.rim) { Highlight.Default.copy(alpha = tuning.rim.coerceIn(0f, 1f)) }
 
     return drawBackdrop(
         backdrop = backdrop,
-        shape = { shape },
+        shape = { glassShape },
         effects = {
-            if (tuning.vibrancyFactor > 0f) colorControls(saturation = 1f + 0.5f * VIBRANCY * tuning.vibrancyFactor)
+            if (tuning.vibrancyFactor > 0f || tuning.saturation != 1f) {
+                colorControls(saturation = (1f + 0.5f * VIBRANCY * tuning.vibrancyFactor) * tuning.saturation)
+            }
             blur(blurPx)
             if (!glassPerformance && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(
@@ -247,13 +296,18 @@ fun Modifier.liquidGlass(
                     refractionAmount = lensAmountPx,
                     depthEffect = tuning.depth3D,
                     chromaticAberration = tuning.chromaticAberration,
+                    chromaticStrength = tuning.dispersionStrength,
                 )
             }
         },
-        highlight = { Highlight.Default },
+        highlight = { highlightSpec },
         shadow = { Shadow.Default.copy(radius = Shadow.Default.radius * tuning.shadowFactor) },
         onDrawSurface = {
             drawRect(color = surfaceTintColor, size = size)
+            if (acrylic) {
+                drawRect(color = acrylicTint, size = size)
+                drawRect(brush = acrylicGrainBrush(), size = size, alpha = ACRYLIC_NOISE)
+            }
         },
         exportedBackdrop = exportedBackdrop,
         samplingScale = { _, _ -> resolutionScale },

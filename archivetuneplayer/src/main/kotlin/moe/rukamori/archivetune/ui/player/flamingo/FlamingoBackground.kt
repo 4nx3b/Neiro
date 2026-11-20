@@ -19,6 +19,7 @@
 
 package moe.rukamori.archivetune.ui.player.flamingo
 
+import moe.rukamori.archivetune.bridge.bitChordWander // BRIDGE(neiro): wander
 import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -142,12 +143,18 @@ fun FlamingoFloatingLight(
 
         if (bitmap != null) {
             if (backgroundEffect) {
-                FlamingoKenBurnsImage(
-                    bitmap = bitmap,
-                    isPlaying = isPlaying,
-                    motionSuspended = motionSuspended,
-                    modifier = modifier.then(baseBlackBackground),
+                // BRIDGE(neiro): the BitChord style's wander over upstream's Ken Burns; the wander drifts while paused too.
+                val wander = moe.rukamori.archivetune.bridge.rememberBitChordWander(
+                    active = !moe.rukamori.archivetune.LocalAnimationsDisabled.current && !motionSuspended(),
                 )
+                Box(modifier.then(baseBlackBackground).clipToBounds()) {
+                    FlamingoKenBurnsImage(
+                        bitmap = bitmap,
+                        isPlaying = isPlaying,
+                        motionSuspended = motionSuspended,
+                        modifier = Modifier.fillMaxSize().bitChordWander(wander),
+                    )
+                }
             } else {
                 Image(
                     bitmap = bitmap.asImageBitmap(),

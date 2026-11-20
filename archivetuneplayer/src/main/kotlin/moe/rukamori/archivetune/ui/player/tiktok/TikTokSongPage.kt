@@ -7,6 +7,8 @@
 
 package moe.rukamori.archivetune.ui.player.tiktok
 
+import moe.rukamori.archivetune.bridge.bitChordWander // BRIDGE(neiro): wander
+import moe.rukamori.archivetune.bridge.driftArtworkSlot // BRIDGE(neiro): drift
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -183,11 +185,18 @@ internal fun TikTokSongPage(
         var videoQualityMenuOpen by remember(pageMetadata.id) { mutableStateOf(false) }
 
         val meshColors = rememberTikTokArtworkColors(pageMetadata.thumbnailUrl)
-        TikTokMeshBackdrop(
-            palette = meshColors,
-            trackKey = pageMetadata.id,
-            reduceAnimation = LocalAnimationsDisabled.current,
-        )
+        // BRIDGE(neiro): "Moving blur" wanders the current page's backdrop as the BitChord style does.
+        val movingBlur by rememberPreference(moe.rukamori.archivetune.constants.FlamingoBackgroundEffectKey, false)
+        val wanderActive = movingBlur && isCurrentPage && !LocalAnimationsDisabled.current
+        val wander = moe.rukamori.archivetune.bridge.rememberBitChordWander(active = wanderActive)
+        Box(Modifier.fillMaxSize().clipToBounds()) {
+            TikTokMeshBackdrop(
+                palette = meshColors,
+                trackKey = pageMetadata.id,
+                reduceAnimation = LocalAnimationsDisabled.current,
+                modifier = if (movingBlur && isCurrentPage) Modifier.bitChordWander(wander) else Modifier,
+            )
+        }
 
         val videoBackdropAlpha by animateFloatAsState(
             targetValue = if (videoShowing) 1f else 0f,
@@ -275,6 +284,7 @@ internal fun TikTokSongPage(
                                 modifier =
                                     Modifier
                                         .size(artSize)
+                                        .driftArtworkSlot(active = isCurrentPage, cornerDp = cornerRadius.value) // BRIDGE(neiro): drift
                                         .graphicsLayer {
                                             scaleX = artworkScale
                                             scaleY = artworkScale

@@ -1,0 +1,108 @@
+# Neiro — a BitChord fork. GNU General Public License v3.0 or later.
+name: Baseline Profile
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'baselineprofile/**'
+      - 'app/build.gradle.kts'
+      - '.github/workflows/baseline-profile.yml'
+concurrency:
+  group: baseline-profile-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+env:
+  JAVA_TOOL_OPTIONS: -Djava.net.preferIPv4Stack=true
+jobs:
+  generate:
+    name: Generate profiles and benchmark startup (API 34)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Write local.properties
+        run: |
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" > local.properties
+          echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> local.properties
+          echo "TOGETHER_BEARER_TOKEN=${{ secrets.TOGETHER_BEARER_TOKEN }}" >> local.properties
+      - run: chmod +x gradlew
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Generate the Baseline and Startup Profiles
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./gradlew :app:generateProdReleaseBaselineProfile -Pbitchord.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=BaselineProfile -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+      - name: Benchmark startup (report only)
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./gradlew :baselineprofile:connectedProdBenchmarkReleaseAndroidTest -Pbitchord.abis=x86_64 -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=Macrobenchmark -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+      - name: Print the generated profiles and the benchmark summary
+        if: always()
+        run: |
+          dir=app/src/prodRelease/generated/baselineProfiles
+          for f in "$dir/baseline-prof.txt" "$dir/startup-prof.txt"; do
+            if [ -f "$f" ]; then
+              echo "== $f: $(wc -l < "$f") rules"
+              head -30 "$f"
+              echo "- $f: $(wc -l < "$f") rules" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "== $f: MISSING"
+              echo "- $f: missing" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          find baselineprofile/build -name '*benchmarkData.json' > /tmp/bench.txt || true
+          if [ ! -s /tmp/bench.txt ]; then
+            echo "No benchmarkData.json: the benchmark step did not produce results." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          while read -r j; do
+            echo "== $j"
+            python3 .github/scripts/bench_summary.py "$j" | tee -a "$GITHUB_STEP_SUMMARY"
+          done < /tmp/bench.txt
+      - name: Commit the generated profiles to the branch
+        if: success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          dir=app/src/prodRelease/generated/baselineProfiles
+          if [ ! -s "$dir/baseline-prof.txt" ]; then
+            echo "No baseline rules were generated; nothing committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$dir"
+          if git diff --cached --quiet; then
+            echo "Generated profiles unchanged."
+            exit 0
+          fi
+          git commit -m "perf(startup): generated baseline + startup profile (CI)"
+          git push origin "HEAD:${{ github.head_ref || github.ref_name }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: baseline-profiles
+          path: |
+            app/src/prodRelease/generated/baselineProfiles/
+            baselineprofile/build/outputs/

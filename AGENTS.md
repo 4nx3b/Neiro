@@ -383,3 +383,29 @@ its own source system. Porting rules:
   (penaltyLog) is set by `app/src/debug/kotlin/.../DebugDiagnosticsProvider.kt`. Keep that file
   under `src/debug/kotlin`: tv's debug source set adds only `app/src/debug/java`. Compose
   stability lives in `compose_stability.conf` (list only vals-only classes).
+- **Ported player styles (curialy/drift-lyrics-acrylic-perf).** Vendored edits marked
+  `BRIDGE(neiro)`: FlamingoPlayer.kt and TikTokSongPage.kt carry `driftArtworkSlot` (the dock
+  drift); FlamingoBackground.kt and TikTokSongPage.kt use `bridge/BitChordWander.kt` (a verbatim
+  copy of sharedUi's BlurWanderDrift: 18 dp, ±3°, 5-10 s legs, 1.06 overscan) under "Moving blur";
+  LyricsUtils.kt's `ENHANCED_LRC_WORD_TIME_REGEX` has capture groups (without them
+  `toLrcTimestampMs()` threw and enhanced-LRC word timing never parsed). Acrylic blur
+  (`AppSettings.acrylicBlur`, `acrylic_blur`) swaps every `optimizedHazeEffect` style for
+  `acrylicFrost` (32 dp, 0.12 noise, 0.72 tint) via sharedUi `AcrylicMaterial`; glass is untouched.
+- **Startup (curialy/drift-lyrics-acrylic-perf).** `:baselineprofile` (com.android.test →
+  :app, androidx.baselineprofile 1.5.0) holds `BaselineProfileGenerator` (startup profile
+  included) and `StartupBenchmark` (None vs Partial(Require)); `.github/workflows/baseline-profile.yml`
+  runs both on an API 34 emulator. `app/build.gradle.kts` keeps `mergeIntoMain = false`: with
+  true the plugin registers only `:app:generateBaselineProfile` (every variant, dev included,
+  against a generator that targets com.music.bitchord) and no per-variant task. The task is
+  `:app:generateProdReleaseBaselineProfile`; it writes
+  `app/src/prodRelease/generated/baselineProfiles/{baseline,startup}-prof.txt`, packaged into
+  the shipped prodRelease APK only. The workflow commits those files back to the branch as
+  github-actions[bot] (fast-forward the local branch before the next push). To regenerate,
+  dispatch baseline-profile.yml. `app/src/main/baseline-prof.txt` stays the hand-written
+  fallback for every other variant. The benchmark step is report-only.
+  The shader prewarm and the ArchiveTune player host start two frames after the first frame;
+  `ReportDrawnWhen` fires once the home feed leaves Loading.
+- **Liquid Glass fine tuning.** `data/settings/LiquidGlassUpstream.kt` holds the upstream
+  defaults (AndroidLiquidGlass playground: corner 0.5, chromatic 0; Zenith GlassPreset.DEFAULT:
+  clarity 0.13, saturation 1, refraction width 0.36, rainbow 0, rim 1, quality 1). Each is applied
+  relative to its default, so the defaults draw today's glass exactly (LiquidGlassUpstreamTest).

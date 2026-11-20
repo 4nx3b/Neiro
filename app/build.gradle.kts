@@ -7,6 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("androidx.baselineprofile")
 }
 
 /**
@@ -202,6 +203,11 @@ android {
          * build is interpreted and verified at runtime and says little about
          * either. `./gradlew installDevBenchmark`.
          */
+        configureEach {
+            if (name == "nonMinifiedRelease" || name == "benchmarkRelease") {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+        }
         create("benchmark") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
@@ -304,6 +310,7 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 
 dependencies {
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    "baselineProfile"(project(":baselineprofile"))
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
     // The ported ArchiveTune player stack (only the phone app mounts it).
@@ -630,4 +637,13 @@ if (providers.gradleProperty("bitchord.bundleWear").orNull != "false" && findPro
 
 composeCompiler {
     stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability.conf"))
+}
+
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+    mergeIntoMain = false
+    warnings {
+        maxAgpVersion = false
+    }
 }
