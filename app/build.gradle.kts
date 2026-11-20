@@ -352,6 +352,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
 
     // ---- Media playback: Media3 / ExoPlayer ----
     implementation("androidx.media3:media3-exoplayer:1.11.0")
@@ -625,4 +626,8 @@ if (providers.gradleProperty("bitchord.bundleWear").orNull != "false" && findPro
         }
         variant.sources.assets?.addGeneratedSourceDirectory(bundle, BundleWearApk::outputDir)
     }
+}
+
+composeCompiler {
+    stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability.conf"))
 }

@@ -155,7 +155,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.music.bitchord.ui.components.PillSegmentedControl
-import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.theme.CustomFontLoader
 import com.music.bitchord.ui.theme.SfProFontCatalog
@@ -293,7 +292,6 @@ fun SettingsScreen(
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
     val liquidGlassSupported = isGlassSupported()
     val hideStatusBar by AppSettings.hideStatusBar.collectAsStateWithLifecycle()
     val uiScale by AppSettings.uiScale.collectAsStateWithLifecycle()
@@ -1440,8 +1438,8 @@ fun SettingsScreen(
             }
             // All of the Liquid Glass options live a page deep now, ported as
             // the "Liquid Glass" subpage the way ArchiveTune's own settings
-            // page sits beside the switch: the master, the elements each with
-            // a pill of their own, the tuning, and the blur it can draw.
+            // page sits beside it: the elements each with a pill of their
+            // own, the tuning, and the blur it can draw.
             val liquidGlassTitle = stringResource(R.string.liquid_glass)
             row(
                 liquidGlassTitle,
@@ -1456,9 +1454,6 @@ fun SettingsScreen(
                         } else {
                             R.string.liquid_glass_unavailable
                         },
-                    ),
-                    value = stringResource(
-                        if (liquidGlass) R.string.settings_state_on else R.string.settings_state_off,
                     ),
                     trailing = { Chevron() },
                     onClick = { onOpenChoice(SettingsChoiceKind.LIQUID_GLASS) },
@@ -4059,7 +4054,7 @@ internal fun SliderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (LocalLiquidGlassEnabled.current && isGlassSupported()) {
+        if (isGlassSupported()) {
             // The glass slider, on the vendored AndroidLiquidGlass renderer:
             // the 6dp capsule track with the accent fill and the 40×24 thumb
             // as a real glass lens that lifts and enlarges under the finger.
@@ -4412,21 +4407,18 @@ fun SettingsChoicePage(
 
 /**
  * The Liquid Glass page, ported from ArchiveTune's Liquid Glass settings page
- * and holding everything the glass is: the master switch — which brings the
- * adaptive bar along with it — the elements, each with a pill of their own, the
+ * and holding everything the glass is. Glass is always on (there is no master
+ * switch): the elements, each with a pill of their own, the
  * two cost-saving switches, the tuning's intensity tier, optics sliders and
  * optical-quality switches, and a reset. Every default is the glass the app has
  * always drawn, so the page opens on the stock look.
  */
 @Composable
 private fun LiquidGlassTuningPage() {
-    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
     val glassSupported = isGlassSupported()
     val glassPerformance by AppSettings.glassPerformance.collectAsStateWithLifecycle()
     val progressiveBlur by AppSettings.progressiveBlur.collectAsStateWithLifecycle()
     val glassHeaderPills by AppSettings.glassHeaderPills.collectAsStateWithLifecycle()
-    val glassNavBar by AppSettings.glassNavBar.collectAsStateWithLifecycle()
-    val glassMiniPlayer by AppSettings.glassMiniPlayer.collectAsStateWithLifecycle()
     val glassMenus by AppSettings.glassMenus.collectAsStateWithLifecycle()
     val intensity by AppSettings.liquidGlassIntensity.collectAsStateWithLifecycle()
     val refractionHeight by AppSettings.liquidGlassRefractionHeight.collectAsStateWithLifecycle()
@@ -4439,29 +4431,6 @@ private fun LiquidGlassTuningPage() {
     val backdropVibrancy by AppSettings.liquidGlassBackdropVibrancy.collectAsStateWithLifecycle()
     val adaptiveLuminance by AppSettings.liquidGlassAdaptiveLuminance.collectAsStateWithLifecycle()
 
-    SettingsGroup(
-        topSpacing = 0.dp,
-        footer = stringResource(R.string.liquid_glass_master_footer),
-    ) {
-        val masterTitle = stringResource(R.string.liquid_glass_effects)
-        SettingsRow(
-            icon = SfIcons.AutoAwesome,
-            title = masterTitle,
-            subtitle = stringResource(
-                if (glassSupported) R.string.liquid_glass_effects_desc else R.string.liquid_glass_unavailable,
-            ),
-            enabled = glassSupported,
-            trailing = {
-                IosSwitch(
-                    checked = liquidGlass,
-                    onCheckedChange = AppSettings::setLiquidGlass,
-                    enabled = glassSupported,
-                )
-            },
-            onClick = { AppSettings.setLiquidGlass(!liquidGlass) },
-        )
-    }
-
     // The elements, each with its own pill: the glass can be taken piecemeal
     // rather than all at once, the surfaces each named as the thing it is.
     SettingsGroup(
@@ -4471,73 +4440,44 @@ private fun LiquidGlassTuningPage() {
         SettingsRow(
             title = stringResource(R.string.glass_header_pills),
             subtitle = stringResource(R.string.glass_header_pills_desc),
-            enabled = liquidGlass && glassSupported,
+            enabled = glassSupported,
             trailing = {
                 IosSwitch(
                     checked = glassHeaderPills,
                     onCheckedChange = AppSettings::setGlassHeaderPills,
-                    enabled = liquidGlass && glassSupported,
+                    enabled = glassSupported,
                 )
             },
             onClick = { AppSettings.setGlassHeaderPills(!glassHeaderPills) },
         )
         RowDivider()
         SettingsRow(
-            title = stringResource(R.string.glass_nav_bar_element),
-            subtitle = stringResource(R.string.glass_nav_bar_element_desc),
-            enabled = liquidGlass && glassSupported,
-            trailing = {
-                IosSwitch(
-                    checked = glassNavBar,
-                    onCheckedChange = AppSettings::setGlassNavBar,
-                    enabled = liquidGlass && glassSupported,
-                )
-            },
-            onClick = { AppSettings.setGlassNavBar(!glassNavBar) },
-        )
-        RowDivider()
-        SettingsRow(
-            title = stringResource(R.string.glass_mini_player_element),
-            subtitle = stringResource(R.string.glass_mini_player_element_desc),
-            enabled = liquidGlass && glassSupported,
-            trailing = {
-                IosSwitch(
-                    checked = glassMiniPlayer,
-                    onCheckedChange = AppSettings::setGlassMiniPlayer,
-                    enabled = liquidGlass && glassSupported,
-                )
-            },
-            onClick = { AppSettings.setGlassMiniPlayer(!glassMiniPlayer) },
-        )
-        RowDivider()
-        SettingsRow(
             title = stringResource(R.string.glass_menus_element),
             subtitle = stringResource(R.string.glass_menus_element_desc),
-            enabled = liquidGlass && glassSupported,
+            enabled = glassSupported,
             trailing = {
                 IosSwitch(
                     checked = glassMenus,
                     onCheckedChange = AppSettings::setGlassMenus,
-                    enabled = liquidGlass && glassSupported,
+                    enabled = glassSupported,
                 )
             },
             onClick = { AppSettings.setGlassMenus(!glassMenus) },
         )
     }
 
-    // Only while the glass is on: they qualify it rather than standing on their
-    // own. Glass performance trades the lens for a frost; Progressive blur
+    // They qualify the glass rather than standing on their own. Glass performance trades the lens for a frost; Progressive blur
     // costs frames of its own. Reduce dynamic blur overrides both.
     SettingsGroup(header = stringResource(R.string.glass_performance_group)) {
         SettingsRow(
             title = stringResource(R.string.glass_performance),
             subtitle = stringResource(R.string.glass_performance_desc),
-            enabled = liquidGlass && glassSupported,
+            enabled = glassSupported,
             trailing = {
                 IosSwitch(
                     checked = glassPerformance,
                     onCheckedChange = AppSettings::setGlassPerformance,
-                    enabled = liquidGlass && glassSupported,
+                    enabled = glassSupported,
                 )
             },
             onClick = { AppSettings.setGlassPerformance(!glassPerformance) },
@@ -4546,12 +4486,12 @@ private fun LiquidGlassTuningPage() {
         SettingsRow(
             title = stringResource(R.string.progressive_blur),
             subtitle = stringResource(R.string.progressive_blur_desc),
-            enabled = liquidGlass && glassSupported,
+            enabled = glassSupported,
             trailing = {
                 IosSwitch(
                     checked = progressiveBlur,
                     onCheckedChange = AppSettings::setProgressiveBlur,
-                    enabled = liquidGlass && glassSupported,
+                    enabled = glassSupported,
                 )
             },
             onClick = { AppSettings.setProgressiveBlur(!progressiveBlur) },

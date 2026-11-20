@@ -560,3 +560,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
         el.file.startsWith(phoneJava) && el.relativePath.pathString in replacedByTv
     }
 }
+
+composeCompiler {
+    stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability.conf"))
+}

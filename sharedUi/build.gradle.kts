@@ -120,3 +120,7 @@ compose.resources {
     packageOfResClass = "com.music.bitchord.sharedui.resources"
     generateResClass = always
 }
+
+composeCompiler {
+    stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability.conf"))
+}

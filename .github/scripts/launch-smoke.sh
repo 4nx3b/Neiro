@@ -70,6 +70,11 @@ interact() {
     adb shell input swipe "$cx" "$bottom" "$cx" "$top" 300
     sleep 0.5
   done
+  echo "drag along the bar"
+  adb shell input swipe $((w * 12 / 100)) "$bar_y" $((w * 88 / 100)) "$bar_y" 900
+  sleep 0.8
+  adb shell input swipe $((w * 88 / 100)) "$bar_y" $((w * 12 / 100)) "$bar_y" 900
+  sleep 0.8
   echo "tap mini player area"
   adb shell input tap "$cx" $((h * 85 / 100))
   sleep 2
@@ -79,6 +84,23 @@ interact() {
   sleep 1
   echo "settle 10 s"
   sleep 10
+}
+
+tab_cycles() {
+  local pkg="$1" tag="$2"
+  local size w h bar_y cycle frac
+  size="$(screen_size)"
+  w="${size%x*}"
+  h="${size#*x}"
+  bar_y=$((h * 93 / 100))
+  echo "TAB CYCLES $tag: 10"
+  for cycle in 1 2 3 4 5 6 7 8 9 10; do
+    for frac in 12 30 50 70; do
+      adb shell input tap $((w * frac / 100)) "$bar_y"
+      sleep 0.3
+    done
+  done
+  sleep 3
 }
 
 perf_block() {
@@ -117,7 +139,10 @@ launch_once() {
   pid="$(adb shell pidof "$pkg" | tr -d '\r')"
   adb exec-out screencap -p > "$out/shot-$tag$attempt.png" 2>/dev/null || true
   if [ -n "$pid" ]; then
+    echo "MEMINFO before $tag$attempt: $(adb shell dumpsys meminfo "$pkg" | tr -d '\r' | grep -m1 'TOTAL')"
     interact "$pkg" "$tag$attempt"
+    tab_cycles "$pkg" "$tag$attempt"
+    echo "MEMINFO after $tag$attempt: $(adb shell dumpsys meminfo "$pkg" | tr -d '\r' | grep -m1 'TOTAL')"
     adb exec-out screencap -p > "$out/shot-$tag$attempt-interacted.png" 2>/dev/null || true
     pid="$(adb shell pidof "$pkg" | tr -d '\r')"
     if [ -z "$pid" ]; then
@@ -131,6 +156,12 @@ launch_once() {
   else
     echo "ALIVE: $pkg pid $pid"
   fi
+  grep -E 'LeakCanary' "$out/logcat-$tag$attempt.txt" | grep -iE 'retained|leak' > "$out/leaks-$tag$attempt.txt" || true
+  grep -E 'StrictMode' "$out/logcat-$tag$attempt.txt" > "$out/strictmode-$tag$attempt.txt" || true
+  echo "LEAKCANARY $tag$attempt: $(wc -l < "$out/leaks-$tag$attempt.txt") lines"
+  head -20 "$out/leaks-$tag$attempt.txt"
+  echo "STRICTMODE $tag$attempt: $(grep -c 'policy violation' "$out/strictmode-$tag$attempt.txt" || true) violations"
+  grep -E 'StrictMode policy violation' "$out/strictmode-$tag$attempt.txt" | sed -E 's/.*violation[^:]*: //' | sort | uniq -c | sort -rn | head -15
   if grep -q "FATAL EXCEPTION" "$out/logcat-$tag$attempt.txt"; then
     echo "FATAL EXCEPTION in $tag$attempt:"
     grep -A60 "FATAL EXCEPTION" "$out/logcat-$tag$attempt.txt"

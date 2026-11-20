@@ -57,7 +57,6 @@ import moe.rukamori.archivetune.ui.screens.settings.AppearanceExtrasSettings
 import moe.rukamori.archivetune.ui.screens.settings.AppearanceSettings
 import moe.rukamori.archivetune.ui.screens.settings.CanvasSettingsScreen
 import moe.rukamori.archivetune.ui.screens.settings.CustomizeBackground
-import moe.rukamori.archivetune.ui.screens.settings.LiquidGlassSettings
 import moe.rukamori.archivetune.ui.screens.settings.LyricsRomanisationSettings
 import moe.rukamori.archivetune.ui.screens.settings.LyricsSettings
 import moe.rukamori.archivetune.ui.screens.settings.PlayerSettings
@@ -140,7 +139,7 @@ fun ArchiveTuneSettingsPage(
                 composable(ArchiveTuneSettingsPageId.LYRICS.route) { LyricsSettings(navController = navController) }
                 composable(ArchiveTuneSettingsPageId.ROMANISATION.route) { LyricsRomanisationSettings(navController = navController) }
                 composable(ArchiveTuneSettingsPageId.BACKGROUND.route) { CustomizeBackground(navController) }
-                composable(ArchiveTuneSettingsPageId.LIQUID_GLASS.route) { LiquidGlassSettings(navController = navController) }
+                composable(ArchiveTuneSettingsPageId.LIQUID_GLASS.route) { UnportedSettingsPage(onBack = { navController.navigateUp() }) }
                 composable(ArchiveTuneSettingsPageId.CANVAS.route) { CanvasSettingsScreen(navController = navController) }
                 UnportedSettingsRoutes.forEach { route ->
                     composable(route) { UnportedSettingsPage(onBack = { navController.navigateUp() }) }

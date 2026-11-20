@@ -108,7 +108,7 @@ private fun CompactControlCircle(
     onClick: () -> Unit,
     fraction: () -> Float,
 ) {
-    val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val useGlass = isGlassSupported()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val navBarGlassGlow by AppSettings.navBarGlassGlow.collectAsStateWithLifecycle()
     val navBarGlassGlowIntensity by AppSettings.navBarGlassGlowIntensity.collectAsStateWithLifecycle()

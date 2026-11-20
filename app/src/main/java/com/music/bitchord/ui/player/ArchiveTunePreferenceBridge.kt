@@ -200,7 +200,13 @@ object ArchiveTunePreferenceBridge {
         // The full-cover blur, in dp on both sides (0..64, 48 by default).
         floatKey(BlurRadiusKey, AppSettings.blurIntensity, AppSettings::setBlurIntensity)
         // Liquid Glass: the same tuning, the same units and defaults on both sides.
-        boolKey(LiquidGlassEnabledKey, AppSettings.liquidGlass, AppSettings::setLiquidGlass)
+        // Liquid Glass is always on: the ported reader sees true and its write is ignored.
+        BridgedPreferences.bridge(
+            key = LiquidGlassEnabledKey,
+            read = { true },
+            write = { },
+            changes = kotlinx.coroutines.flow.flowOf(true),
+        )
         enumKey<LiquidGlassIntensity, AtGlassIntensity>(LiquidGlassIntensityKey, AppSettings.liquidGlassIntensity, { toAt(it) }) {
             AppSettings.setLiquidGlassIntensity(fromAt(it))
         }

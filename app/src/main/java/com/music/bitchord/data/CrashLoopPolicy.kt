@@ -49,7 +49,7 @@ object CrashLoopPolicy {
      * Whether observed launch deaths form a native crash loop: two or more
      * consecutive launches that died before they could clear their glass
      * session, within [WINDOW_MS] of now. One death, or deaths older than the
-     * window, never count — see [CrashLoopGuard.checkNativeGlassLoop] for
+     * window, never count — see [CrashLoopGuard] for
      * what a "death" is when the renderer dies without a Java exception.
      */
     fun isNativeDeathLoop(deathTimesMs: List<Long>, now: Long): Boolean =

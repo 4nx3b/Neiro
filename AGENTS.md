@@ -372,3 +372,14 @@ its own source system. Porting rules:
   old party-server BuildConfig (`LISTEN_TOGETHER_SERVER`) and its CI seeding
   are gone. The Go `backend/` and `web/` modules still exist for the old
   party protocol and are untouched by this port.
+
+- **Liquid Glass is always on (curialy/glass-always).** There is no master switch and no
+  per-element switch for the nav bar or mini player; `isGlassSupported()` (API 33+
+  RuntimeShader) is the only gate. CrashLoopGuard no longer turns glass off. Nav-bar drag
+  invariants: the swell scales only the bar's surface Box, never the tab Row;
+  `GlassPillMotion.dragTo` writes the snapshot position synchronously (no `scope.launch`);
+  `PillTinted` clips to `PillGeometry.visibleWidth`. Guarded by LiquidGlassAlwaysOnGuardTest.
+- **Diagnostics (dev debug only).** LeakCanary 2.14 is a `debugImplementation`, and StrictMode
+  (penaltyLog) is set by `app/src/debug/kotlin/.../DebugDiagnosticsProvider.kt`. Keep that file
+  under `src/debug/kotlin`: tv's debug source set adds only `app/src/debug/java`. Compose
+  stability lives in `compose_stability.conf` (list only vals-only classes).
