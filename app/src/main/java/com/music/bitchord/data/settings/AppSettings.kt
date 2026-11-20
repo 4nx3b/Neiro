@@ -669,6 +669,9 @@ object AppSettings {
      */
     val disableBlendEffects = MutableStateFlow(false)
 
+    /** ArchiveTune's acrylic material on the frosted surfaces; liquid glass stays on. */
+    val acrylicBlur = MutableStateFlow(false)
+
     /**
      * Frosts the glass instead of refracting it, for phones the lens shader is too
      * much for: the bar's rim, shadow, tint and motion all stay. A Liquid Glass
@@ -703,6 +706,14 @@ object AppSettings {
 
     /** Drop shadow underneath glass surfaces, as a 0..1 fraction of the default 0.45. */
     val liquidGlassShadowDepth = MutableStateFlow(DEFAULT_LIQUID_GLASS_SHADOW_DEPTH)
+    val liquidGlassCornerRadius = MutableStateFlow(LiquidGlassUpstream.CORNER_RADIUS_DEFAULT)
+    val liquidGlassChromaticAmount = MutableStateFlow(LiquidGlassUpstream.CHROMATIC_AMOUNT_DEFAULT)
+    val liquidGlassClarity = MutableStateFlow(LiquidGlassUpstream.CLARITY_DEFAULT)
+    val liquidGlassSaturation = MutableStateFlow(LiquidGlassUpstream.SATURATION_DEFAULT)
+    val liquidGlassRefractionWidth = MutableStateFlow(LiquidGlassUpstream.REFRACTION_WIDTH_DEFAULT)
+    val liquidGlassRainbow = MutableStateFlow(LiquidGlassUpstream.RAINBOW_DEFAULT)
+    val liquidGlassRim = MutableStateFlow(LiquidGlassUpstream.RIM_DEFAULT)
+    val liquidGlassQuality = MutableStateFlow(LiquidGlassUpstream.QUALITY_DEFAULT)
 
     /** Multi-layer spatial depth refraction on thick glass. */
     val liquidGlassDepth3D = MutableStateFlow(true)
@@ -1623,6 +1634,8 @@ object AppSettings {
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
+        acrylicBlur.value = prefs.getBoolean(KEY_ACRYLIC_BLUR, false)
+        com.music.bitchord.ui.components.AcrylicMaterial.enabled = acrylicBlur.value
         // Liquid Glass is always on: drop the retired master-switch keys once.
         val retiredGlassKeys = listOf("liquid_glass", "liquid_glass_default_on_v1", "glass_nav_bar", "glass_mini_player")
         if (retiredGlassKeys.any { prefs.contains(it) }) {
@@ -1644,6 +1657,14 @@ object AppSettings {
         liquidGlassTintOpacity.value = prefs.getFloat(KEY_LIQUID_GLASS_TINT_OPACITY, DEFAULT_LIQUID_GLASS_TINT_OPACITY)
             .coerceIn(0f, 2f)
         liquidGlassShadowDepth.value = prefs.getFloat(KEY_LIQUID_GLASS_SHADOW_DEPTH, DEFAULT_LIQUID_GLASS_SHADOW_DEPTH)
+        liquidGlassCornerRadius.value = prefs.getFloat(KEY_LIQUID_GLASS_CORNER_RADIUS, LiquidGlassUpstream.CORNER_RADIUS_DEFAULT)
+        liquidGlassChromaticAmount.value = prefs.getFloat(KEY_LIQUID_GLASS_CHROMATIC_AMOUNT, LiquidGlassUpstream.CHROMATIC_AMOUNT_DEFAULT)
+        liquidGlassClarity.value = prefs.getFloat(KEY_LIQUID_GLASS_CLARITY, LiquidGlassUpstream.CLARITY_DEFAULT)
+        liquidGlassSaturation.value = prefs.getFloat(KEY_LIQUID_GLASS_SATURATION, LiquidGlassUpstream.SATURATION_DEFAULT)
+        liquidGlassRefractionWidth.value = prefs.getFloat(KEY_LIQUID_GLASS_REFRACTION_WIDTH, LiquidGlassUpstream.REFRACTION_WIDTH_DEFAULT)
+        liquidGlassRainbow.value = prefs.getFloat(KEY_LIQUID_GLASS_RAINBOW, LiquidGlassUpstream.RAINBOW_DEFAULT)
+        liquidGlassRim.value = prefs.getFloat(KEY_LIQUID_GLASS_RIM, LiquidGlassUpstream.RIM_DEFAULT)
+        liquidGlassQuality.value = prefs.getFloat(KEY_LIQUID_GLASS_QUALITY, LiquidGlassUpstream.QUALITY_DEFAULT)
             .coerceIn(0f, 1f)
         liquidGlassDepth3D.value = prefs.getBoolean(KEY_LIQUID_GLASS_DEPTH_3D, true)
         liquidGlassChromaticAberration.value = prefs.getBoolean(KEY_LIQUID_GLASS_CHROMATIC_ABERRATION, true)
@@ -2316,6 +2337,12 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_SMART_VERSION_ALIGNMENT, value).apply()
     }
 
+    fun setAcrylicBlur(value: Boolean) {
+        acrylicBlur.value = value
+        com.music.bitchord.ui.components.AcrylicMaterial.enabled = value
+        prefs.edit().putBoolean(KEY_ACRYLIC_BLUR, value).apply()
+    }
+
     fun setDisableBlendEffects(value: Boolean) {
         disableBlendEffects.value = value
         prefs.edit().putBoolean(KEY_DISABLE_BLEND_EFFECTS, value).apply()
@@ -2374,6 +2401,54 @@ object AppSettings {
         prefs.edit().putFloat(KEY_LIQUID_GLASS_SHADOW_DEPTH, clamped).apply()
     }
 
+    fun setLiquidGlassCornerRadius(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassCornerRadius.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_CORNER_RADIUS, clamped).apply()
+    }
+
+    fun setLiquidGlassChromaticAmount(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassChromaticAmount.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_CHROMATIC_AMOUNT, clamped).apply()
+    }
+
+    fun setLiquidGlassClarity(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassClarity.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_CLARITY, clamped).apply()
+    }
+
+    fun setLiquidGlassSaturation(value: Float) {
+        val clamped = value.coerceIn(0f, 2f)
+        liquidGlassSaturation.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_SATURATION, clamped).apply()
+    }
+
+    fun setLiquidGlassRefractionWidth(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassRefractionWidth.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_REFRACTION_WIDTH, clamped).apply()
+    }
+
+    fun setLiquidGlassRainbow(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassRainbow.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_RAINBOW, clamped).apply()
+    }
+
+    fun setLiquidGlassRim(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        liquidGlassRim.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_RIM, clamped).apply()
+    }
+
+    fun setLiquidGlassQuality(value: Float) {
+        val clamped = value.coerceIn(0.2f, 1f)
+        liquidGlassQuality.value = clamped
+        prefs.edit().putFloat(KEY_LIQUID_GLASS_QUALITY, clamped).apply()
+    }
+
     fun setLiquidGlassDepth3D(value: Boolean) {
         liquidGlassDepth3D.value = value
         prefs.edit().putBoolean(KEY_LIQUID_GLASS_DEPTH_3D, value).apply()
@@ -2406,6 +2481,14 @@ object AppSettings {
         setLiquidGlassChromaticAberration(true)
         setLiquidGlassBackdropVibrancy(true)
         setLiquidGlassAdaptiveLuminance(true)
+        setLiquidGlassCornerRadius(LiquidGlassUpstream.CORNER_RADIUS_DEFAULT)
+        setLiquidGlassChromaticAmount(LiquidGlassUpstream.CHROMATIC_AMOUNT_DEFAULT)
+        setLiquidGlassClarity(LiquidGlassUpstream.CLARITY_DEFAULT)
+        setLiquidGlassSaturation(LiquidGlassUpstream.SATURATION_DEFAULT)
+        setLiquidGlassRefractionWidth(LiquidGlassUpstream.REFRACTION_WIDTH_DEFAULT)
+        setLiquidGlassRainbow(LiquidGlassUpstream.RAINBOW_DEFAULT)
+        setLiquidGlassRim(LiquidGlassUpstream.RIM_DEFAULT)
+        setLiquidGlassQuality(LiquidGlassUpstream.QUALITY_DEFAULT)
     }
 
     fun setGlassHeaderPills(value: Boolean) {
@@ -3567,6 +3650,7 @@ object AppSettings {
     private const val KEY_SMART_VERSION_ALIGNMENT = "smart_version_alignment"
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
+    private const val KEY_ACRYLIC_BLUR = "acrylic_blur"
     private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LIQUID_GLASS_INTENSITY = "liquid_glass_intensity"
@@ -3575,6 +3659,14 @@ object AppSettings {
     private const val KEY_LIQUID_GLASS_BLUR_RADIUS = "liquid_glass_blur_radius"
     private const val KEY_LIQUID_GLASS_TINT_OPACITY = "liquid_glass_tint_opacity"
     private const val KEY_LIQUID_GLASS_SHADOW_DEPTH = "liquid_glass_shadow_depth"
+    private const val KEY_LIQUID_GLASS_CORNER_RADIUS = "liquid_glass_corner_radius"
+    private const val KEY_LIQUID_GLASS_CHROMATIC_AMOUNT = "liquid_glass_chromatic_amount"
+    private const val KEY_LIQUID_GLASS_CLARITY = "liquid_glass_clarity"
+    private const val KEY_LIQUID_GLASS_SATURATION = "liquid_glass_saturation"
+    private const val KEY_LIQUID_GLASS_REFRACTION_WIDTH = "liquid_glass_refraction_width"
+    private const val KEY_LIQUID_GLASS_RAINBOW = "liquid_glass_rainbow"
+    private const val KEY_LIQUID_GLASS_RIM = "liquid_glass_rim"
+    private const val KEY_LIQUID_GLASS_QUALITY = "liquid_glass_quality"
     private const val KEY_LIQUID_GLASS_DEPTH_3D = "liquid_glass_depth_3d"
     private const val KEY_LIQUID_GLASS_CHROMATIC_ABERRATION = "liquid_glass_chromatic_aberration"
     private const val KEY_LIQUID_GLASS_BACKDROP_VIBRANCY = "liquid_glass_backdrop_vibrancy"

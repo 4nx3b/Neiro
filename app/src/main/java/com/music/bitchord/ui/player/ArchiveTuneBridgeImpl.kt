@@ -342,7 +342,7 @@ private fun formatLrcTime(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     val hundredths = (ms % 1000) / 10
-    return "[%d:%02d.%02d]".format(minutes, seconds, hundredths)
+    return String.format(java.util.Locale.ROOT, "[%d:%02d.%02d]", minutes, seconds, hundredths)
 }
 
 /** The word stamp's own shape: the same time, bare, without the line stamp's square brackets. */
@@ -351,5 +351,5 @@ private fun formatWordTime(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     val hundredths = (ms % 1000) / 10
-    return "%d:%02d.%02d".format(minutes, seconds, hundredths)
+    return String.format(java.util.Locale.ROOT, "%d:%02d.%02d", minutes, seconds, hundredths)
 }

@@ -1704,4 +1704,22 @@
     <string name="user_blocked_by_host">User blocked by host</string>
     <string name="waiting_for_approval">Waiting for approval from host</string>
     <string name="you_label">You</string>
+    <string name="acrylic_blur">Acrylic blur</string>
+    <string name="acrylic_blur_subtitle">Frosted acrylic material with grain behind bars, menus and dialogs</string>
+    <string name="liquid_glass_fine_tuning">Fine tuning</string>
+    <string name="liquid_glass_corner_radius">Corner radius</string>
+    <string name="liquid_glass_corner_radius_desc">How round the glass corners are (AndroidLiquidGlass playground)</string>
+    <string name="liquid_glass_chromatic_amount">Chromatic aberration amount</string>
+    <string name="liquid_glass_chromatic_amount_desc">How far the lens splits colour at the rim (AndroidLiquidGlass playground)</string>
+    <string name="liquid_glass_clarity">Clarity</string>
+    <string name="liquid_glass_clarity_desc">From clear to frosted: blur, tint and resolution together (Zenith)</string>
+    <string name="liquid_glass_saturation">Saturation</string>
+    <string name="liquid_glass_saturation_desc">Colour strength of what shows through the glass (Zenith)</string>
+    <string name="liquid_glass_refraction_width">Refraction width</string>
+    <string name="liquid_glass_refraction_width_desc">How wide the bending edge of the lens is (Zenith)</string>
+    <string name="liquid_glass_rainbow">Rainbow edge</string>
+    <string name="liquid_glass_rainbow_desc">Extra prism colour on the lens edge (Zenith)</string>
+    <string name="liquid_glass_rim">Rim highlight</string>
+    <string name="liquid_glass_rim_desc">Brightness of the specular rim (Zenith)</string>
+    <string name="liquid_glass_quality_desc">Resolution the glass samples at (Zenith)</string>
 </resources>

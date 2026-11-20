@@ -50,6 +50,7 @@ if (androidSdk != null && file(androidSdk).isDirectory) {
     // module, see backdrop/build.gradle.kts) — a plain Android library, so
     // it rides with the same SDK gate as the modules that consume it.
     include(":backdrop")
+    include(":baselineprofile")
     // The vendored ArchiveTune player stack: the Android library plus the
     // pure-JVM modules its sources import (InnerTube core, canvas providers,
     // lyric parsers, JioSaavn). Desktop-only checkouts skip them along with

@@ -2569,3 +2569,61 @@ Work Log:
 Stage Summary:
 - Not compiled locally (no Android SDK). CI and the launch-smoke meminfo/LeakCanary/StrictMode
   report are the evidence.
+
+---
+Task ID: curialy/drift-lyrics-acrylic-perf
+Agent: Curialy Engineer
+Task: Request #8 — finish drift, word lyrics, acrylic, glass sliders, cold start.
+Work Log:
+- Sandbox reset lost the earlier unpushed player-acrylic commits; redone from main 920557e.
+- Tests kept as contracts: AcrylicStyleTest (ACRYLIC_BLUR_DP/NOISE/TINT_ALPHA in
+  com.music.bitchord.ui.components; KEY_ACRYLIC_BLUR in AppSettings.kt; AppSettings::setAcrylicBlur
+  in SettingsSheet.kt) and ArchiveTuneLrcRoundTripTest (toArchiveTuneLrc → LyricsUtils, US + Arabic digits).
+- Drift: driftArtworkSlot on the Apple Music cover and the current TikTok page's cover; "Moving
+  blur" now wanders the Apple Music background (replacing the playing-only Ken Burns) and the
+  current TikTok mesh with the BitChord wander.
+- Lyrics root cause: LyricsUtils.ENHANCED_LRC_WORD_TIME_REGEX had no capture groups, so
+  parseEnhancedLrcLine's toLrcTimestampMs() read groupValues[1] out of range; groups added.
+- Acrylic blur toggle (Appearance › Misc), persisted, strings in all 20 catalogues.
+Stage Summary:
+- Not done: the AndroidLiquidGlass/Zenith slider inventory and port; the generated
+  Baseline/Startup Profile module and workflow; startup deferrals. Nothing compiled (no SDK);
+  CI and device checks pending until the branch is pushed.
+
+---
+Task ID: curialy/drift-lyrics-acrylic-perf (round 2)
+Agent: Curialy Engineer
+Task: Review round 1 — sliders, cold start, acrylic on glass, Ken Burns.
+Work Log:
+- Slider inventory (three-way):
+  | Control | AndroidLiquidGlass playground | Zenith | Neiro before | Now |
+  | corner radius | 0..1, 0.5 | — | — | added (relative to caller's corners) |
+  | blur | 0..32 dp, 0 | GlassCustom.blur 0.66 | liquidGlassBlurRadius | kept |
+  | refraction height | 0..1, 0.2 | refraction 0.99 | liquidGlassRefractionHeight | kept |
+  | refraction amount | 0..1, 0.2 | — | liquidGlassRefractionAmount | kept |
+  | chromatic aberration | 0..1, 0 | — | Boolean | added amount (dispersion strength) |
+  | clarity | — | GlassClarity.level 0.13 (soft mix) | — | added |
+  | saturation | — | 1 | backdropVibrancy (Boolean) | added |
+  | tint | — | 1.67 | liquidGlassTintOpacity | kept |
+  | refraction width | — | 0.36 | — | added |
+  | rainbow | — | 0 | — | added (adds to dispersion strength) |
+  | rim | — | 1 | — | added (highlight alpha) |
+  | shadow | — | 1 | liquidGlassShadowDepth | kept |
+  | depth | — | true | liquidGlassDepth3D | kept |
+  | quality | — | 1 | — | added (sampling resolution × quality) |
+- Acrylic on liquid glass: blur stage at 32 dp, surface tint at 0.72 and a process-wide 128×128
+  seeded ALPHA_8 grain tile (12 %) drawn in onDrawSurface; no new backdrop sampler.
+- Apple Music keeps upstream's Ken Burns under the BitChord wander.
+- Cold start: :baselineprofile module + baseline-profile.yml; prewarm and the ArchiveTune host
+  moved after the first frames; ReportDrawnWhen; launch-smoke resets compilation and prints a
+  first-10-s window (gfxinfo percentiles, slow UI thread, dexopt status) uncompiled vs speed-profile.
+Stage Summary:
+- Not verified: nothing compiled (no SDK); the profile workflow has never run, so no generated
+  profile is committed and no benchmark numbers exist yet. ProfileVerifier logging not added
+  (dumpsys dexopt status printed instead). Slider strings are English in every catalogue.
+- Review round 2: the acrylic grain tile is ARGB_8888 mid-grey noise (128 ± 96), not an ALPHA_8 mask,
+  so it reads as neutral grain at 12 % and never as dark speckle. cornerFactor already spans 0..2
+  (neutral at 0.5, clamped at the pill radius by scaledCorners); LiquidGlassUpstreamTest now pins
+  cornerFactor(1) = 2 and cornerFactor(0) = 0. refractionWidth stays on the lens height: that is
+  Zenith's own mapping (Zenith ui/components/LiquidGlass.kt:240, lensHeightPx × custom.refractionWidth).
+  values-zh-rHK and values-b+zh+Hant got the 16 new liquid_glass_* placeholders too.

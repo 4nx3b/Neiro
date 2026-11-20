@@ -697,10 +697,15 @@ private fun BitChordApp(
     // bar fall away, and scrolling up brings the stack back. The two hold
     // modes pin the fold rather than listening to the scroll.
     var bottomUiCompact by remember { mutableStateOf(false) }
+    var firstFramesDrawn by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
         withFrameNanos { }
+        firstFramesDrawn = true
         viewModel.onFirstFramesDrawn()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            com.kyant.backdrop.prewarmBackdropShaders()
+        }
     }
     LaunchedEffect(miniPlayerBarBehavior) {
         bottomUiCompact = miniPlayerBarBehavior == MiniPlayerBarBehavior.ALWAYS_COMPACT
@@ -1081,6 +1086,7 @@ private fun BitChordApp(
     )
 
     val homeState by viewModel.home.collectAsStateWithLifecycle()
+    androidx.activity.compose.ReportDrawnWhen { homeState !is UiState.Loading }
     val hideRecents by AppSettings.hideRecents.collectAsStateWithLifecycle()
     val hideHomeVideos by AppSettings.hideHomeVideos.collectAsStateWithLifecycle()
     val hideTopPicks by AppSettings.hideTopPicks.collectAsStateWithLifecycle()
@@ -4614,7 +4620,7 @@ private fun BitChordApp(
         // what ArchiveTune ships, driven by this app's playback through the
         // bridge. The app's own player comes back the moment the style is
         // BITCHORD again, untouched by any of this.
-        if (archiveTunePlayerActive && controller != null) {
+        if (archiveTunePlayerActive && controller != null && firstFramesDrawn) {
             val atBottomBarHeight = with(LocalDensity.current) { floatingBarsHeight.intValue.toDp() }
             androidx.compose.runtime.key(controller) {
                 val archiveTuneBridge =
