@@ -186,7 +186,7 @@ fun FrostedTopBar(
     // while it is on, ported as one of the Liquid Glass page's element pills.
     val glassHeaderPills by AppSettings.glassHeaderPills.collectAsStateWithLifecycle()
     val useFloatingChrome = artworkPageChrome ||
-        (LocalLiquidGlassEnabled.current && glassHeaderPills && isGlassSupported())
+        (glassHeaderPills && isGlassSupported())
     val titleAlpha by animateFloatAsState(
         targetValue = if (scrolled() || trailingTitle != null) 1f else 0f,
         animationSpec = tween(220),
@@ -358,7 +358,7 @@ private fun ArtworkPageBackButton(
 ) {
     val shape = CircleShape
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val useLiquidGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val useLiquidGlass = isGlassSupported()
     val contentColor = if (useLiquidGlass && !reduceDynamicBlur) {
         glassContentColor()
     } else {
@@ -495,7 +495,7 @@ private fun artworkPageSurface(
 ): Modifier {
     val container = MaterialTheme.colorScheme.surface
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val useLiquidGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val useLiquidGlass = isGlassSupported()
 
     return Modifier
         .clip(shape)

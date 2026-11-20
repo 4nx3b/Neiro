@@ -670,23 +670,16 @@ object AppSettings {
     val disableBlendEffects = MutableStateFlow(false)
 
     /**
-     * Real backdrop-sampled glass (blur, lens refraction) on the floating nav
-     * bar, Android 12+ only. On by default, and switched on once for an
-     * upgrade too (see [GlassDefault]).
-     */
-    val liquidGlass = MutableStateFlow(GlassDefault.DEFAULT_ON)
-
-    /**
      * Frosts the glass instead of refracting it, for phones the lens shader is too
      * much for: the bar's rim, shadow, tint and motion all stay. A Liquid Glass
-     * option, honoured only while [liquidGlass] is on.
+     * option; glass itself is always on wherever the device can render it.
      */
     val glassPerformance = MutableStateFlow(false)
 
     /**
      * Blurs what scrolls under the status bar and the top controls, easing out
      * just below them, instead of fading it to the page colour. A Liquid Glass
-     * option, honoured only while [liquidGlass] is on. Off by default: it costs
+     * option. Off by default: it costs
      * frames. Reduce dynamic blur overrides it.
      */
     val progressiveBlur = MutableStateFlow(false)
@@ -729,12 +722,6 @@ object AppSettings {
 
     /** Glass on the floating header pills and the artwork-page round buttons. */
     val glassHeaderPills = MutableStateFlow(true)
-
-    /** Glass on the bottom navigation bar — the all-in-one glass bar. */
-    val glassNavBar = MutableStateFlow(true)
-
-    /** Glass on the mini player's own Liquid Glass background style. */
-    val glassMiniPlayer = MutableStateFlow(true)
 
     /** Glass frost on the menus and popovers. */
     val glassMenus = MutableStateFlow(true)
@@ -1636,18 +1623,12 @@ object AppSettings {
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
-        run {
-            val glass = GlassDefault.decide(
-                stored = if (prefs.contains(KEY_LIQUID_GLASS)) prefs.getBoolean(KEY_LIQUID_GLASS, true) else null,
-                migrated = prefs.getBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, false),
-            )
-            liquidGlass.value = glass.liquidGlass
-            if (glass.markMigrated) {
-                prefs.edit()
-                    .putBoolean(KEY_LIQUID_GLASS, glass.liquidGlass)
-                    .putBoolean(KEY_LIQUID_GLASS_DEFAULT_ON_V1, true)
-                    .apply()
-            }
+        // Liquid Glass is always on: drop the retired master-switch keys once.
+        val retiredGlassKeys = listOf("liquid_glass", "liquid_glass_default_on_v1", "glass_nav_bar", "glass_mini_player")
+        if (retiredGlassKeys.any { prefs.contains(it) }) {
+            val retire = prefs.edit()
+            retiredGlassKeys.forEach { retire.remove(it) }
+            retire.apply()
         }
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
@@ -1669,8 +1650,6 @@ object AppSettings {
         liquidGlassBackdropVibrancy.value = prefs.getBoolean(KEY_LIQUID_GLASS_BACKDROP_VIBRANCY, true)
         liquidGlassAdaptiveLuminance.value = prefs.getBoolean(KEY_LIQUID_GLASS_ADAPTIVE_LUMINANCE, true)
         glassHeaderPills.value = prefs.getBoolean(KEY_GLASS_HEADER_PILLS, true)
-        glassNavBar.value = prefs.getBoolean(KEY_GLASS_NAV_BAR, true)
-        glassMiniPlayer.value = prefs.getBoolean(KEY_GLASS_MINI_PLAYER, true)
         glassMenus.value = prefs.getBoolean(KEY_GLASS_MENUS, true)
         miniPlayerBarBehavior.value = runCatching {
             MiniPlayerBarBehavior.valueOf(prefs.getString(KEY_MINI_PLAYER_BAR_BEHAVIOR, null) ?: "ADAPTIVE")
@@ -2350,15 +2329,6 @@ object AppSettings {
         editor.apply()
     }
 
-    fun setLiquidGlass(value: Boolean) {
-        liquidGlass.value = value
-        prefs.edit().putBoolean(KEY_LIQUID_GLASS, value).apply()
-        // Ported per the user's spec: Liquid Glass brings the adaptive bar with
-        // it — the glass bar's folded shape assumes it, so the behavior goes
-        // along the moment the glass comes on.
-        if (value) setMiniPlayerBarBehavior(MiniPlayerBarBehavior.ADAPTIVE)
-    }
-
     fun setGlassPerformance(value: Boolean) {
         glassPerformance.value = value
         prefs.edit().putBoolean(KEY_GLASS_PERFORMANCE, value).apply()
@@ -2441,16 +2411,6 @@ object AppSettings {
     fun setGlassHeaderPills(value: Boolean) {
         glassHeaderPills.value = value
         prefs.edit().putBoolean(KEY_GLASS_HEADER_PILLS, value).apply()
-    }
-
-    fun setGlassNavBar(value: Boolean) {
-        glassNavBar.value = value
-        prefs.edit().putBoolean(KEY_GLASS_NAV_BAR, value).apply()
-    }
-
-    fun setGlassMiniPlayer(value: Boolean) {
-        glassMiniPlayer.value = value
-        prefs.edit().putBoolean(KEY_GLASS_MINI_PLAYER, value).apply()
     }
 
     fun setGlassMenus(value: Boolean) {
@@ -3607,8 +3567,6 @@ object AppSettings {
     private const val KEY_SMART_VERSION_ALIGNMENT = "smart_version_alignment"
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
-    private const val KEY_LIQUID_GLASS = "liquid_glass"
-    private const val KEY_LIQUID_GLASS_DEFAULT_ON_V1 = "liquid_glass_default_on_v1"
     private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LIQUID_GLASS_INTENSITY = "liquid_glass_intensity"
@@ -3622,8 +3580,6 @@ object AppSettings {
     private const val KEY_LIQUID_GLASS_BACKDROP_VIBRANCY = "liquid_glass_backdrop_vibrancy"
     private const val KEY_LIQUID_GLASS_ADAPTIVE_LUMINANCE = "liquid_glass_adaptive_luminance"
     private const val KEY_GLASS_HEADER_PILLS = "glass_header_pills"
-    private const val KEY_GLASS_NAV_BAR = "glass_nav_bar"
-    private const val KEY_GLASS_MINI_PLAYER = "glass_mini_player"
     private const val KEY_GLASS_MENUS = "glass_menus"
     private const val KEY_MINI_PLAYER_BAR_BEHAVIOR = "mini_player_bar_behavior"
     private const val KEY_NAV_BAR_GLASS_GLOW = "nav_bar_glass_glow"

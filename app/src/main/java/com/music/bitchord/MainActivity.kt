@@ -298,7 +298,6 @@ import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScr
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
-import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.ThinGlassSlider
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -464,21 +463,6 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG,
                     ).show()
                 }
-                // Liquid Glass kept dying in the renderer before any Java
-                // handler could catch it (a native RenderThread death — see
-                // CrashLoopGuard), so it was switched off before this launch:
-                // say so once too.
-                val glassReset = withContext(Dispatchers.IO) {
-                    runCatching { com.music.bitchord.data.CrashLoopGuard.consumeGlassReset(appContext) }
-                        .getOrDefault(false)
-                }
-                if (glassReset) {
-                    Toast.makeText(
-                        appContext,
-                        getString(R.string.liquid_glass_crash_reset),
-                        Toast.LENGTH_LONG,
-                    ).show()
-                }
             }
             lifecycleScope.launch {
                 val crashed = withContext(Dispatchers.IO) {
@@ -514,7 +498,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             val highPerformance by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
-            val liquidGlassEnabled by AppSettings.liquidGlass.collectAsStateWithLifecycle()
             val iosOverscrollFactory = rememberIosOverscrollFactory()
             val performanceRefreshRate by AppSettings.performanceRefreshRate.collectAsStateWithLifecycle()
             // Ported from ArchiveTune's UI scale: the font scale is multiplied so
@@ -569,7 +552,6 @@ class MainActivity : AppCompatActivity() {
                 // refract the recorded page beneath them.
                 CompositionLocalProvider(
                     LocalOverscrollFactory provides iosOverscrollFactory,
-                    LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
                     LocalDensity provides scaledDensity,
                     // The sharedUi thin slider's glass ride — the player's
@@ -672,7 +654,7 @@ private fun BitChordApp(
     val hazeState = remember { HazeState() }
     // Recording the backdrop layer costs a draw pass, so it only runs when a
     // liquid-glass surface (the nav bar or artwork-page back button) can sample it.
-    val glassActive = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val glassActive = isGlassSupported()
     // "Reduce dynamic blur" keeps the glass bar's *shape* — the folding
     // now-playing-and-tabs component is a layout, not an effect, and dropping
     // back to the two stacked bars would be answering a question about material
@@ -754,10 +736,8 @@ private fun BitChordApp(
             }
         }
     }
-    // Which bar stack is drawing: the all-in-one glass bar while Liquid Glass
-    // and its navigation-bar element are on.
-    val glassNavBarElement by AppSettings.glassNavBar.collectAsStateWithLifecycle()
-    val glassBarStack = glassActive && glassNavBarElement
+    // The all-in-one glass bar draws wherever the device can render glass.
+    val glassBarStack = glassActive
     // The tab the app opens on, ported from ArchiveTune's default open tab.
     // Read once — a change is about the *next* launch, not this one's layout.
     val defaultOpenTab = remember { AppSettings.defaultOpenTab.value }

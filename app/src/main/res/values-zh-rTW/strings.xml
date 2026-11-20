@@ -1458,10 +1458,6 @@
     <string name="glass_header_pills_desc">Glass on the floating header pills and the round page buttons</string>
     <string name="glass_menus_element">Menus</string>
     <string name="glass_menus_element_desc">A glass frost on the menus and popovers</string>
-    <string name="glass_mini_player_element">Mini player</string>
-    <string name="glass_mini_player_element_desc">Glass on the mini player\'s Liquid Glass background style</string>
-    <string name="glass_nav_bar_element">Navigation bar</string>
-    <string name="glass_nav_bar_element_desc">Glass on the floating navigation bar\'s surface</string>
     <string name="glass_performance_desc">Trade the glass lens for a plain frost, on the devices the lens costs</string>
     <string name="glass_performance_group">Performance</string>
     <string name="hide_library_on_device_shelf">Hide On-device shelf</string>
@@ -1483,15 +1479,12 @@
     <string name="liquid_glass_customize">Customize Glass</string>
     <string name="liquid_glass_depth_3d">3D depth effect</string>
     <string name="liquid_glass_depth_3d_desc">Multi-layer spatial depth refraction on thick glass</string>
-    <string name="liquid_glass_effects">Liquid Glass effects</string>
-    <string name="liquid_glass_effects_desc">The glass look for the header pills, the mini player, the navigation bar and the menus. When off, every glass surface stands down.</string>
     <string name="liquid_glass_elements">Elements</string>
     <string name="liquid_glass_elements_footer">Each surface keeps a pill of its own, so the glass can be taken piecemeal rather than all at once. All of them need the master switch on.</string>
     <string name="liquid_glass_intensity">Glass intensity</string>
     <string name="liquid_glass_intensity_standard">Standard</string>
     <string name="liquid_glass_intensity_subtle">Subtle</string>
     <string name="liquid_glass_intensity_vivid">Vivid</string>
-    <string name="liquid_glass_master_footer">The master switch the glass hangs on: every surface below answers to it, and turning it on brings the adaptive bar along with it.</string>
     <string name="liquid_glass_optics">Optics</string>
     <string name="liquid_glass_optics_footer">Each control is a multiple of the stock glass; 100% is what the app has always drawn.</string>
     <string name="liquid_glass_percent_value">%1$d%%</string>
@@ -1573,7 +1566,6 @@
     <string name="ui_scale_value">%1$d%%</string>
     <string name="crash_log_saved">Neiro 上次當機了 — 記錄已儲存至 %1$s</string>
     <string name="player_style_reset">%1$s 播放器反覆當機，Neiro 已切換回內建播放器。當機記錄位於 Downloads/Neiro。</string>
-    <string name="liquid_glass_crash_reset">Liquid Glass 啟動時反覆當機，已自動關閉。你可以在設定中重新開啟。</string>
     <string name="permanent_shuffle">永久隨機播放模式</string>
     <string name="permanent_shuffle_subtitle">開始新歌曲時保持隨機播放開啟</string>
     <string name="auto_skip_on_error">發生錯誤時自動跳到下一首歌</string>

@@ -100,8 +100,10 @@ internal class GlassPillMotion(
     private var settleJob: Job? = null
     private var lastDragPos = 0f
     private var lastDragNs = 0L
+    private var dragPos by mutableFloatStateOf(Float.NaN)
+    private var heldStretch by mutableFloatStateOf(0f)
 
-    val position: Float get() = valueAnim.value
+    val position: Float get() = dragPos.let { if (it.isNaN()) valueAnim.value else it }
 
     val liftX: Float get() = liftXAnim.value
 
@@ -151,6 +153,7 @@ internal class GlassPillMotion(
         liftJob?.cancel()
         dropJob?.cancel()
         scope.launch {
+            handOffDrag()
             valueAnim.snapTo(target.toFloat())
             pressAnim.snapTo(0f)
             liftXAnim.snapTo(0f)
@@ -172,10 +175,14 @@ internal class GlassPillMotion(
     }
 
     fun startDrag() {
+        if (held) return
         held = true
         settleJob?.cancel()
+        val from = position
         scope.launch { valueAnim.stop() }
-        lastDragPos = valueAnim.value
+        dragPos = from
+        heldStretch = stretchAnim.value
+        lastDragPos = from
         lastDragNs = 0L
         if (!reduceMotion) raise()
     }
@@ -187,13 +194,21 @@ internal class GlassPillMotion(
             val dt = (now - lastDragNs) / 1e9f
             if (dt > 0f) {
                 val raw = (position - lastDragPos) / dt
-                val smoothed = stretchAnim.value + (raw - stretchAnim.value) * 0.35f
-                scope.launch { stretchAnim.snapTo(smoothed) }
+                heldStretch += (raw - heldStretch) * 0.35f
             }
         }
         lastDragPos = position
         lastDragNs = now
-        scope.launch { valueAnim.snapTo(position) }
+        dragPos = position
+    }
+
+    private suspend fun handOffDrag() {
+        val from = dragPos
+        if (from.isNaN()) return
+        valueAnim.snapTo(from)
+        stretchAnim.snapTo(heldStretch)
+        dragPos = Float.NaN
+        heldStretch = 0f
     }
 
     fun release(next: Int) {
@@ -210,6 +225,7 @@ internal class GlassPillMotion(
     private fun settleTo(target: Float, from: Float?) {
         settleJob?.cancel()
         settleJob = scope.launch {
+            handOffDrag()
             raise()
             if (from != null) valueAnim.snapTo(from)
             var landed = false
@@ -255,31 +271,52 @@ internal class GlassPillMotion(
     }
 
     private fun stretch(): Float {
-        if (valueAnim.value.isNaN()) return 0f
-        val speed = abs(valueAnim.velocity) + abs(stretchAnim.value)
+        if (position.isNaN()) return 0f
+        val speed = if (dragPos.isNaN()) {
+            abs(valueAnim.velocity) + abs(stretchAnim.value)
+        } else {
+            abs(heldStretch)
+        }
         return (speed * STRETCH_PER_STEP_PER_S).coerceAtMost(MAX_STRETCH) * squashScale
     }
 
     fun flatSize(rest: Size, lifted: Size): Size {
-        val s = liveSize(rest, lifted)
+        val s = stretch()
         return Size(
-            s.width.coerceAtMost(rest.width),
-            s.height.coerceAtMost(rest.height),
+            PillGeometry.visibleWidth(rest.width, lifted.width, liftX, s, flat = true),
+            PillGeometry.liveHeight(rest.height, lifted.height, liftY, s).coerceAtMost(rest.height),
         )
     }
 
     fun liveSize(rest: Size, lifted: Size): Size {
-        val w = rest.width + (lifted.width - rest.width) * liftX
-        val h = rest.height + (lifted.height - rest.height) * liftY
         val s = stretch()
-        return Size(w * (1f + s), h * (1f - s / 3f))
+        return Size(
+            PillGeometry.liveWidth(rest.width, lifted.width, liftX, s),
+            PillGeometry.liveHeight(rest.height, lifted.height, liftY, s),
+        )
     }
+
+    fun visibleWidth(rest: Size, lifted: Size, glass: Boolean): Float =
+        PillGeometry.visibleWidth(rest.width, lifted.width, liftX, stretch(), flat = !glass || isFlat)
 
     private companion object {
         const val STRETCH_PER_STEP_PER_S = 0.012f
         const val MAX_STRETCH = 0.12f
 
         const val LAND_STEPS = 0.05f
+    }
+}
+
+internal object PillGeometry {
+    fun liveWidth(restWidth: Float, liftedWidth: Float, liftX: Float, stretch: Float): Float =
+        (restWidth + (liftedWidth - restWidth) * liftX) * (1f + stretch)
+
+    fun liveHeight(restHeight: Float, liftedHeight: Float, liftY: Float, stretch: Float): Float =
+        (restHeight + (liftedHeight - restHeight) * liftY) * (1f - stretch / 3f)
+
+    fun visibleWidth(restWidth: Float, liftedWidth: Float, liftX: Float, stretch: Float, flat: Boolean): Float {
+        val live = liveWidth(restWidth, liftedWidth, liftX, stretch)
+        return if (flat) live.coerceAtMost(restWidth) else live
     }
 }
 

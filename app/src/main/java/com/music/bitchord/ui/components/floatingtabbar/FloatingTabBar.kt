@@ -105,6 +105,7 @@ import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -658,8 +659,7 @@ private fun SharedTransitionScope.StandaloneTabBody(
 ) {
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val glassPill = isGlassSupported() && !reduceDynamicBlur &&
-        com.music.bitchord.ui.components.LocalLiquidGlassEnabled.current
+    val glassPill = isGlassSupported() && !reduceDynamicBlur
     val coroutineScope = rememberCoroutineScope()
     val pill = remember { GlassPillMotion(coroutineScope, 0, slow = 1.6) }
     val glassIndicator by AppSettings.glassIndicator.collectAsStateWithLifecycle()
@@ -923,8 +923,7 @@ private fun SharedTransitionScope.ExpandedTabs(
     val glassIndicator by AppSettings.glassIndicator.collectAsStateWithLifecycle()
     pill.reduceMotion = reduceAnimation
     pill.squashScale = glassIndicator.squash
-    val glassPill = isGlassSupported() && !reduceDynamicBlur &&
-        com.music.bitchord.ui.components.LocalLiquidGlassEnabled.current
+    val glassPill = isGlassSupported() && !reduceDynamicBlur
     val barGlass = rememberLayerBackdrop()
     val tabRow = rememberLayerBackdrop()
 
@@ -965,6 +964,9 @@ private fun SharedTransitionScope.ExpandedTabs(
     } else {
         restSize
     }
+    val currentRestSize by rememberUpdatedState(restSize)
+    val currentLiftedSize by rememberUpdatedState(liftedSize)
+    val currentGlassPill by rememberUpdatedState(glassPill)
     val pillCenterInRow: (Float) -> Offset = { position ->
         val x = position * tabStepPx + tabWidthPx / 2f
         Offset(if (isRtl) rowSize.width - x else x, rowHeightPx / 2f)
@@ -991,15 +993,16 @@ private fun SharedTransitionScope.ExpandedTabs(
                 animatedVisibilityScope = animatedVisibilityScope,
                 zIndexInOverlay = 1f
             )
-            .graphicsLayer {
-                val swell = if (reduceAnimation) 0f else pill.liftY.coerceAtLeast(0f)
-                scaleX = 1f + 0.03f * swell
-                scaleY = 1f + 0.06f * swell
-            }
     ) {
         CompositionLocalProvider(LocalGlassExport provides barGlass) {
             Box(
                 modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        val swell = if (reduceAnimation) 0f else pill.liftY.coerceAtLeast(0f)
+                        scaleX = 1f + 0.03f * swell
+                        scaleY = 1f + 0.06f * swell
+                    }
                     .shadow(
                         shape = shapes.tabBarShape,
                         elevation = elevations.expandedElevation,
@@ -1010,14 +1013,19 @@ private fun SharedTransitionScope.ExpandedTabs(
                         shape = shapes.tabBarShape
                     )
                     .then(tabBarContentModifier())
-                    .padding(contentPadding)
+            )
+            Box(
+                modifier = Modifier.padding(contentPadding)
             ) {
-                if (showPill && (!glassPill || pill.isFlat || pill.flatVisible)) {
+                if (showPill) {
                     FlatSelectionPill(
                         color = colors.indicatorColor,
                         barGlass = barGlass,
                         modifier = Modifier
                             .matchParentSize()
+                            .drawWithContent {
+                                if (!glassPill || pill.isFlat || pill.flatVisible) drawContent()
+                            }
                             .pillPlacement(
                                 center = { pillCenterInRow(pill.position) },
                                 size = { pill.flatSize(restSize, liftedSize) },
@@ -1141,7 +1149,10 @@ private fun SharedTransitionScope.ExpandedTabs(
                                     Offset(1_000_000f, 0f)
                                 } else {
                                     val dx = (pill.position - tabIndex) * currentTabStepPx
-                                    Offset(if (currentIsRtl) -dx else dx, currentTabWidthPx)
+                                    Offset(
+                                        if (currentIsRtl) -dx else dx,
+                                        pill.visibleWidth(currentRestSize, currentLiftedSize, currentGlassPill),
+                                    )
                                 }
                             }
                         }
@@ -1210,7 +1221,7 @@ private fun SharedTransitionScope.ExpandedTabs(
             }
         }
 
-        if (glassPill && showPill && !pill.isFlat) {
+        if (glassPill && showPill) {
             GlassSelectionPill(
                 motion = pill,
                 fillColor = colors.indicatorColor,
@@ -1219,6 +1230,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                 iconTint = colors.selectedContentColor,
                 modifier = Modifier
                     .matchParentSize()
+                    .drawWithContent { if (!pill.isFlat) drawContent() }
                     .pillPlacement(
                         center = { pillCenterInRow(pill.position) + Offset(padLeftPx, padTopPx) },
                         size = { pill.liveSize(restSize, liftedSize) },

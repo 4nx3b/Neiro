@@ -72,7 +72,7 @@ fun IosSwitch(
         settled = true
     }
 
-    if (onCheckedChange != null && LocalLiquidGlassEnabled.current && isGlassSupported()) {
+    if (onCheckedChange != null && isGlassSupported()) {
         // The glass switch keeps the app-wide tuning's green off a cold
         // start: the toggle reads its own iOS tint, its backdrop and its
         // drag physics straight off the vendored renderer.

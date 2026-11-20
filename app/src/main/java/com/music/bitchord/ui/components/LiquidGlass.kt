@@ -51,8 +51,6 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.Shadow
 import androidx.compose.ui.unit.dp
 
-val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
-
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdrop provided") }
 
 internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
@@ -184,7 +182,7 @@ fun Modifier.lightweightLiquidGlass(
     fallbackColor: Color,
 ): Modifier {
     val glassHeaderPills by AppSettings.glassHeaderPills.collectAsStateWithLifecycle()
-    val useGlass = LocalLiquidGlassEnabled.current && glassHeaderPills && isGlassSupported()
+    val useGlass = glassHeaderPills && isGlassSupported()
     val glassTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFAFAFA)
     } else {
@@ -203,7 +201,7 @@ fun Modifier.lightweightLiquidGlass(
 @Composable
 fun Modifier.liquidGlassRim(shape: CornerBasedShape): Modifier {
     val glassHeaderPills by AppSettings.glassHeaderPills.collectAsStateWithLifecycle()
-    if (!LocalLiquidGlassEnabled.current || !glassHeaderPills || !isGlassSupported()) return this
+    if (!glassHeaderPills || !isGlassSupported()) return this
     return remember(shape) { glassRim(shape) }
 }
 

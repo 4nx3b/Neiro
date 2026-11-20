@@ -2514,3 +2514,58 @@ Stage Summary:
 - Not yet verified: the push of 519d975 and every CI round (Check, TV,
   Launch Smoke) wait for the Reviewer's approval. Perf numbers stay pending
   until the first green launch-smoke run.
+
+---
+Task ID: curialy/glass-always
+Agent: Curialy Engineer
+Task: Glass always on (no master switch); steady nav tabs while dragging; performance and leaks.
+Work Log:
+- Branched from origin/main 349fda8 (stale d549f39 leftovers kept in `git stash` "stale-d549f39").
+- Glass always on: removed AppSettings.liquidGlass / setLiquidGlass, GlassDefault (+test),
+  LocalLiquidGlassEnabled and every reader, the nav-bar and mini-player per-element glass
+  switches, the Settings master row, CrashLoopGuard's native glass-loop reset and its
+  MainActivity notice, and the 8 now-unused strings in all locales. The retired prefs keys
+  are removed once on load. ArchiveTune's LiquidGlassEnabledKey is bridged as always true.
+- Drag flicker, four causes fixed in floatingtabbar/:
+  1. the swell graphicsLayer scaled the tab Row: it now scales only the background surface Box
+     (same barGlass export node);
+  2. startDrag ran twice per gesture and restarted the lift springs: now a no-op while held;
+  3. dragTo moved the pill through scope.launch{snapTo}, a frame behind the finger: it now sets
+     a snapshot dragPos synchronously and hands off to the same springs on release/settle;
+  4. PillTinted clipped to the rest tab width: tabPillGeometry now reports the drawn pill
+     width from PillGeometry, the same function the pill is sized with.
+  The flat and glass pills stay composed during the gesture (alpha / draw gating), so nothing
+  is added or removed mid-drag. All spring specs are unchanged.
+- Tests: PillGeometryTest, LiquidGlassAlwaysOnGuardTest (no master switch; synchronous drag;
+  the swell does not scale the Row). Not compiled locally (no Android SDK or JDK here).
+- Round 2 (performance and leaks, no visual change):
+  - compose_stability.conf (data.model.*, List/Map/Set) wired into app, sharedUi and tv via
+    composeCompiler.stabilityConfigurationFiles; every data.model class is vals-only.
+  - Baseline profile: already covers floatingtabbar/**, liquid/** and com/kyant/backdrop/**
+    through the existing `com/music/bitchord/**` and `com/kyant/backdrop/**` wildcards; no
+    new rules needed.
+  - Leak audit: every listed registration already pairs with its release or is a
+    process-lifetime singleton on applicationContext with an install-once guard
+    (BitPerfectOutput/LosslessOutput/ExclusiveTransport audio-device callbacks,
+    UsbDirectDevices receivers, CastController removeCallback lambda, CastPlayback
+    unregisterCallback in release, CrossfadeController removeListener on swap,
+    PlaybackService removeListener on swap and release, PlayerConnection DisposableEffect,
+    the MediaController future on the main executor, AudioCache storing applicationContext).
+    The three `while (isActive)` loops are lifecycle-bound already (two in LaunchedEffect with
+    delay, MusicVideoPlayer's syncJob cancelled in release). No code change was needed;
+    LeakCanary now checks this at runtime.
+  - LeakCanary 2.14 (debugImplementation, launcher icon off; heap dumps off on emulators so
+    launch-smoke cannot ANR on a dump) and StrictMode (thread: disk/network; VM: closables,
+    activity leaks, registrations; penaltyLog) via a debug-only provider in
+    app/src/debug/kotlin (tv's debug source set only adds app/src/debug/java, so tv does not
+    compile it).
+  - launch-smoke: a bar drag swipe, 10 tab cycles, dumpsys meminfo TOTAL before and after,
+    and LeakCanary and StrictMode summaries per attempt (saved as artifacts, report only).
+  - ArchiveTune's hidden Liquid Glass page (with its own master switch) is no longer routed:
+    its route shows the unported-page stub. ArchiveTuneSettingsPage is not called from app or
+    tv, so the page was already unreachable.
+  - Minor: stretch() guards on the live position; the hidden flat pill is skipped in draw,
+    not drawn at alpha 0.
+Stage Summary:
+- Not compiled locally (no Android SDK). CI and the launch-smoke meminfo/LeakCanary/StrictMode
+  report are the evidence.
