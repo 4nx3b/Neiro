@@ -140,21 +140,16 @@ its own source system. Porting rules:
   When touching a BitChord file, leave its comments alone; when creating a new
   file, keep it comment-clean.
 
-- **Glasmio capped-glass crash (2026-11-19).** Glasmio v0.2.2–v0.2.4 render capped
-  glass in a second `HardwareRenderer` (`GlassFrameCache`). On the user's 120 Hz
-  Mali phone (auto tier Balanced, cap 60) the Glasmio sample crashes RenderThread
-  (SIGSEGV, use-after-free) on taps and scrolls — see
-  `docs/glasmio-crash-2026-11-19.md`. The library fix lives as `git am` patches
-  in `third_party/glasmio-patches/fix` (against `UPSTREAM_SHA`); the user applies
-  them to myself-tsuki/Glasmio and tags a release. **Do not bump Glasmio past
-  v0.2.1 until `third_party/glasmio-patches/FIXED_IN` names that tag**
-  (`GlasmioVersionGuardTest` enforces it). `.github/workflows/glasmio-sample-smoke.yml`
-  rebuilds the sample with or without the fix and walks every page on API 34/35/36.
+- **Liquid Glass (2026-11-20).** The earlier JitPack glass fork and its
+  second-renderer crash patches are gone. The
+  glass now rides the vendored AndroidLiquidGlass backdrop module (below),
+  which draws through the ordinary per-surface graphics layer.
 
 ## Modules & submodules
 
 - Gradle modules: `:app` (Android phone), `:tv`, `:wearos`, `:shared` (plain JVM
-  common data), `:sharedUi` (Compose Multiplatform screens), `:web`, `:backend`
+  common data), `:sharedUi` (Compose Multiplatform screens), `:backdrop` (the
+  vendored liquid-glass renderer), `:web`, `:backend`
   (Go Listen-Together server). Android modules are only included when an SDK is
   present (`settings.gradle.kts`).
 - **The Compose line is the 1.12 era, whole** (`compose-bom:2026.09.00`, so
@@ -163,45 +158,78 @@ its own source system. Porting rules:
   foundation 1.11.0-beta02 and material3 1.5.0-alpha18) resolved a split
   runtime — the JetBrains Compose plugin sharedUi rides elevated androidx ui
   while those pins held foundation/material3 back — and the mixed APK crashed
-  the release build on launch. The Glasmio fork's transitive Compose pins
-  (foundation 1.12.1) resolve above the app's BOM, which Compose supports
-  deliberately (foundation depends on ui, not the reverse). Do not pin
+  the release build on launch. Do not pin
   modules to a different line than the app resolves.
-- **Glasmio** is the liquid-glass controls and motion library, served from the
-  JitPack fork `com.github.myself-tsuki.Glasmio` (of NEORUAA/Glasmio) and
-  pinned at **v0.2.1** — `glasmio-ui` + `glasmio-scaffold` in `:app` and `:tv`,
-  `glasmio-glass` in `:archivetuneplayer`. Kyant's backdrop is gone: no
-  vendored source and no `io.github.kyant0:backdrop`. The fork minSdks 31 while
-  the app keeps 26: app and tv carry `tools:overrideLibrary` for the five fork
-  packages, and every fork surface is gated at runtime on
-  `isGlassSupported()` (API 31+). MainActivity wires
-  `GlasmioIconProvider` (with `BitChordGlasmioIconResolver`), `GlasmioTheme`
-  (nested inside `BitChordTheme`, the app's palette passed through) and
-  `GlasmioBackdropProvider` over the app backdrop.
+- **The Liquid Glass renderer is `:backdrop`** — the backdrop module of
+  guozhiqiang123/AndroidLiquidGlass (Kyant's fork, Apache-2.0), vendored
+  verbatim (commonMain + the Android actuals, expect/actual collapsed) at
+  the commit in `backdrop/UPSTREAM_SHA` and compiled by this repo's own
+  toolchain — the fork is published nowhere (no Maven Central, no JitPack
+  build) so vendoring is the only reliable consume. The local changes
+  against the fork's sources are listed in `backdrop/PATCHES.md`
+  (samplingScale, Lens `chromaticStrength`, the process-wide
+  `RuntimeShaderPool` + `prewarmBackdropShaders()` called from
+  `BitChordApplication`). Its one Maven dependency is Kyant's
+  `io.github.kyant0:shapes:1.2.1` (the SDF capsules the lens reads). The
+  module minSdks 21, below the app's 26 — no `tools:overrideLibrary` is
+  needed anywhere. The liquid-glass controls — sliders, toggles, the tab
+  bar, the tracking highlight — are ported from the fork's catalog into
+  `app/…/ui/components/liquid/` (BitChord's theme, backdrop and tuning
+  applied); MainActivity wires the app backdrop and the `LocalGlassSlider`
+  slot over them.
   - **Owners of each surface.**
-    - `IosSwitch` → `GlasmioSwitch` wherever Liquid Glass is on and supported;
-      the plain iOS 26 capsule stays below API 31, glass-off and read-out rows.
-    - The settings `SliderRow` → `GlasmioSlider`, the drag quantised to M3's
-      own steps + 1 intervals; M3's `Slider` stays as the fallback.
+    - `IosSwitch` → `LiquidGlassSwitch` (the catalog toggle, 64×28 with the
+      40×24 lens thumb) wherever Liquid Glass is on and supported; the plain
+      iOS 26 capsule stays below API 31, glass-off and read-out rows.
+    - The settings `SliderRow` → `LiquidGlassSlider`, the drag quantised to
+      M3's own steps + 1 intervals at the call site; M3's `Slider` stays as
+      the fallback.
     - sharedUi `ThinSlider` (scrubber, volume, lyrics offset, audio output)
-      → `GlassSlider` (`GlasmioSlider` + `snapToSteps`, in
-      `ui/components/GlasmioSupport.kt`) through the `LocalGlassSlider` slot
-      MainActivity provides. A degenerate or non-finite range, or
-      `!glasmioAvailable`, falls back to Material's `Slider`. ThinSlider keeps
-      drawing itself while it is loading, mixing, pulsing or showing an
-      Automix window.
+      → `GlassSlider` (`LiquidGlassSlider` + `snapToSteps`, in
+      `ui/components/GlassControls.kt`) through the `LocalGlassSlider` slot
+      MainActivity provides. A degenerate or non-finite range, or a device
+      without the AGSL lens (`liquidGlassControlsSupported`, API 33+), falls
+      back to Material's `Slider`. ThinSlider keeps drawing itself while it
+      is loading, mixing, pulsing or showing an Automix window.
     - `IosMenuPopover` and `HeldContextMenu` → the popup morph rides the
-      ported DropdownMorphSpring constants (`GlassMorph.kt`, tested in
-      `GlassMorphTest`); :archivetuneplayer's menus use `GlasmioMotion.kt`.
-    - `GlassNavBar` → `GlasmioNavigationBarWithTrailingItem`, with Neiro's
-      icons through `BitChordGlasmioIconResolver` and the fold driver in
-      `NavigationBarScroll.kt`. The old Echo FloatingTabBar shell is deleted.
-    - Page push/pop and the album zoom → the fork's navigation spring,
-      parallax and dim (`ui/motion/IosNavigationMotion.kt`, with
-      `IosPageTransitions`; `PageMotionTest` pins the spring).
-  - Do not bump Glasmio past v0.2.1 until `third_party/glasmio-patches/FIXED_IN`
-    names that tag (`GlasmioVersionGuardTest` enforces it — see the
-    capped-glass rule above).
+      pre-port spring constants (damping 0.82, stiffness 300) (`GlassMorph.kt`, tested in
+      `GlassMorphTest`); :archivetuneplayer's menus run ArchiveTune's
+      own original springs again.
+    - `GlassNavBar`, `ui/components/floatingtabbar/` (FloatingTabBar,
+      GlassSelectionPill, RubberStretch), `FloatingBottomBar` and
+      `MiniPlayer` are a port of rezapranata089-bit/Zenith@01e2ab1 (package
+      renamed only; springs, thresholds, JellyPush and RubberStretch kept
+      verbatim). Zenith's `AppSettings.glassIndicator` is
+      `data/settings/GlassIndicator.kt`, pinned to Zenith's DEFAULT preset with
+      no settings UI. Zenith's player panel morph (`PlayerDock.panelShown`) is
+      not ported: Neiro's full player is a sheet, not a panel.
+      `CompactControlCircles.kt` holds Neiro's ArchiveTune compact circles.
+    - Page push/pop and the album zoom → the original iOS push/pop slide
+      (`IosPageTransitions`/`PageMotion`; `PageMotionTest` pins it).
+  - The renderer itself guards `RenderEffect` at API 31 and `RuntimeShader`
+    at API 33; `isGlassSupported()` (API 31) gates every glass surface, and
+    the lens-based controls are additionally gated on
+    `liquidGlassControlsSupported` (API 33).
+- Glass invariant: no drawBackdrop may sample a LayerBackdrop whose recorded
+  content contains it. In-page liquid controls default to `emptyBackdrop()`.
+  Defaults trace to `ui/components/liquid/LiquidGlassDefaults.kt`
+  (AndroidLiquidGlass catalog @0ed8b08). Pages inside `layerBackdrop(appBackdrop)`
+  get `LocalAppBackdrop = emptyBackdrop()`; the nav bar is drawn outside that
+  box (`GlassRecursionGuardTest`).
+- Performance invariants: never trade quality for speed (no samplingScale,
+  `BackdropRendering.scale`, blur or refraction reductions). `app/` and `tv/`
+  ship `src/main/baseline-prof.txt` plus profileinstaller; keep it covering
+  the UI packages, `com/kyant/backdrop` and the ArchiveTune UI. Read
+  per-frame values in layout/draw lambdas only. launch-smoke runs an
+  interaction phase and prints a perf block (cold start ×3, gfxinfo),
+  as installed and after speed-profile.
+- While a portrait player is fully up, MainActivity's page root skips
+  `drawContent()` (`coveredByPlayer`, a derivedStateOf on
+  `playerDock.openFraction() >= 1f`). That box holds both the
+  `layerBackdrop(appBackdrop)` recorder and `GlassNavBar`, so the page is not
+  recorded while covered, and recording resumes on the first frame the sheet
+  moves down. Nothing in the player (its own dialog window) samples
+  `appBackdrop`. Keep both inside that box.
 - `shared/…/data/model/Models.kt` owns `Song`; the app module has no model file.
 - Source system: `app/…/data/sources/` — `MusicSource` (search + stream),
   `SourceKind` (rank-ordered), `SourceRegistry` (encrypted-prefs persistence,
@@ -219,14 +247,14 @@ its own source system. Porting rules:
 - JDK 17, Android SDK (compileSdk 37, targetSdk 36), flavors dev/prod.
 - CI (`check.yml`): `./gradlew testDevDebugUnitTest` + `assembleDevDebug` + Go
   backend build/vet/test. Push to `dev` or open a PR to run it.
-- **main is the active line** (since 2026-11-18: the Glasmio port and the
+- **main is the active line** (since 2026-11-18: the liquid-glass port and the
   Compose 1.12 / material3 1.5.0-rc01 move landed there; dev is behind).
   Branch from `origin/main` and PR into main.
 - **Launch smoke** (`launch-smoke.yml`, on every PR and by hand). It builds
   `:app:assembleDevDebug` and `:app:assembleProdRelease` (R8) for x86_64
   once and prints the resolved Compose line. An unsigned release is signed
   with the debug key. It then installs and launches each APK on an API 30
-  (below the Glasmio gate) and an API 34 emulator, using
+  (below the glass gate) and an API 34 emulator, using
   `.github/scripts/launch-smoke.sh`.
   - The packages are `com.dev.bitchord` (dev) and `com.music.bitchord`
     (prod).

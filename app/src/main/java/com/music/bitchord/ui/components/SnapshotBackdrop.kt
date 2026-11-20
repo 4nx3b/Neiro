@@ -23,19 +23,19 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
-import io.github.neoruaa.glasmio.glass.render.Backdrop
+import com.kyant.backdrop.Backdrop
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
  * A backdrop that is a still of its source rather than the source live.
  *
- * [io.github.neoruaa.glasmio.glass.render.backdrops.LayerBackdrop] keeps a
- * recording that is the source by reference — every animated thing inside
- * it, a progress bar's tick or a drifting mesh, makes whatever samples it
- * render the whole source again and re-run its effects on the next frame. For
- * a panel that is up for a few seconds over content the person isn't looking
- * at, that is a full-screen redraw and a blur per frame bought for nothing.
+ * [com.kyant.backdrop.backdrops.LayerBackdrop] keeps a recording that is
+ * the source by reference — every animated thing inside it, a progress
+ * bar's tick or a drifting mesh, makes whatever samples it render the
+ * whole source again and re-run its effects on the next frame. For a panel
+ * that is up for a few seconds over content the person isn't looking at,
+ * that is a full-screen redraw and a blur per frame bought for nothing.
  * This takes one picture when [capture] is called — small, since only a blur
  * will ever see it — and the effects run on that, again only when the panel
  * itself moves.
@@ -43,10 +43,10 @@ import kotlin.math.roundToInt
  * Nothing is recorded until [capture]: the source draws exactly as it would
  * without this. [release] lets go of the picture once nothing samples it.
  *
- * Written against Kyant's Backdrop while the app vendored that library; now
- * it implements Glasmio's own [Backdrop] — the interface the fork ships under
- * io.github.neoruaa.glasmio.glass.render — so the same still-of-the-source
- * behaviour serves the panels sampling through Glasmio's drawBackdrop.
+ * Written against the vendored AndroidLiquidGlass backdrop module — the
+ * Backdrop interface the renderer ships under com.kyant.backdrop — so the
+ * same still-of-the-source behaviour serves the panels sampling through
+ * its drawBackdrop.
  */
 @Stable
 class SnapshotBackdrop internal constructor() : Backdrop {

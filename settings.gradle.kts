@@ -46,6 +46,10 @@ if (androidSdk != null && file(androidSdk).isDirectory) {
     include(":app")
     include(":tv")
     include(":wearos")
+    // The vendored liquid-glass renderer (AndroidLiquidGlass's backdrop
+    // module, see backdrop/build.gradle.kts) — a plain Android library, so
+    // it rides with the same SDK gate as the modules that consume it.
+    include(":backdrop")
     // The vendored ArchiveTune player stack: the Android library plus the
     // pure-JVM modules its sources import (InnerTube core, canvas providers,
     // lyric parsers, JioSaavn). Desktop-only checkouts skip them along with

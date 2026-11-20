@@ -601,6 +601,8 @@ object AppSettings {
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
 
+    val glassIndicator = MutableStateFlow(GlassIndicator())
+
     /**
      * Whether the welcome pages (party name, then YouTube sign-in) have been
      * through. Absent rather than true for anyone updating from a build that
