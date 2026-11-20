@@ -513,7 +513,7 @@ private class SelectionPillBackdrop(
 }
 
 private fun DrawScope.drawBarRim(bar: LayerBackdrop, coordinates: LayoutCoordinates?, edge: Color) {
-    val barCoordinates = bar.layerCoordinates ?: return
+    val barCoordinates = bar.recordedLayerCoordinates ?: return
     val here = coordinates ?: return
     if (!barCoordinates.isAttached || !here.isAttached) return
     val offset = try {

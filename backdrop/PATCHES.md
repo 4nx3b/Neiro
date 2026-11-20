@@ -23,3 +23,8 @@ the order of effects.
    shaders off the main thread at app start (no-op below API 33). This moves
    the SkSL parse/compile off the first frame of each glass surface; it does
    not change what is drawn.
+4. **LayerBackdrop `recordedLayerCoordinates`** — the selection pill's rim
+   (`drawBarRim`) reads the bar layer's own coordinates to place its halo,
+   which upstream keeps internal; `LayerBackdrop` gains a read-only
+   `recordedLayerCoordinates` returning the same value. Nothing can write it
+   from outside the module.
