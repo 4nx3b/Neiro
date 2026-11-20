@@ -3,7 +3,6 @@ package com.music.bitchord
 import com.music.bitchord.ui.motion.IosPageFrame
 import com.music.bitchord.ui.motion.PageMotionState
 import com.music.bitchord.ui.motion.iosPageTransform
-import com.music.bitchord.ui.motion.rootTabFade
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -95,7 +94,9 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import com.kyant.backdrop.backdrops.emptyBackdrop
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -292,8 +293,8 @@ import com.music.bitchord.ui.components.FLOATING_BAR_MAX_WIDTH
 import com.music.bitchord.ui.components.FloatingBottomBar
 import com.music.bitchord.ui.components.GlassNavBar
 import com.music.bitchord.ui.components.CompactControlCircles
-import com.music.bitchord.ui.components.FloatingTabBarInlineBehavior
-import com.music.bitchord.ui.components.rememberFloatingTabBarScrollConnection
+import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
+import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScrollConnection
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
@@ -695,6 +696,7 @@ private fun BitChordApp(
     val playerDesignStyleActive by AppSettings.playerDesignStyle.collectAsStateWithLifecycle()
     val archiveTunePlayerActive = playerDesignStyleActive != PlayerDesignStyle.BITCHORD
     val navBarScroll = rememberFloatingTabBarScrollConnection(
+        expandThreshold = 250.dp,
         inlineBehavior = if (miniPlayerBarBehavior == MiniPlayerBarBehavior.ADAPTIVE) {
             FloatingTabBarInlineBehavior.OnScrollDown
         } else {
@@ -713,11 +715,16 @@ private fun BitChordApp(
     // bar fall away, and scrolling up brings the stack back. The two hold
     // modes pin the fold rather than listening to the scroll.
     var bottomUiCompact by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        withFrameNanos { }
+        viewModel.onFirstFramesDrawn()
+    }
     LaunchedEffect(miniPlayerBarBehavior) {
         bottomUiCompact = miniPlayerBarBehavior == MiniPlayerBarBehavior.ALWAYS_COMPACT
     }
     val reduceAnimationForBars by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
-    val bottomUiCompactFraction by animateFloatAsState(
+    val bottomUiCompactState = animateFloatAsState(
         targetValue = if (bottomUiCompact) 1f else 0f,
         animationSpec = if (reduceAnimationForBars) {
             snap()
@@ -726,6 +733,8 @@ private fun BitChordApp(
         },
         label = "bottomUiCompact",
     )
+    val bottomUiCompactFraction by bottomUiCompactState
+    val bottomUiCompactShown by remember { derivedStateOf { bottomUiCompactState.value > 0.01f } }
     val compactThresholdPx = with(LocalDensity.current) { 14.dp.toPx() }
     val compactScrollConnection = remember(compactThresholdPx) {
         object : NestedScrollConnection {
@@ -3160,27 +3169,11 @@ private fun BitChordApp(
                 // composable scope: the ported slide needs the layout
                 // direction for its mirrored travel and the density for the
                 // pixel-exact parallax offset.
-                val pageLayoutDirection = LocalLayoutDirection.current
-                val pageDensity = LocalDensity.current.density
                 AnimatedContent(
                     targetState = pageTarget,
                     // A route's entry is copied when the release pages under it
                     // change, which is not a different page.
                     contentKey = { it.key },
-                    // Tabs swap on the root fade; everything else
-                    // slides on the ported navigation motion — or the album
-                    // zoom, when the page is a release opened from its cover.
-                    //
-                    // A tab is not a place you travel to — the bar is the
-                    // whole navigation — and a straight crossfade between
-                    // top-level routes answers that:
-                    // `fadeIn() togetherWith fadeOut()`, the root-tab
-                    // transition, ported verbatim as [rootTabFade].
-                    //
-                    // "Show all" swapping with the Library tab underneath it is
-                    // still that tab's own relayout, not a navigation: it keeps
-                    // no transition in either direction, so a card held there
-                    // doesn't breathe through a fade, same as before.
                     transitionSpec = {
                         val initial = initialState
                         val target = targetState
@@ -3190,19 +3183,10 @@ private fun BitChordApp(
                             (this as? AppDestination.Route)?.entry?.route is AppRoute.LibraryShowAll
                         val libraryShowAllSwap = (initial.isShowAll() && target == libraryTab) ||
                             (target.isShowAll() && initial == libraryTab)
-                        if (libraryShowAllSwap) {
+                        if (tabSwap || libraryShowAllSwap) {
                             EnterTransition.None togetherWith ExitTransition.None
-                        } else if (tabSwap) {
-                            rootTabFade()
                         } else {
-                            // The iOS push / pop slide on the ported motion, or the
-                            // album zoom out of its cover.
-                            iosPageTransform(
-                                pageMotion,
-                                reducePageMotion,
-                                layoutDirection = pageLayoutDirection,
-                                density = pageDensity,
-                            )
+                            iosPageTransform(pageMotion, reducePageMotion)
                         }
                     },
                     modifier = Modifier
@@ -3235,6 +3219,7 @@ private fun BitChordApp(
                         ),
                     label = "content",
                 ) { destination ->
+                    CompositionLocalProvider(LocalAppBackdrop provides emptyBackdrop()) {
                     // Every branch below reads `destination` rather than the
                     // stack that produced it. The two are the same thing only
                     // for the page being entered: the one on its way out is
@@ -4116,6 +4101,7 @@ private fun BitChordApp(
                             }
                         }
                     }
+                    }
                 }
 
                 // The top-bar footprint is transparent on every page so the
@@ -4582,7 +4568,7 @@ private fun BitChordApp(
                                     isPlaying = player.isPlaying,
                                     isLoading = playPauseBusy,
                                     hazeState = hazeState,
-                                    compactFraction = bottomUiCompactFraction,
+                                    compactFraction = { bottomUiCompactState.value },
                                     onPlayPause = {
                                         togglePlayPause()
                                     },
@@ -4601,9 +4587,9 @@ private fun BitChordApp(
                                     pull = if (archiveTunePlayerActive) portedPull else playerSheetMotion.takeIf { !reducePlayerMotion },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                if (bottomUiCompactFraction > 0.01f) {
+                                if (bottomUiCompactShown) {
                                     CompactControlCircles(
-                                        fraction = bottomUiCompactFraction,
+                                        fraction = { bottomUiCompactState.value },
                                         leftIsLibrary = selectedTab == TAB_LIBRARY,
                                         onLeft = {
                                             if (selectedTab != TAB_HOME) onTabSelected(TAB_HOME)

@@ -12,6 +12,7 @@
  * (AppSettings.glassPerformance) trades the thumb's lens for a wider blur,
  * the same trade Modifier.liquidGlass makes on every other glass surface.
  */
+
 package com.music.bitchord.ui.components.liquid
 
 import androidx.compose.foundation.background
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -51,6 +53,7 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.emptyBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -63,23 +66,8 @@ import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.ui.components.LocalAppBackdrop
 import kotlinx.coroutines.flow.collectLatest
 
-/**
- * The liquid-glass slider, on the vendored AndroidLiquidGlass renderer.
- *
- * Immediate local drag feedback: the caller owns [value], and every drag
- * event and tap reports through [onValueChange] as it happens — a caller
- * persisting asynchronously keeps its own preview state. The drag rides the
- * damped spring, so a fling settles rather than snaps; the thumb's glass
- * lens lifts and enlarges under the finger while it is down.
- *
- * Composed only where Liquid Glass is on and the AGSL lens is supported
- * (the callers gate on it — see GlassSlider for the Material fallback);
- * under the frost switch the lens goes and the blur frosts instead, the
- * same trade every other glass surface makes.
- */
 @Composable
 fun LiquidGlassSlider(
     value: Float,
@@ -88,7 +76,8 @@ fun LiquidGlassSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     enabled: Boolean = true,
     onValueChangeFinished: (() -> Unit)? = null,
-    backdrop: Backdrop = LocalAppBackdrop.current,
+
+    backdrop: Backdrop = emptyBackdrop(),
 ) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val accentColor = MaterialTheme.colorScheme.primary
@@ -128,6 +117,10 @@ fun LiquidGlassSlider(
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
         val animationScope = rememberCoroutineScope()
         var didDrag by remember { mutableStateOf(false) }
+        val latestValue = rememberUpdatedState(value)
+        val latestOnValueChange = rememberUpdatedState(onValueChange)
+        val latestOnValueChangeFinished = rememberUpdatedState(onValueChangeFinished)
+        val fingerValue = remember { floatArrayOf(0f) }
         val dampedDragAnimation = remember(animationScope, valueRange) {
             DampedDragAnimation(
                 animationScope = animationScope,
@@ -139,25 +132,26 @@ fun LiquidGlassSlider(
                 onDragStarted = {},
                 onDragStopped = {
                     if (didDrag) {
-                        onValueChange(targetValue)
+                        latestOnValueChange.value(fingerValue[0])
                     }
                     didDrag = false
-                    onValueChangeFinished?.invoke()
+                    latestOnValueChangeFinished.value?.invoke()
                 },
                 onDrag = { _, dragAmount ->
                     if (!didDrag) {
+                        fingerValue[0] = targetValue
                         didDrag = dragAmount.x != 0f
                     }
                     val delta = (valueRange.endInclusive - valueRange.start) * (dragAmount.x / trackWidth)
-                    onValueChange(
-                        if (isLtr) (targetValue + delta).coerceIn(valueRange)
-                        else (targetValue - delta).coerceIn(valueRange)
-                    )
+                    fingerValue[0] =
+                        if (isLtr) (fingerValue[0] + delta).coerceIn(valueRange)
+                        else (fingerValue[0] - delta).coerceIn(valueRange)
+                    latestOnValueChange.value(fingerValue[0])
                 }
             )
         }
         LaunchedEffect(dampedDragAnimation) {
-            snapshotFlow { value.coerceIn(valueRange) }
+            snapshotFlow { latestValue.value.coerceIn(valueRange) }
                 .collectLatest { value ->
                     if (dampedDragAnimation.targetValue != value) {
                         dampedDragAnimation.updateValue(value)
@@ -178,10 +172,10 @@ fun LiquidGlassSlider(
                                 else valueRange.endInclusive - delta)
                                     .coerceIn(valueRange)
                             dampedDragAnimation.animateToValue(targetValue)
-                            onValueChange(targetValue)
+                            latestOnValueChange.value(targetValue)
                         }
                     }
-                    .height(TrackHeight)
+                    .height(LiquidGlassDefaults.SliderTrackHeight)
                     .fillMaxWidth()
             )
 
@@ -189,7 +183,7 @@ fun LiquidGlassSlider(
                 Modifier
                     .clip(Capsule())
                     .background(accentColor)
-                    .height(TrackHeight)
+                    .height(LiquidGlassDefaults.SliderTrackHeight)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
                         val width = (constraints.maxWidth * dampedDragAnimation.progress).fastRoundToInt()
@@ -266,17 +260,13 @@ fun LiquidGlassSlider(
                         drawRect(Color.White.copy(alpha = 1f - progress))
                     }
                 )
-                .size(40f.dp, 24f.dp)
+                .size(LiquidGlassDefaults.SliderThumbWidth, LiquidGlassDefaults.SliderThumbHeight)
         )
     }
 }
 
-/** The slider's own height: the thumb plus the air it lifts into. */
 private val SliderHeight = 40.dp
 
-/** The track's height, the hairline capsule the thumb rides on. */
-private val TrackHeight = 6.dp
 
-/** The thumb's blur while unpressed — and the frost's wider one, always down. */
-private val ThumbBlurRadius = 8.dp
+private val ThumbBlurRadius = LiquidGlassDefaults.ThumbBlur
 private val FrostBlurRadius = 16.dp

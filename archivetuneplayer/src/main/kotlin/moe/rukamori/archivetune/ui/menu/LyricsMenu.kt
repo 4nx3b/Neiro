@@ -7,9 +7,6 @@
 
 package moe.rukamori.archivetune.ui.menu
 
-import moe.rukamori.archivetune.ui.component.LiquidDropdownMorphSpring
-import moe.rukamori.archivetune.ui.component.LiquidMorphAlphaInMs
-import moe.rukamori.archivetune.ui.component.LiquidMorphCloseMs
 import moe.rukamori.archivetune.ui.component.LocalLiquidGlassTuning
 import androidx.activity.compose.BackHandler
 import android.app.SearchManager
@@ -18,6 +15,8 @@ import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -1491,15 +1490,17 @@ fun AnchoredLyricsOverflowMenu(
         val scaleJob = scope.launch {
             scaleAnim.animateTo(
                 targetValue = 1f,
-                // The liquid-morph content spring (see LiquidMorphMotion.kt).
-                animationSpec = LiquidDropdownMorphSpring,
+                animationSpec =
+                    spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
             )
         }
         val alphaJob = scope.launch {
             alphaAnim.animateTo(
                 targetValue = 1f,
-                // The morph entrance alpha: 120 ms.
-                animationSpec = tween(LiquidMorphAlphaInMs),
+                animationSpec = tween(180),
             )
         }
         scaleJob.join()
@@ -1511,14 +1512,17 @@ fun AnchoredLyricsOverflowMenu(
         val scaleJob = scope.launch {
             scaleAnim.animateTo(
                 targetValue = 0.3f,
-                animationSpec = LiquidDropdownMorphSpring,
+                animationSpec =
+                    spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
             )
         }
         val alphaJob = scope.launch {
             alphaAnim.animateTo(
                 targetValue = 0f,
-                // The liquid-morph collapse: 300 ms.
-                animationSpec = tween(LiquidMorphCloseMs),
+                animationSpec = tween(180),
             )
         }
         scaleJob.join()

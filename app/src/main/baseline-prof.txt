@@ -10,3 +10,8 @@
 HSPLcom/music/bitchord/**->**(**)**
 HSPLcom/my/kizzy/**->**(**)**
 Lcom/music/bitchord/**;
+HSPLcom/kyant/backdrop/**->**(**)**
+Lcom/kyant/backdrop/**;
+HSPLmoe/rukamori/archivetune/ui/player/**->**(**)**
+HSPLmoe/rukamori/archivetune/ui/component/**->**(**)**
+Lmoe/rukamori/archivetune/ui/**;

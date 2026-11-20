@@ -9,13 +9,17 @@ sealed interface RuntimeShaderCache {
 
 internal class RuntimeShaderCacheImpl : RuntimeShaderCache {
 
-    private val runtimeShaders = mutableMapOf<String, RuntimeShader>()
+    private val runtimeShaders = mutableMapOf<String, Pair<String, RuntimeShader>>()
 
     override fun obtainRuntimeShader(key: String, string: String): RuntimeShader {
-        return runtimeShaders.getOrPut(key) { RuntimeShader(string) }
+        runtimeShaders[key]?.let { return it.second }
+        val shader = RuntimeShaderPool.acquire(string)
+        runtimeShaders[key] = string to shader
+        return shader
     }
 
     fun clear() {
+        runtimeShaders.values.forEach { (source, shader) -> RuntimeShaderPool.release(source, shader) }
         runtimeShaders.clear()
     }
 }

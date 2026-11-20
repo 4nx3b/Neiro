@@ -1,8 +1,5 @@
 package com.music.bitchord
 
-import com.music.bitchord.ui.motion.IosNavigationDurationMillis
-import com.music.bitchord.ui.motion.iosNavigationParallaxOffset
-import com.music.bitchord.ui.motion.iosNavigationPosition
 import com.music.bitchord.ui.motion.PageMotion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -10,34 +7,18 @@ import org.junit.Test
 
 class PageMotionTest {
     @Test
-    fun pushIsOnTheCriticalSpring() {
-        // The ported slide: the unnormalised critical spring (damping 1,
-        // ω = 2π/0.3) sampled over the 350 ms coordinator window — so a frame
-        // is a frame of that window: 15% of the travel after one, settled by
-        // 170 ms, monotonic throughout.
-        val oneFrame = 33f / IosNavigationDurationMillis
-        val e = iosNavigationPosition(oneFrame, 350_000_000L)
-        assertTrue("one frame in: $e", e in 0.08f..0.22f)
-        assertTrue(iosNavigationPosition(170f / IosNavigationDurationMillis, 350_000_000L) > 0.85f)
-        // The unnormalised spring asymptotes: 99.5% at the 350 ms window's end —
-        // the fork's motion runs on past it rather than being cut to it.
-        assertTrue(iosNavigationPosition(1f, 350_000_000L) > 0.99f)
+    fun pushIsAboutHalfWayAfterOneFrameAndSettlesInTime() {
+        val oneFrame = 33f / PageMotion.SLIDE_MS
+        val e = PageMotion.slideEase(oneFrame)
+        assertTrue("one frame in: $e", e in 0.35f..0.65f)
+        assertTrue(PageMotion.slideEase(170f / PageMotion.SLIDE_MS) > 0.97f)
+        assertEquals(1f, PageMotion.slideEase(1f), 0f)
         var last = 0f
         for (i in 0..20) {
-            val v = iosNavigationPosition(i / 20f, 350_000_000L)
+            val v = PageMotion.slideEase(i / 20f)
             assertTrue(v >= last - 1e-4f)
             last = v
         }
-    }
-
-    @Test
-    fun theUnderlayTravelsTheParallaxRemainder() {
-        // The ported parallax offset: the covered page moves the width minus
-        // seventy percent of it, pixel-exact through the density round-trip.
-        assertEquals(1080 - (1080 / 3f * 0.7f).toInt() * 3, iosNavigationParallaxOffset(1080, 3f))
-        val width = 1080
-        val offset = iosNavigationParallaxOffset(width, 2.75f)
-        assertTrue(offset in (width * 0.28f).toInt()..(width * 0.32f).toInt())
     }
 
     @Test

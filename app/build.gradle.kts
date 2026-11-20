@@ -303,6 +303,7 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 }
 
 dependencies {
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
     // The ported ArchiveTune player stack (only the phone app mounts it).

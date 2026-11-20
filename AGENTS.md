@@ -140,11 +140,8 @@ its own source system. Porting rules:
   When touching a BitChord file, leave its comments alone; when creating a new
   file, keep it comment-clean.
 
-- **Liquid Glass history (2026-11-19).** The earlier Glasmio fork
-  (myself-tsuki/Glasmio from JitPack) rendered capped glass in a second
-  `HardwareRenderer` that crashed RenderThread on the user's 120 Hz Mali
-  phone; that whole arrangement is retired — the library, its crash
-  patches, its sample-smoke workflow and its version guard are gone. The
+- **Liquid Glass (2026-11-20).** The earlier JitPack glass fork and its
+  second-renderer crash patches are gone. The
   glass now rides the vendored AndroidLiquidGlass backdrop module (below),
   which draws through the ordinary per-surface graphics layer.
 
@@ -168,10 +165,11 @@ its own source system. Porting rules:
   verbatim (commonMain + the Android actuals, expect/actual collapsed) at
   the commit in `backdrop/UPSTREAM_SHA` and compiled by this repo's own
   toolchain — the fork is published nowhere (no Maven Central, no JitPack
-  build) so vendoring is the only reliable consume. One deliberate change
-  against the fork's sources: `drawBackdrop`/`drawPlainBackdrop` take a
-  per-surface `samplingScale` multiplied with the global
-  `BackdropRendering.scale`. Its one Maven dependency is Kyant's
+  build) so vendoring is the only reliable consume. The local changes
+  against the fork's sources are listed in `backdrop/PATCHES.md`
+  (samplingScale, Lens `chromaticStrength`, the process-wide
+  `RuntimeShaderPool` + `prewarmBackdropShaders()` called from
+  `BitChordApplication`). Its one Maven dependency is Kyant's
   `io.github.kyant0:shapes:1.2.1` (the SDF capsules the lens reads). The
   module minSdks 21, below the app's 26 — no `tools:overrideLibrary` is
   needed anywhere. The liquid-glass controls — sliders, toggles, the tab
@@ -194,21 +192,44 @@ its own source system. Porting rules:
       back to Material's `Slider`. ThinSlider keeps drawing itself while it
       is loading, mixing, pulsing or showing an Automix window.
     - `IosMenuPopover` and `HeldContextMenu` → the popup morph rides the
-      ported DropdownMorphSpring constants (`GlassMorph.kt`, tested in
-      `GlassMorphTest`); :archivetuneplayer's menus use
-      `LiquidMorphMotion.kt`.
-    - `GlassNavBar` → `LiquidGlassTabBar` (the catalog's liquid tabs: the
-      capsule platter, the selection lens over an accent-tinted recorded
-      copy, the damped drag, the split-search trailing circle), with the
-      fold driver in `NavigationBarScroll.kt`. The old Echo FloatingTabBar
-      shell is deleted.
-    - Page push/pop and the album zoom → the ported navigation spring,
-      parallax and dim (`ui/motion/IosNavigationMotion.kt`, with
-      `IosPageTransitions`; `PageMotionTest` pins the spring).
+      pre-port spring constants (damping 0.82, stiffness 300) (`GlassMorph.kt`, tested in
+      `GlassMorphTest`); :archivetuneplayer's menus run ArchiveTune's
+      own original springs again.
+    - `GlassNavBar`, `ui/components/floatingtabbar/` (FloatingTabBar,
+      GlassSelectionPill, RubberStretch), `FloatingBottomBar` and
+      `MiniPlayer` are a port of rezapranata089-bit/Zenith@01e2ab1 (package
+      renamed only; springs, thresholds, JellyPush and RubberStretch kept
+      verbatim). Zenith's `AppSettings.glassIndicator` is
+      `data/settings/GlassIndicator.kt`, pinned to Zenith's DEFAULT preset with
+      no settings UI. Zenith's player panel morph (`PlayerDock.panelShown`) is
+      not ported: Neiro's full player is a sheet, not a panel.
+      `CompactControlCircles.kt` holds Neiro's ArchiveTune compact circles.
+    - Page push/pop and the album zoom → the original iOS push/pop slide
+      (`IosPageTransitions`/`PageMotion`; `PageMotionTest` pins it).
   - The renderer itself guards `RenderEffect` at API 31 and `RuntimeShader`
     at API 33; `isGlassSupported()` (API 31) gates every glass surface, and
     the lens-based controls are additionally gated on
     `liquidGlassControlsSupported` (API 33).
+- Glass invariant: no drawBackdrop may sample a LayerBackdrop whose recorded
+  content contains it. In-page liquid controls default to `emptyBackdrop()`.
+  Defaults trace to `ui/components/liquid/LiquidGlassDefaults.kt`
+  (AndroidLiquidGlass catalog @0ed8b08). Pages inside `layerBackdrop(appBackdrop)`
+  get `LocalAppBackdrop = emptyBackdrop()`; the nav bar is drawn outside that
+  box (`GlassRecursionGuardTest`).
+- Performance invariants: never trade quality for speed (no samplingScale,
+  `BackdropRendering.scale`, blur or refraction reductions). `app/` and `tv/`
+  ship `src/main/baseline-prof.txt` plus profileinstaller; keep it covering
+  the UI packages, `com/kyant/backdrop` and the ArchiveTune UI. Read
+  per-frame values in layout/draw lambdas only. launch-smoke runs an
+  interaction phase and prints a perf block (cold start ×3, gfxinfo),
+  as installed and after speed-profile.
+- While a portrait player is fully up, MainActivity's page root skips
+  `drawContent()` (`coveredByPlayer`, a derivedStateOf on
+  `playerDock.openFraction() >= 1f`). That box holds both the
+  `layerBackdrop(appBackdrop)` recorder and `GlassNavBar`, so the page is not
+  recorded while covered, and recording resumes on the first frame the sheet
+  moves down. Nothing in the player (its own dialog window) samples
+  `appBackdrop`. Keep both inside that box.
 - `shared/…/data/model/Models.kt` owns `Song`; the app module has no model file.
 - Source system: `app/…/data/sources/` — `MusicSource` (search + stream),
   `SourceKind` (rank-ordered), `SourceRegistry` (encrypted-prefs persistence,

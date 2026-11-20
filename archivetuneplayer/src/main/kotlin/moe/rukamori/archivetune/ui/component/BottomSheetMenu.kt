@@ -10,6 +10,8 @@
 package moe.rukamori.archivetune.ui.component
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -134,17 +136,16 @@ fun BottomSheetMenu(
             enterProgress.snapTo(0f)
             enterProgress.animateTo(
                 targetValue = 1f,
-                // The dropdown morph spring, ported: the spring
-                // UIKitCore/AnimationKit's liquidMorph copies to width,
-                // height, position and transform on iOS 27 — stiffness
-                // (2π/response)² for the 0.3 s response, damping 0.8.
-                animationSpec = LiquidDropdownMorphSpring,
+                animationSpec =
+                    spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
             )
         } else if (renderState) {
             enterProgress.animateTo(
                 targetValue = 0f,
-                // The liquid-morph collapse: ≈300 ms.
-                animationSpec = tween(durationMillis = 300),
+                animationSpec = tween(durationMillis = 200),
             )
             focusManager.clearFocus()
             renderState = false

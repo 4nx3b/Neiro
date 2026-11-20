@@ -10,6 +10,7 @@
  * so the two switches are one shape at both densities. On is iOS green
  * whatever the theme's accent, the one colour the platform keeps its own.
  */
+
 package com.music.bitchord.ui.components.liquid
 
 import androidx.compose.foundation.layout.Box
@@ -63,30 +64,16 @@ import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.ui.components.LocalAppBackdrop
 import kotlinx.coroutines.flow.collectLatest
 
-/**
- * The app's glass settings toggle, on the vendored AndroidLiquidGlass
- * renderer: the track's own layer backdrop fused with the page beneath it
- * under the thumb's lens, which lifts, blurs out and enlarges under the
- * finger, the squish deformation riding the drag's velocity. Tapping flips
- * through the spring; dragging commits at half travel and springs home
- * either way.
- *
- * Composed only where Liquid Glass is on and the glass is supported (see
- * IosSwitch, which gates it); the plain iOS 26 capsule is the fallback
- * everywhere else. Under "reduce dynamic blur" the lens and the sampling
- * are skipped for a solid track and a white thumb — what that setting
- * promises everywhere else in the app.
- */
 @Composable
 fun LiquidGlassSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    backdrop: Backdrop = LocalAppBackdrop.current,
+
+    backdrop: Backdrop = emptyBackdrop(),
 ) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val accentColor =
@@ -150,7 +137,7 @@ fun LiquidGlassSwitch(
         if (target != fraction || target != dampedDragAnimation.targetValue) {
             didDrag = false
             fraction = target
-            // Restored preferences and parent-row changes are not thumb presses.
+
             dampedDragAnimation.animateToValue(target)
         }
     }
@@ -160,7 +147,7 @@ fun LiquidGlassSwitch(
     Box(
         modifier
             .alpha(if (enabled) 1f else 0.5f)
-            .size(TrackWidth, TrackHeight)
+            .size(LiquidGlassDefaults.ToggleTrackWidth, LiquidGlassDefaults.ToggleTrackHeight)
             .semantics {
                 role = Role.Switch
                 toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
@@ -181,7 +168,7 @@ fun LiquidGlassSwitch(
                     val fraction = dampedDragAnimation.value
                     drawRect(lerp(trackColor, accentColor, fraction))
                 }
-                .size(TrackWidth, TrackHeight)
+                .size(LiquidGlassDefaults.ToggleTrackWidth, LiquidGlassDefaults.ToggleTrackHeight)
         )
 
         Box(
@@ -258,19 +245,12 @@ fun LiquidGlassSwitch(
                         }
                     }
                 )
-                .size(ThumbWidth, ThumbHeight)
+                .size(LiquidGlassDefaults.ToggleThumbWidth, LiquidGlassDefaults.ToggleThumbHeight)
         )
     }
 }
 
-/** The switch's track — the same capsule the plain IosSwitch draws. */
-private val TrackWidth = 64.dp
-private val TrackHeight = 28.dp
 
-/** The glass thumb, the lens that rides the track. */
-private val ThumbWidth = 40.dp
-private val ThumbHeight = 24.dp
 
-/** The thumb's blur while unpressed — and the frost's wider one, always down. */
-private val ThumbBlurRadius = 8.dp
+private val ThumbBlurRadius = LiquidGlassDefaults.ThumbBlur
 private val FrostBlurRadius = 16.dp
